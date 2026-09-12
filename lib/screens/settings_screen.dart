@@ -117,12 +117,12 @@ class SettingsScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 14),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _buildFontOption(context, 'Sedang', 'normal', settings.skalaFont == 'normal'),
-                            const SizedBox(width: 8),
                             _buildFontOption(context, 'Besar', 'large', settings.skalaFont == 'large'),
-                            const SizedBox(width: 8),
                             _buildFontOption(context, 'Ekstra', 'extra_large', settings.skalaFont == 'extra_large'),
                           ],
                         ),
@@ -153,12 +153,12 @@ class SettingsScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 14),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _buildRateOption(context, '0.75x Lambat', 0.75, settings.kecepatanSuara == 0.75),
-                            const SizedBox(width: 8),
                             _buildRateOption(context, '1.0x Normal', 1.0, settings.kecepatanSuara == 1.0),
-                            const SizedBox(width: 8),
                             _buildRateOption(context, '1.25x Cepat', 1.25, settings.kecepatanSuara == 1.25),
                           ],
                         ),
@@ -189,32 +189,29 @@ class SettingsScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 14),
-                        Row(
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
                           children: [
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Center(child: Text('🇮🇩 Bahasa Indonesia')),
-                                selected: settings.bahasaSuara == 'id-ID',
-                                selectedColor: AppColors.accentBlue,
-                                labelStyle: TextStyle(
-                                  color: settings.bahasaSuara == 'id-ID' ? Colors.white : (isDark ? Colors.white : Colors.black),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                onSelected: (_) => settingsProvider.setLanguage('id-ID'),
+                            ChoiceChip(
+                              label: const Text('🇮🇩 Bahasa Indonesia'),
+                              selected: settings.bahasaSuara == 'id-ID',
+                              selectedColor: AppColors.accentBlue,
+                              labelStyle: TextStyle(
+                                color: settings.bahasaSuara == 'id-ID' ? Colors.white : (isDark ? Colors.white : Colors.black),
+                                fontWeight: FontWeight.bold,
                               ),
+                              onSelected: (_) => settingsProvider.setLanguage('id-ID'),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ChoiceChip(
-                                label: const Center(child: Text('🇬🇧 English')),
-                                selected: settings.bahasaSuara == 'en-US',
-                                selectedColor: AppColors.accentBlue,
-                                labelStyle: TextStyle(
-                                  color: settings.bahasaSuara == 'en-US' ? Colors.white : (isDark ? Colors.white : Colors.black),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                onSelected: (_) => settingsProvider.setLanguage('en-US'),
+                            ChoiceChip(
+                              label: const Text('🇬🇧 English'),
+                              selected: settings.bahasaSuara == 'en-US',
+                              selectedColor: AppColors.accentBlue,
+                              labelStyle: TextStyle(
+                                color: settings.bahasaSuara == 'en-US' ? Colors.white : (isDark ? Colors.white : Colors.black),
+                                fontWeight: FontWeight.bold,
                               ),
+                              onSelected: (_) => settingsProvider.setLanguage('en-US'),
                             ),
                           ],
                         ),

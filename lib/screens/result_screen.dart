@@ -225,9 +225,9 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                       const Divider(height: 24),
 
-                      // Pilihan Cepat Kecepatan Suara
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Pilihan Cepat Kecepatan Suara (Responsif Wrap)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Kecepatan Suara:',
@@ -237,29 +237,32 @@ class _ResultScreenState extends State<ResultScreen> {
                               color: isDark ? Colors.white70 : AppColors.lightTextSecondary,
                             ),
                           ),
-                          Row(
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [0.75, 1.0, 1.25].map((rate) {
                               final isSelected = settingsProvider.settings.kecepatanSuara == rate;
-                              return Padding(
-                                padding: const EdgeInsets.only(left: 6.0),
-                                child: ChoiceChip(
-                                  label: Text('${rate}x'),
-                                  selected: isSelected,
-                                  onSelected: (_) {
-                                    settingsProvider.setSpeechRate(rate);
-                                    if (reader.isPlaying) {
-                                      reader.readExistingText(
-                                        text: fullText,
-                                        speechRate: rate,
-                                        language: settingsProvider.settings.bahasaSuara,
-                                      );
-                                    }
-                                  },
-                                  selectedColor: AppColors.accentBlue,
-                                  labelStyle: TextStyle(
-                                    color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              return ChoiceChip(
+                                label: Text(
+                                  rate == 0.75 ? '0.75x Lambat' : (rate == 1.0 ? '1.0x Normal' : '1.25x Cepat'),
+                                ),
+                                selected: isSelected,
+                                onSelected: (_) {
+                                  settingsProvider.setSpeechRate(rate);
+                                  if (reader.isPlaying) {
+                                    reader.readExistingText(
+                                      text: fullText,
+                                      speechRate: rate,
+                                      language: settingsProvider.settings.bahasaSuara,
+                                    );
+                                  }
+                                },
+                                selectedColor: AppColors.accentBlue,
+                                labelStyle: TextStyle(
+                                  color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13 * fontMultiplier,
                                 ),
                               );
                             }).toList(),

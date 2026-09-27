@@ -66,6 +66,39 @@ class AppStrings {
 
   // --- History ---
   String get history => isIndonesian ? 'Riwayat' : 'History';
+  String get clearAll => isIndonesian ? 'Hapus Semua' : 'Clear All';
+  String get deleteConfirmTitle =>
+      isIndonesian ? 'Hapus Riwayat' : 'Delete History';
+  String get deleteConfirmMessage => isIndonesian
+      ? 'Apakah Anda yakin ingin menghapus item riwayat ini?'
+      : 'Are you sure you want to delete this history item?';
+  String get clearAllConfirmMessage => isIndonesian
+      ? 'Apakah Anda yakin ingin menghapus seluruh riwayat?'
+      : 'Are you sure you want to delete all history items?';
+  String get delete => isIndonesian ? 'Hapus' : 'Delete';
+  String get noHistoryTitle =>
+      isIndonesian ? 'Belum Ada Riwayat' : 'No Scan History Yet';
+  String get noHistorySubtitle => isIndonesian
+      ? 'Teks hasil pemindaian kamera akan muncul di sini.'
+      : 'Scanned documents and text will appear here.';
+
+  // --- Auth & Form Validations ---
+  String get emailInvalid => isIndonesian
+      ? 'Masukkan alamat email yang valid'
+      : 'Please enter a valid email address';
+  String get passwordTooShort => isIndonesian
+      ? 'Kata sandi minimal 6 karakter'
+      : 'Password must be at least 6 characters';
+  String get passwordRequired => isIndonesian
+      ? 'Kata sandi tidak boleh kosong'
+      : 'Password is required';
+  String get currentPasswordRequired => isIndonesian
+      ? 'Kata sandi saat ini harus diisi'
+      : 'Current password is required';
+  String get newPasswordSameAsOld => isIndonesian
+      ? 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini'
+      : 'New password cannot be the same as current password';
+  String get ok => 'OK';
 
   // --- Settings ---
   String get settings => isIndonesian ? 'Pengaturan' : 'Settings';

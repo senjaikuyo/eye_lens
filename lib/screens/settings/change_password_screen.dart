@@ -22,6 +22,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  String? _currentPasswordError;
+  String? _newPasswordError;
+  String? _confirmPasswordError;
+
   @override
   void dispose() {
     _currentPasswordController.dispose();
@@ -30,39 +34,128 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  void _onUpdatePressed(AppStrings strings) {
-    if (_currentPasswordController.text.isEmpty ||
-        _newPasswordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.fillAllFields),
-          backgroundColor: AppColors.black,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
+  bool _validate(AppStrings strings) {
+    bool isValid = true;
+    final current = _currentPasswordController.text;
+    final newPass = _newPasswordController.text;
+    final confirm = _confirmPasswordController.text;
+
+    // Current password
+    if (current.isEmpty) {
+      setState(() {
+        _currentPasswordError = strings.currentPasswordRequired;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _currentPasswordError = null;
+      });
     }
 
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.passwordsDoNotMatch),
-          backgroundColor: AppColors.black,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
+    // New password
+    if (newPass.isEmpty) {
+      setState(() {
+        _newPasswordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (newPass.length < 6) {
+      setState(() {
+        _newPasswordError = strings.passwordTooShort;
+      });
+      isValid = false;
+    } else if (newPass == current && current.isNotEmpty) {
+      setState(() {
+        _newPasswordError = strings.newPasswordSameAsOld;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _newPasswordError = null;
+      });
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.passwordUpdatedSuccess),
-        backgroundColor: AppColors.black,
-        duration: const Duration(seconds: 2),
+    // Confirm password
+    if (confirm.isEmpty) {
+      setState(() {
+        _confirmPasswordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (confirm != newPass) {
+      setState(() {
+        _confirmPasswordError = strings.passwordsDoNotMatch;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _confirmPasswordError = null;
+      });
+    }
+
+    return isValid;
+  }
+
+  void _onUpdatePressed(AppStrings strings, bool isDark) {
+    if (!_validate(strings)) return;
+
+    // Show refined success dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: Color(0xFF22C55E),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              strings.passwordUpdatedSuccess,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? Colors.white : AppColors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? Colors.white : AppColors.black,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Back to Settings
+              },
+              child: Text(
+                strings.ok,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-    Navigator.of(context).pop();
   }
 
   @override
@@ -122,6 +215,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 label: strings.currentPassword,
                 controller: _currentPasswordController,
                 obscureText: _obscureCurrent,
+                errorText: _currentPasswordError,
+                onChanged: (_) {
+                  if (_currentPasswordError != null) {
+                    setState(() {
+                      _currentPasswordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscureCurrent,
                   onTap: () {
@@ -139,6 +240,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 label: strings.newPassword,
                 controller: _newPasswordController,
                 obscureText: _obscureNew,
+                errorText: _newPasswordError,
+                onChanged: (_) {
+                  if (_newPasswordError != null) {
+                    setState(() {
+                      _newPasswordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscureNew,
                   onTap: () {
@@ -156,6 +265,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 label: strings.confirmPassword,
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirm,
+                errorText: _confirmPasswordError,
+                onChanged: (_) {
+                  if (_confirmPasswordError != null) {
+                    setState(() {
+                      _confirmPasswordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscureConfirm,
                   onTap: () {
@@ -174,7 +291,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: () => _onUpdatePressed(strings),
+                    onTap: () => _onUpdatePressed(strings, isDark),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       constraints: const BoxConstraints(minWidth: 110),

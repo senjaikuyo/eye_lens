@@ -49,3 +49,4 @@ linux/flutter/ephemeral/
 
 # Widget Preview related
 .widget_preview/
+devtools_options.yaml

@@ -18,6 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  String? _emailError;
+  String? _passwordError;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -25,10 +28,50 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onLoginPressed() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
+  bool _validate(AppStrings strings) {
+    bool isValid = true;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+      setState(() {
+        _emailError = strings.emailInvalid;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _emailError = null;
+      });
+    }
+
+    // Password validation
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (password.length < 6) {
+      setState(() {
+        _passwordError = strings.passwordTooShort;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _passwordError = null;
+      });
+    }
+
+    return isValid;
+  }
+
+  void _onLoginPressed(AppStrings strings) {
+    if (_validate(strings)) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    }
   }
 
   void _onRegisterTap() {
@@ -65,20 +108,36 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 48),
 
-              // Email Input
+              // Email Input with visual validation
               CustomAuthField(
                 label: strings.email,
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                errorText: _emailError,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(() {
+                      _emailError = null;
+                    });
+                  }
+                },
               ),
 
               const SizedBox(height: 18),
 
-              // Password Input with Eyelash Toggle
+              // Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.password,
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                errorText: _passwordError,
+                onChanged: (_) {
+                  if (_passwordError != null) {
+                    setState(() {
+                      _passwordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscurePassword,
                   onTap: () {
@@ -119,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: _onLoginPressed,
+                    onTap: () => _onLoginPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       constraints: const BoxConstraints(minWidth: 110),

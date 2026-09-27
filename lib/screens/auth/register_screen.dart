@@ -20,6 +20,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -28,15 +32,73 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  bool _validate(AppStrings strings) {
+    bool isValid = true;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    // Email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+      setState(() {
+        _emailError = strings.emailInvalid;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _emailError = null;
+      });
+    }
+
+    // Password validation
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (password.length < 6) {
+      setState(() {
+        _passwordError = strings.passwordTooShort;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _passwordError = null;
+      });
+    }
+
+    // Confirm password validation
+    if (confirmPassword.isEmpty) {
+      setState(() {
+        _confirmPasswordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (confirmPassword != password) {
+      setState(() {
+        _confirmPasswordError = strings.passwordsDoNotMatch;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _confirmPasswordError = null;
+      });
+    }
+
+    return isValid;
+  }
+
   void _onRegisterPressed(AppStrings strings) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.registerSuccess),
-        backgroundColor: AppColors.black,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    Navigator.of(context).pop();
+    if (_validate(strings)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.registerSuccess),
+          backgroundColor: AppColors.black,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      Navigator.of(context).pop();
+    }
   }
 
   void _onLoginTap() {
@@ -71,20 +133,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 48),
 
-              // Email Input
+              // Email Input with visual validation
               CustomAuthField(
                 label: strings.email,
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                errorText: _emailError,
+                onChanged: (_) {
+                  if (_emailError != null) {
+                    setState(() {
+                      _emailError = null;
+                    });
+                  }
+                },
               ),
 
               const SizedBox(height: 18),
 
-              // Password Input with Eyelash Toggle
+              // Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.password,
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                errorText: _passwordError,
+                onChanged: (_) {
+                  if (_passwordError != null) {
+                    setState(() {
+                      _passwordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscurePassword,
                   onTap: () {
@@ -97,11 +175,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 18),
 
-              // Confirm Password Input with Eyelash Toggle
+              // Confirm Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.confirmPassword,
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
+                errorText: _confirmPasswordError,
+                onChanged: (_) {
+                  if (_confirmPasswordError != null) {
+                    setState(() {
+                      _confirmPasswordError = null;
+                    });
+                  }
+                },
                 suffixIcon: EyelashIcon(
                   isObscured: _obscureConfirmPassword,
                   onTap: () {

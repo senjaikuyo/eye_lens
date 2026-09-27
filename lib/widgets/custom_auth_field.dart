@@ -8,6 +8,7 @@ class CustomAuthField extends StatelessWidget {
   final TextInputType keyboardType;
   final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
+  final String? errorText;
 
   const CustomAuthField({
     super.key,
@@ -17,11 +18,13 @@ class CustomAuthField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.suffixIcon,
     this.onChanged,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasError = errorText != null && errorText!.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,13 +38,16 @@ class CustomAuthField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E1E) : AppColors.greyLight,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isDark ? const Color(0xFF383838) : AppColors.greyDarkBorder,
-              width: 0.9,
+              color: hasError
+                  ? const Color(0xFFEF4444)
+                  : (isDark ? const Color(0xFF383838) : AppColors.greyDarkBorder),
+              width: hasError ? 1.4 : 0.9,
             ),
           ),
           child: TextField(
@@ -71,6 +77,32 @@ class CustomAuthField extends StatelessWidget {
             ),
           ),
         ),
+        if (hasError) ...[
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 14,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    errorText!,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -20,13 +20,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoPlayAudio = false;
 
-  void _showLogoutDialog() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final strings = AppStrings.of(context);
-
+  void _showLogoutDialog(BuildContext context, AppStrings strings, bool isDark) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -47,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               strings.cancel,
               style: TextStyle(
@@ -65,7 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(dialogContext).pop(); // Close dialog
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                 (route) => false,
@@ -82,16 +79,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildCard({
+    required bool isDark,
+    required bool isHighContrast,
     required Widget icon,
     required Widget child,
     VoidCallback? onTap,
     Widget? trailing,
     bool isDestructive = false,
   }) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDark = themeProvider.isDark(context);
-    final isHighContrast = themeProvider.isHighContrast;
-
     final borderColor = isDestructive
         ? const Color(0xFFEF4444)
         : (isHighContrast
@@ -186,6 +181,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 1. Email Card
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.mail_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -219,6 +216,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 2. Change Password
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.lock_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -250,6 +249,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 3. History
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.calendar_month_outlined,
                   color: isDark ? Colors.white : Colors.black,
@@ -286,6 +287,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 4. Appearance
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Text(
                   'Aa',
                   style: TextStyle(
@@ -325,6 +328,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 5. Auto-Play Audio Switch
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.volume_up_outlined,
                   color: isDark ? Colors.white : Colors.black,
@@ -390,59 +395,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         // Indonesian Radio Pill
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              context.read<LanguageProvider>().setLanguage('Indonesian');
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isDark ? const Color(0xFF555555) : Colors.black,
-                                  width: 1.0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () {
+                                context.read<LanguageProvider>().setLanguage('Indonesian');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    strings.indonesian,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isHighContrast
+                                        ? (isDark ? Colors.white : Colors.black)
+                                        : (isDark ? const Color(0xFF555555) : Colors.black),
+                                    width: isHighContrast ? 2.0 : 1.0,
                                   ),
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      strings.indonesian,
+                                      style: TextStyle(
                                         color: isDark ? Colors.white : Colors.black,
-                                        width: 1.5,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    child: selectedLanguage == 'Indonesian'
-                                        ? Center(
-                                            child: Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: BoxDecoration(
-                                                color: isDark ? Colors.white : Colors.black,
-                                                shape: BoxShape.circle,
+                                    Container(
+                                      width: 18,
+                                      height: 18,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDark ? Colors.white : Colors.black,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: selectedLanguage == 'Indonesian'
+                                          ? Center(
+                                              child: Container(
+                                                width: 9,
+                                                height: 9,
+                                                decoration: BoxDecoration(
+                                                  color: isDark ? Colors.white : Colors.black,
+                                                  shape: BoxShape.circle,
+                                                ),
                                               ),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
+                                            )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -451,59 +462,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                         // English Radio Pill
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              context.read<LanguageProvider>().setLanguage('English');
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isDark ? const Color(0xFF555555) : Colors.black,
-                                  width: 1.0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () {
+                                context.read<LanguageProvider>().setLanguage('English');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    strings.english,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isHighContrast
+                                        ? (isDark ? Colors.white : Colors.black)
+                                        : (isDark ? const Color(0xFF555555) : Colors.black),
+                                    width: isHighContrast ? 2.0 : 1.0,
                                   ),
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      strings.english,
+                                      style: TextStyle(
                                         color: isDark ? Colors.white : Colors.black,
-                                        width: 1.5,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    child: selectedLanguage == 'English'
-                                        ? Center(
-                                            child: Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: BoxDecoration(
-                                                color: isDark ? Colors.white : Colors.black,
-                                                shape: BoxShape.circle,
+                                    Container(
+                                      width: 18,
+                                      height: 18,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDark ? Colors.white : Colors.black,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: selectedLanguage == 'English'
+                                          ? Center(
+                                              child: Container(
+                                                width: 9,
+                                                height: 9,
+                                                decoration: BoxDecoration(
+                                                  color: isDark ? Colors.white : Colors.black,
+                                                  shape: BoxShape.circle,
+                                                ),
                                               ),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
+                                            )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -523,6 +540,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 7. FAQ
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.help_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -554,6 +573,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 8. About
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 icon: Icon(
                   Icons.info_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -591,6 +612,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 9. LOG OUT BUTTON
               _buildCard(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 isDestructive: true,
                 icon: const Icon(
                   Icons.logout_rounded,
@@ -610,7 +633,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: Color(0xFFEF4444),
                   size: 28,
                 ),
-                onTap: _showLogoutDialog,
+                onTap: () => _showLogoutDialog(context, strings, isDark),
               ),
 
               const SizedBox(height: 36),

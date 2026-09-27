@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/app_colors.dart';
+import '../providers/theme_provider.dart';
 
 class CustomAuthField extends StatelessWidget {
   final String label;
@@ -23,8 +25,20 @@ class CustomAuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark(context);
+    final isHighContrast = themeProvider.isHighContrast;
     final hasError = errorText != null && errorText!.isNotEmpty;
+
+    final borderColor = hasError
+        ? const Color(0xFFEF4444)
+        : (isHighContrast
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark ? const Color(0xFF383838) : AppColors.greyDarkBorder));
+
+    final borderWidth = hasError
+        ? (isHighContrast ? 2.2 : 1.4)
+        : (isHighContrast ? 2.0 : 0.9);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,7 +48,7 @@ class CustomAuthField extends StatelessWidget {
           style: TextStyle(
             color: isDark ? AppColors.white : AppColors.textPrimary,
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: isHighContrast ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
         const SizedBox(height: 6),
@@ -44,10 +58,8 @@ class CustomAuthField extends StatelessWidget {
             color: isDark ? const Color(0xFF1E1E1E) : AppColors.greyLight,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: hasError
-                  ? const Color(0xFFEF4444)
-                  : (isDark ? const Color(0xFF383838) : AppColors.greyDarkBorder),
-              width: hasError ? 1.4 : 0.9,
+              color: borderColor,
+              width: borderWidth,
             ),
           ),
           child: TextField(
@@ -59,6 +71,7 @@ class CustomAuthField extends StatelessWidget {
             style: TextStyle(
               color: isDark ? AppColors.white : AppColors.textPrimary,
               fontSize: 15,
+              fontWeight: isHighContrast ? FontWeight.w600 : FontWeight.w400,
             ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
@@ -92,10 +105,10 @@ class CustomAuthField extends StatelessWidget {
                 Expanded(
                   child: Text(
                     errorText!,
-                    style: const TextStyle(
-                      color: Color(0xFFEF4444),
+                    style: TextStyle(
+                      color: const Color(0xFFEF4444),
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),

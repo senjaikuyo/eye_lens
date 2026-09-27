@@ -249,6 +249,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     required bool cursorColorEnabled,
     required Color highlightColor,
     required bool isDark,
+    required bool isHighContrast,
   }) {
     final lines = text.split('\n');
     if (!cursorColorEnabled) {
@@ -263,7 +264,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 color: isDark ? Colors.white : AppColors.black,
                 fontSize: fontSize,
                 height: 1.35,
-                fontWeight: FontWeight.w600,
+                fontWeight: isHighContrast ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
           );
@@ -297,6 +298,12 @@ class _SpeechScreenState extends State<SpeechScreen> {
             decoration: BoxDecoration(
               color: isActive ? highlightColor : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
+              border: isActive && isHighContrast
+                  ? Border.all(
+                      color: isDark ? Colors.white : Colors.black,
+                      width: 2.0,
+                    )
+                  : null,
               boxShadow: isActive
                   ? [
                       BoxShadow(
@@ -315,7 +322,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     : (isDark ? Colors.white : AppColors.black),
                 fontSize: fontSize,
                 height: 1.35,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                fontWeight: isHighContrast
+                    ? FontWeight.w900
+                    : (isActive ? FontWeight.w700 : FontWeight.w600),
               ),
             ),
           ),
@@ -396,6 +405,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     cursorColorEnabled: themeProvider.cursorColor,
                     highlightColor: themeProvider.highlightColor,
                     isDark: isDark,
+                    isHighContrast: themeProvider.isHighContrast,
                   ),
                 ),
               ),

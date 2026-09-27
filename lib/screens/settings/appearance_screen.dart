@@ -11,7 +11,13 @@ class AppearanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDark(context);
+    final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);
+
+    final cardBorderColor = isHighContrast
+        ? (isDark ? Colors.white : Colors.black)
+        : (isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA));
+    final cardBorderWidth = isHighContrast ? 2.0 : 1.0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : AppColors.white,
@@ -69,10 +75,8 @@ class AppearanceScreen extends StatelessWidget {
                       : const Color(0xFFF2F4F7),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFDDE3EA),
-                    width: 1.0,
+                    color: cardBorderColor,
+                    width: cardBorderWidth,
                   ),
                 ),
                 child: Row(
@@ -159,10 +163,8 @@ class AppearanceScreen extends StatelessWidget {
                       : const Color(0xFFF2F4F7),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFDDE3EA),
-                    width: 1.0,
+                    color: cardBorderColor,
+                    width: cardBorderWidth,
                   ),
                 ),
                 child: Row(
@@ -205,10 +207,8 @@ class AppearanceScreen extends StatelessWidget {
                       : const Color(0xFFF2F4F7),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFDDE3EA),
-                    width: 1.0,
+                    color: cardBorderColor,
+                    width: cardBorderWidth,
                   ),
                 ),
                 child: Row(
@@ -251,10 +251,8 @@ class AppearanceScreen extends StatelessWidget {
                         : const Color(0xFFF2F4F7),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF333333)
-                          : const Color(0xFFDDE3EA),
-                      width: 1.0,
+                      color: cardBorderColor,
+                      width: cardBorderWidth,
                     ),
                   ),
                   child: Row(

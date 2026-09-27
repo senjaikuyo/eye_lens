@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../providers/theme_provider.dart';
 import '../speech/speech_screen.dart';
 
 class HistoryItemModel {
@@ -160,8 +162,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark(context);
+    final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);
+
+    final cardBorderColor = isHighContrast
+        ? (isDark ? Colors.white : Colors.black)
+        : (isDark ? const Color(0xFF333333) : const Color(0xFFD9E0E8));
+    final cardBorderWidth = isHighContrast ? 2.0 : 1.0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : AppColors.white,
@@ -277,10 +286,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: isDark
-                                          ? const Color(0xFF333333)
-                                          : const Color(0xFFD9E0E8),
-                                      width: 1.0,
+                                      color: cardBorderColor,
+                                      width: cardBorderWidth,
                                     ),
                                   ),
                                   child: Row(
@@ -297,7 +304,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                     ? Colors.white
                                                     : AppColors.black,
                                                 fontSize: 15,
-                                                fontWeight: FontWeight.w600,
+                                                fontWeight: isHighContrast
+                                                    ? FontWeight.w800
+                                                    : FontWeight.w600,
                                               ),
                                             ),
                                             const SizedBox(height: 4),

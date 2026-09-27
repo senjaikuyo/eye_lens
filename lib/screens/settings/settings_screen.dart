@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 import '../history/history_screen.dart';
 import 'appearance_screen.dart';
@@ -87,7 +88,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Widget? trailing,
     bool isDestructive = false,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark(context);
+    final isHighContrast = themeProvider.isHighContrast;
+
+    final borderColor = isDestructive
+        ? const Color(0xFFEF4444)
+        : (isHighContrast
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA)));
+
+    final borderWidth = isHighContrast ? 2.0 : 1.0;
 
     return Material(
       color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F4F7),
@@ -100,12 +111,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDestructive
-                  ? const Color(0xFFEF4444).withValues(alpha: 0.5)
-                  : isDark
-                      ? const Color(0xFF333333)
-                      : const Color(0xFFDDE3EA),
-              width: 1.0,
+              color: borderColor,
+              width: borderWidth,
             ),
           ),
           child: Row(
@@ -123,7 +130,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark(context);
+    final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);
     final languageProvider = context.watch<LanguageProvider>();
     final selectedLanguage = languageProvider.language;
@@ -349,8 +358,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F4F7),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA),
-                    width: 1.0,
+                    color: isHighContrast
+                        ? (isDark ? Colors.white : Colors.black)
+                        : (isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA)),
+                    width: isHighContrast ? 2.0 : 1.0,
                   ),
                 ),
                 child: Column(

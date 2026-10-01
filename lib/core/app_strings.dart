@@ -8,10 +8,16 @@ class AppStrings {
   const AppStrings({required this.isIndonesian});
 
   static AppStrings of(BuildContext context, {bool listen = true}) {
-    final languageProvider = listen
-        ? Provider.of<LanguageProvider>(context, listen: true)
-        : Provider.of<LanguageProvider>(context, listen: false);
-    return AppStrings(isIndonesian: languageProvider.isIndonesian);
+    try {
+      final languageProvider = listen
+          ? Provider.of<LanguageProvider>(context, listen: true)
+          : Provider.of<LanguageProvider>(context, listen: false);
+      return AppStrings(isIndonesian: languageProvider.isIndonesian);
+    } catch (_) {
+      final languageProvider =
+          Provider.of<LanguageProvider>(context, listen: false);
+      return AppStrings(isIndonesian: languageProvider.isIndonesian);
+    }
   }
 
   // --- Common & Navigation ---

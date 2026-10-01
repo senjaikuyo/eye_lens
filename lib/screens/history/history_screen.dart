@@ -272,8 +272,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        SpeechScreen(text: item.fullText),
+                                    builder: (context) => SpeechScreen(
+                                      text: item.fullText,
+                                      hasImage: false,
+                                    ),
                                   ),
                                 );
                               },

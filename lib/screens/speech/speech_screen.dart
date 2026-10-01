@@ -9,10 +9,12 @@ import '../settings/settings_screen.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
+  final bool hasImage;
 
   const SpeechScreen({
     super.key,
     this.text = 'yesterday\ntoday\ntomorrow',
+    this.hasImage = true,
   });
 
   @override
@@ -20,13 +22,19 @@ class SpeechScreen extends StatefulWidget {
 }
 
 class _SpeechScreenState extends State<SpeechScreen> {
-  bool _isTextView = false;
+  late bool _isTextView;
   double _fontSize = 32.0;
   bool _isPlaying = false;
   double _progress = 0.25;
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   Timer? _playbackTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _isTextView = !widget.hasImage;
+  }
 
   @override
   void dispose() {
@@ -438,15 +446,12 @@ class _SpeechScreenState extends State<SpeechScreen> {
     );
   }
 
-  void _showLanguageBottomSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final strings = AppStrings.of(context);
-
+  void _showLanguageBottomSheet(AppStrings strings, bool isDark) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) {
+      builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Container(
@@ -472,7 +477,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => Navigator.of(bottomSheetContext).pop(),
                         icon: Icon(
                           Icons.close,
                           color: isDark ? Colors.white : AppColors.black,
@@ -493,7 +498,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                       setState(() {
                         _selectedLanguage = 'Indonesia';
                       });
-                      Navigator.of(context).pop();
+                      Navigator.of(bottomSheetContext).pop();
                     },
                   ),
                   const SizedBox(height: 16),
@@ -508,7 +513,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                       setState(() {
                         _selectedLanguage = 'English';
                       });
-                      Navigator.of(context).pop();
+                      Navigator.of(bottomSheetContext).pop();
                     },
                   ),
                   const SizedBox(height: 32),
@@ -954,10 +959,11 @@ class _SpeechScreenState extends State<SpeechScreen> {
           ),
 
           // FLOATING MODE TOGGLE BUTTON (Right Bottom, cleanly above player bar - matching UI Speech.png)
-          Positioned(
-            right: 20,
-            bottom: bottomPadding + 148,
-            child: Container(
+          if (widget.hasImage)
+            Positioned(
+              right: 20,
+              bottom: bottomPadding + 148,
+              child: Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(
@@ -1066,7 +1072,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     children: [
                       // Flag Button (Circular, consistent 44x44, neat container)
                       GestureDetector(
-                        onTap: _showLanguageBottomSheet,
+                        onTap: () => _showLanguageBottomSheet(strings, isDark),
                         child: Container(
                           width: 44,
                           height: 44,

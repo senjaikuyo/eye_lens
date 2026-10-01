@@ -5,8 +5,6 @@ import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
-import '../history/history_screen.dart';
-import 'appearance_screen.dart';
 import 'change_password_screen.dart';
 import 'faq_screen.dart';
 
@@ -62,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             onPressed: () {
-              Navigator.of(dialogContext).pop(); // Close dialog
+              Navigator.of(dialogContext).pop();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                 (route) => false,
@@ -78,42 +76,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildCard({
-    required bool isDark,
-    required bool isHighContrast,
+  Widget _buildListTile({
     required Widget icon,
     required Widget child,
     VoidCallback? onTap,
     Widget? trailing,
-    bool isDestructive = false,
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
   }) {
-    final borderColor = isDestructive
-        ? const Color(0xFFEF4444)
-        : (isHighContrast
-            ? (isDark ? Colors.white : Colors.black)
-            : (isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA)));
-
-    final borderWidth = isHighContrast ? 2.0 : 1.0;
-
     return Material(
-      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F4F7),
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: borderColor,
-              width: borderWidth,
-            ),
-          ),
+        child: Padding(
+          padding: padding,
           child: Row(
             children: [
               icon,
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(child: child),
               ?trailing,
             ],
@@ -132,92 +111,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final languageProvider = context.watch<LanguageProvider>();
     final selectedLanguage = languageProvider.language;
 
+    final dividerColor = isHighContrast
+        ? (isDark ? Colors.white : Colors.black)
+        : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEDEDED));
+    final dividerThickness = isHighContrast ? 1.5 : 0.8;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : AppColors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 12),
 
               // Header: Back Button + "Settings"
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF2A2A2A)
-                          : const Color(0xFFD9D9D9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(
-                        Icons.arrow_back_rounded,
-                        color: isDark ? Colors.white : Colors.black,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Text(
-                    strings.settings,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.black,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // 1. Email Card
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
-                icon: Icon(
-                  Icons.mail_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   children: [
-                    Text(
-                      strings.email,
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFFAAAAAA) : AppColors.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF2A2A2A)
+                            : const Color(0xFFD9D9D9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          Icons.arrow_back_rounded,
+                          color: isDark ? Colors.white : Colors.black,
+                          size: 22,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(width: 14),
                     Text(
-                      'afifhamzah21@gmail.com',
+                      strings.settings,
                       style: TextStyle(
                         color: isDark ? Colors.white : AppColors.black,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
+
+              // 1. Header Email Section (clean flat text)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      strings.email,
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF888888) : const Color(0xFF888888),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'afifhamzah21@gmail.com',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : AppColors.black,
+                        fontSize: 15,
+                        fontWeight: isHighContrast ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
               // 2. Change Password
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
+              _buildListTile(
                 icon: Icon(
                   Icons.lock_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -228,13 +207,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 28,
+                  size: 26,
                 ),
                 onTap: () {
                   Navigator.of(context).push(
@@ -245,93 +224,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
-              const SizedBox(height: 12),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // 3. History
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
+              // 3. Auto-Play Audio (with graphic_eq waveform icon from new UI)
+              _buildListTile(
                 icon: Icon(
-                  Icons.calendar_month_outlined,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                child: Text(
-                  strings.history,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 28,
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const HistoryScreen(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 16),
-              Divider(
-                color: isDark ? const Color(0xFF333333) : const Color(0xFF222222),
-                thickness: 0.8,
-              ),
-              const SizedBox(height: 16),
-
-              // 4. Appearance
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
-                icon: Text(
-                  'Aa',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                child: Text(
-                  strings.appearance,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 28,
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AppearanceScreen(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 16),
-              Divider(
-                color: isDark ? const Color(0xFF333333) : const Color(0xFF222222),
-                thickness: 0.8,
-              ),
-              const SizedBox(height: 16),
-
-              // 5. Auto-Play Audio Switch
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
-                icon: Icon(
-                  Icons.volume_up_outlined,
+                  Icons.graphic_eq_rounded,
                   color: isDark ? Colors.white : Colors.black,
                   size: 24,
                 ),
@@ -340,7 +238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 trailing: Switch(
@@ -354,194 +252,180 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // 6. Language App Selector
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F4F7),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isHighContrast
-                        ? (isDark ? Colors.white : Colors.black)
-                        : (isDark ? const Color(0xFF333333) : const Color(0xFFDDE3EA)),
-                    width: isHighContrast ? 2.0 : 1.0,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // 4. Language App Selector (with translate icon from new UI)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.language_rounded,
-                          color: isDark ? Colors.white : Colors.black,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 14),
-                        Text(
-                          strings.languageApp,
-                          style: TextStyle(
-                            color: isDark ? Colors.white : AppColors.black,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.translate_rounded,
+                      color: isDark ? Colors.white : Colors.black,
+                      size: 24,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        // Indonesian Radio Pill
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(10),
-                              onTap: () {
-                                context.read<LanguageProvider>().setLanguage('Indonesian');
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isHighContrast
-                                        ? (isDark ? Colors.white : Colors.black)
-                                        : (isDark ? const Color(0xFF555555) : Colors.black),
-                                    width: isHighContrast ? 2.0 : 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      strings.indonesian,
-                                      style: TextStyle(
-                                        color: isDark ? Colors.white : Colors.black,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 18,
-                                      height: 18,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isDark ? Colors.white : Colors.black,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      child: selectedLanguage == 'Indonesian'
-                                          ? Center(
-                                              child: Container(
-                                                width: 9,
-                                                height: 9,
-                                                decoration: BoxDecoration(
-                                                  color: isDark ? Colors.white : Colors.black,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            strings.languageApp,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : AppColors.black,
+                              fontSize: 15,
+                              fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              // Indonesian Radio Pill
+                              Expanded(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () {
+                                      context.read<LanguageProvider>().setLanguage('Indonesian');
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isHighContrast
+                                              ? (isDark ? Colors.white : Colors.black)
+                                              : (isDark ? const Color(0xFF555555) : Colors.black),
+                                          width: isHighContrast ? 1.8 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            strings.indonesian,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDark ? Colors.white : Colors.black,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: selectedLanguage == 'Indonesian'
+                                                ? Center(
+                                                    child: Container(
+                                                      width: 8,
+                                                      height: 8,
+                                                      decoration: BoxDecoration(
+                                                        color: isDark ? Colors.white : Colors.black,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
 
-                        // English Radio Pill
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(10),
-                              onTap: () {
-                                context.read<LanguageProvider>().setLanguage('English');
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isHighContrast
-                                        ? (isDark ? Colors.white : Colors.black)
-                                        : (isDark ? const Color(0xFF555555) : Colors.black),
-                                    width: isHighContrast ? 2.0 : 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      strings.english,
-                                      style: TextStyle(
-                                        color: isDark ? Colors.white : Colors.black,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
+                              // English Radio Pill
+                              Expanded(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () {
+                                      context.read<LanguageProvider>().setLanguage('English');
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
                                       ),
-                                    ),
-                                    Container(
-                                      width: 18,
-                                      height: 18,
                                       decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
+                                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: isDark ? Colors.white : Colors.black,
-                                          width: 1.5,
+                                          color: isHighContrast
+                                              ? (isDark ? Colors.white : Colors.black)
+                                              : (isDark ? const Color(0xFF555555) : Colors.black),
+                                          width: isHighContrast ? 1.8 : 1.0,
                                         ),
                                       ),
-                                      child: selectedLanguage == 'English'
-                                          ? Center(
-                                              child: Container(
-                                                width: 9,
-                                                height: 9,
-                                                decoration: BoxDecoration(
-                                                  color: isDark ? Colors.white : Colors.black,
-                                                  shape: BoxShape.circle,
-                                                ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            strings.english,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDark ? Colors.white : Colors.black,
+                                                width: 1.5,
                                               ),
-                                            )
-                                          : null,
+                                            ),
+                                            child: selectedLanguage == 'English'
+                                                ? Center(
+                                                    child: Container(
+                                                      width: 8,
+                                                      height: 8,
+                                                      decoration: BoxDecoration(
+                                                        color: isDark ? Colors.white : Colors.black,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 16),
-              Divider(
-                color: isDark ? const Color(0xFF333333) : const Color(0xFF222222),
-                thickness: 0.8,
-              ),
-              const SizedBox(height: 16),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // 7. FAQ
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
+              // 5. FAQ
+              _buildListTile(
                 icon: Icon(
                   Icons.help_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -552,13 +436,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 28,
+                  size: 26,
                 ),
                 onTap: () {
                   Navigator.of(context).push(
@@ -569,12 +453,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
-              const SizedBox(height: 12),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // 8. About
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
+              // 6. About
+              _buildListTile(
                 icon: Icon(
                   Icons.info_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
@@ -585,13 +467,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 28,
+                  size: 26,
                 ),
                 onTap: () {
                   showAboutDialog(
@@ -603,37 +485,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
-              const SizedBox(height: 16),
-              Divider(
-                color: isDark ? const Color(0xFF333333) : const Color(0xFF222222),
-                thickness: 0.8,
-              ),
-              const SizedBox(height: 16),
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // 9. LOG OUT BUTTON
-              _buildCard(
-                isDark: isDark,
-                isHighContrast: isHighContrast,
-                isDestructive: true,
-                icon: const Icon(
-                  Icons.logout_rounded,
-                  color: Color(0xFFEF4444),
-                  size: 24,
-                ),
-                child: Text(
-                  strings.logOut,
-                  style: const TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+              const SizedBox(height: 18),
+
+              // 7. LOGOUT ROW with soft pink container (matching new UI setting.png)
+              Material(
+                color: isDark ? const Color(0xFF2A1517) : const Color(0xFFFFF1F2),
+                child: InkWell(
+                  onTap: () => _showLogoutDialog(context, strings, isDark),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          strings.logOut,
+                          style: const TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFFEF4444),
-                  size: 28,
-                ),
-                onTap: () => _showLogoutDialog(context, strings, isDark),
               ),
 
               const SizedBox(height: 36),

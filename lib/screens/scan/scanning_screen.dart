@@ -203,28 +203,28 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // Top Action Bar: Flash (Left) | History & Menu (Right)
+          // Top Action Bar: Flash (Left) | History & Menu (Right) - Clean White Buttons (matching Frame 4533979 / Image 4)
           Positioned(
-            top: topPadding + 14,
-            left: 20,
-            right: 20,
+            top: topPadding + 10,
+            left: 16,
+            right: 16,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Flash Toggle Button
+                // Flash Toggle Button (Clean White Circle 48x48)
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      width: 1.2,
+                      color: const Color(0xFFD0D7DE),
+                      width: 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -233,7 +233,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(24),
                       onTap: () {
                         setState(() {
                           _isFlashOn = !_isFlashOn;
@@ -244,31 +244,31 @@ class _ScanningScreenState extends State<ScanningScreen> {
                           _isFlashOn
                               ? Icons.flash_on_rounded
                               : Icons.flash_off_rounded,
-                          color: _isFlashOn ? const Color(0xFFFBBF24) : Colors.white,
-                          size: 24,
+                          color: _isFlashOn ? const Color(0xFFE58E1B) : Colors.black,
+                          size: 26,
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                // Right Actions: History & PopupMenu
+                // Right Actions: History & PopupMenu (Clean White Circles 48x48)
                 Row(
                   children: [
-                    // History Button (Clock Icon from new UI)
+                    // History Button (Clock Icon)
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                        color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1.2,
+                          color: const Color(0xFFD0D7DE),
+                          width: 1.0,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
+                            color: Colors.black.withValues(alpha: 0.18),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -277,34 +277,34 @@ class _ScanningScreenState extends State<ScanningScreen> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(24),
                           onTap: _onHistoryPressed,
                           child: const Center(
                             child: Icon(
                               Icons.history_rounded,
-                              color: Colors.white,
-                              size: 24,
+                              color: Colors.black,
+                              size: 26,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
 
                     // Three Dots Overflow Menu (Settings, Feedback, FAQ)
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                        color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1.2,
+                          color: const Color(0xFFD0D7DE),
+                          width: 1.0,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
+                            color: Colors.black.withValues(alpha: 0.18),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -324,8 +324,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
                           child: PopupMenuButton<String>(
                             icon: const Icon(
                               Icons.more_vert_rounded,
-                              color: Colors.white,
-                              size: 24,
+                              color: Colors.black,
+                              size: 26,
                             ),
                             padding: EdgeInsets.zero,
                             onSelected: (value) {

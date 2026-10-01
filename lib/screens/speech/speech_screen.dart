@@ -779,35 +779,27 @@ class _SpeechScreenState extends State<SpeechScreen> {
             ),
           ],
 
-          // TOP ACTION BAR: Back (Left) | Aa & Three Dots (Right)
+          // TOP ACTION BAR: Back (Left) | Aa & Three Dots (Right) - Clean White Buttons (matching Frame 4533979 / Image 4)
           Positioned(
             top: topPadding + 10,
             left: 16,
             right: 16,
             child: Row(
               children: [
-                // Back Button (Rounded circle)
+                // Back Button (Clean White Circle 48x48)
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: _isTextView
-                        ? (isDark
-                            ? const Color(0xFF2A2A2A)
-                            : const Color(0xFFEAECEF))
-                        : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _isTextView
-                          ? (isDark
-                              ? const Color(0xFF444444)
-                              : const Color(0xFFD0D7DE))
-                          : Colors.white.withValues(alpha: 0.3),
+                      color: const Color(0xFFD0D7DE),
                       width: 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -816,15 +808,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(24),
                       onTap: () => Navigator.of(context).pop(),
-                      child: Center(
+                      child: const Center(
                         child: Icon(
                           Icons.arrow_back_rounded,
-                          color: _isTextView
-                              ? (isDark ? Colors.white : Colors.black)
-                              : Colors.white,
-                          size: 24,
+                          color: Colors.black,
+                          size: 26,
                         ),
                       ),
                     ),
@@ -833,24 +823,20 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
                 const Spacer(),
 
-                // "Aa" Appearance Button (opens bottom sheet from Frame 4533980.png)
+                // "Aa" Appearance Button (Clean White Circle 48x48)
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: _isTextView
-                        ? (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEAECEF))
-                        : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _isTextView
-                          ? (isDark ? const Color(0xFF444444) : const Color(0xFFD0D7DE))
-                          : Colors.white.withValues(alpha: 0.35),
-                      width: 1.2,
+                      color: const Color(0xFFD0D7DE),
+                      width: 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -859,16 +845,14 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(24),
                       onTap: () => _showAppearanceBottomSheet(context, themeProvider, strings, isDark),
-                      child: Center(
+                      child: const Center(
                         child: Text(
                           'Aa',
                           style: TextStyle(
-                            color: _isTextView
-                                ? (isDark ? Colors.white : Colors.black)
-                                : Colors.white,
-                            fontSize: 18,
+                            color: Colors.black,
+                            fontSize: 19,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -877,26 +861,22 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   ),
                 ),
 
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
 
-                // Three Dots Overflow Menu (Settings, Feedback, FAQ)
+                // Three Dots Overflow Menu (Clean White Circle 48x48)
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: _isTextView
-                        ? (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEAECEF))
-                        : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _isTextView
-                          ? (isDark ? const Color(0xFF444444) : const Color(0xFFD0D7DE))
-                          : Colors.white.withValues(alpha: 0.35),
-                      width: 1.2,
+                      color: const Color(0xFFD0D7DE),
+                      width: 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -914,12 +894,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
                         ),
                       ),
                       child: PopupMenuButton<String>(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.more_vert_rounded,
-                          color: _isTextView
-                              ? (isDark ? Colors.white : Colors.black)
-                              : Colors.white,
-                          size: 24,
+                          color: Colors.black,
+                          size: 26,
                         ),
                         padding: EdgeInsets.zero,
                         onSelected: (value) {

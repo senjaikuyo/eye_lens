@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
+import '../settings/faq_screen.dart';
 import '../settings/settings_screen.dart';
 
 class SpeechScreen extends StatefulWidget {
@@ -67,6 +68,374 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _speed = 1.0;
       }
     });
+  }
+
+  void _showFeedbackDialog(AppStrings strings, bool isDark) {
+    final textController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          strings.feedbackTitle,
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.black,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: TextField(
+          controller: textController,
+          maxLines: 4,
+          cursorColor: isDark ? Colors.white : Colors.black,
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.black,
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            hintText: strings.feedbackHint,
+            hintStyle: TextStyle(
+              color: isDark ? const Color(0xFF777777) : const Color(0xFFAAAAAA),
+              fontSize: 13,
+            ),
+            filled: true,
+            fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF2F4F7),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              strings.cancel,
+              style: TextStyle(
+                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? Colors.white : AppColors.black,
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(strings.feedbackSent),
+                  backgroundColor: AppColors.black,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Text(strings.send, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAppearanceBottomSheet(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    AppStrings strings,
+    bool isDark,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final currentIsDark = themeProvider.isDark(context);
+            final currentHighContrast = themeProvider.isHighContrast;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: currentIsDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header: Title & Close Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        strings.appearance,
+                        style: TextStyle(
+                          color: currentIsDark ? Colors.white : AppColors.black,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(bottomSheetContext).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: currentIsDark ? Colors.white : AppColors.black,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // 1. Theme Row
+                  _buildAppearanceRow(
+                    icon: Icon(
+                      currentIsDark ? Icons.nightlight_round_outlined : Icons.wb_sunny_outlined,
+                      color: currentIsDark ? Colors.white : Colors.black,
+                      size: 24,
+                    ),
+                    label: strings.theme,
+                    currentIsDark: currentIsDark,
+                    trailing: PopupMenuButton<ThemeMode>(
+                      initialValue: themeProvider.themeMode,
+                      onSelected: (mode) {
+                        themeProvider.setThemeMode(mode);
+                        setSheetState(() {});
+                      },
+                      color: currentIsDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(value: ThemeMode.light, child: Text(strings.themeLight)),
+                        PopupMenuItem(value: ThemeMode.dark, child: Text(strings.themeDark)),
+                        PopupMenuItem(value: ThemeMode.system, child: Text(strings.themeSystem)),
+                      ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            themeProvider.themeMode == ThemeMode.dark
+                                ? strings.themeDark
+                                : themeProvider.themeMode == ThemeMode.light
+                                    ? strings.themeLight
+                                    : strings.themeSystem,
+                            style: TextStyle(
+                              color: currentIsDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.unfold_more_rounded,
+                            color: currentIsDark ? const Color(0xFF888888) : const Color(0xFF8E9BAE),
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Divider(height: 24, thickness: 0.8),
+
+                  // 2. Cursor Color Row
+                  _buildAppearanceRow(
+                    icon: Icon(
+                      Icons.navigation_outlined,
+                      color: currentIsDark ? Colors.white : Colors.black,
+                      size: 24,
+                    ),
+                    label: strings.cursorColor,
+                    currentIsDark: currentIsDark,
+                    trailing: PopupMenuButton<Color>(
+                      initialValue: themeProvider.highlightColor,
+                      onSelected: (color) {
+                        themeProvider.setHighlightColor(color);
+                        if (!themeProvider.cursorColor) {
+                          themeProvider.toggleCursorColor(true);
+                        }
+                        setSheetState(() {});
+                      },
+                      color: currentIsDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => ThemeProvider.highlightColors.map((color) {
+                        return PopupMenuItem(
+                          value: color,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.black, width: 1),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                color == ThemeProvider.highlightColors[0]
+                                    ? 'Orange (Default)'
+                                    : color == ThemeProvider.highlightColors[1]
+                                        ? 'Blue'
+                                        : color == ThemeProvider.highlightColors[2]
+                                            ? 'Red'
+                                            : color == ThemeProvider.highlightColors[3]
+                                                ? 'Green'
+                                                : 'Purple',
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: themeProvider.highlightColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            themeProvider.cursorColor ? 'Active' : 'Default',
+                            style: TextStyle(
+                              color: currentIsDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.unfold_more_rounded,
+                            color: currentIsDark ? const Color(0xFF888888) : const Color(0xFF8E9BAE),
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Divider(height: 24, thickness: 0.8),
+
+                  // 3. High Contrast Row
+                  _buildAppearanceRow(
+                    icon: Icon(
+                      Icons.contrast_rounded,
+                      color: currentIsDark ? Colors.white : Colors.black,
+                      size: 24,
+                    ),
+                    label: strings.highContrast,
+                    currentIsDark: currentIsDark,
+                    trailing: GestureDetector(
+                      onTap: () {
+                        themeProvider.toggleHighContrast(!currentHighContrast);
+                        setSheetState(() {});
+                      },
+                      child: Text(
+                        currentHighContrast ? 'On' : 'Off',
+                        style: TextStyle(
+                          color: currentHighContrast
+                              ? (currentIsDark ? Colors.white : Colors.black)
+                              : const Color(0xFF888888),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const Divider(height: 24, thickness: 0.8),
+
+                  // 4. Text Size Row
+                  _buildAppearanceRow(
+                    icon: Icon(
+                      Icons.format_size_rounded,
+                      color: currentIsDark ? Colors.white : Colors.black,
+                      size: 24,
+                    ),
+                    label: strings.textSize,
+                    currentIsDark: currentIsDark,
+                    trailing: PopupMenuButton<double>(
+                      initialValue: _fontSize,
+                      onSelected: (size) {
+                        setState(() {
+                          _fontSize = size;
+                        });
+                        setSheetState(() {});
+                      },
+                      color: currentIsDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(value: 20.0, child: Text(strings.sizeSmall)),
+                        PopupMenuItem(value: 32.0, child: Text(strings.sizeMedium)),
+                        PopupMenuItem(value: 42.0, child: Text(strings.sizeLarge)),
+                      ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _fontSize <= 24
+                                ? strings.sizeSmall
+                                : _fontSize <= 36
+                                    ? strings.sizeMedium
+                                    : strings.sizeLarge,
+                            style: TextStyle(
+                              color: currentIsDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.unfold_more_rounded,
+                            color: currentIsDark ? const Color(0xFF888888) : const Color(0xFF8E9BAE),
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAppearanceRow({
+    required Widget icon,
+    required String label,
+    required Widget trailing,
+    required bool currentIsDark,
+  }) {
+    return Row(
+      children: [
+        icon,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: currentIsDark ? Colors.white : AppColors.black,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        trailing,
+      ],
+    );
   }
 
   void _showLanguageBottomSheet() {
@@ -184,9 +553,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
               Container(
                 width: 32,
                 height: 32,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(shape: BoxShape.circle),
                 child: ClipOval(
                   child: Image.asset(
                     flagAsset,
@@ -272,7 +639,6 @@ class _SpeechScreenState extends State<SpeechScreen> {
       );
     }
 
-    // Active line tracked by playback progress (0.0 to 1.0)
     final activeIndex =
         (_progress * lines.length).clamp(0, lines.length - 1).toInt();
 
@@ -337,6 +703,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDark(context);
+    final strings = AppStrings.of(context);
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final size = MediaQuery.of(context).size;
@@ -412,14 +779,14 @@ class _SpeechScreenState extends State<SpeechScreen> {
             ),
           ],
 
-          // TOP ACTION BAR
+          // TOP ACTION BAR: Back (Left) | Aa & Three Dots (Right)
           Positioned(
             top: topPadding + 10,
             left: 16,
             right: 16,
             child: Row(
               children: [
-                // Back Button (Solid rounded circle with clear visibility)
+                // Back Button (Rounded circle)
                 Container(
                   width: 44,
                   height: 44,
@@ -466,237 +833,193 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
                 const Spacer(),
 
-                // Mode Specific Top Actions
-                if (!_isTextView) ...[
-                  // Switch to Text View Button ('T') with visible button container
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                // "Aa" Appearance Button (opens bottom sheet from Frame 4533980.png)
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _isTextView
+                        ? (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEAECEF))
+                        : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isTextView
+                          ? (isDark ? const Color(0xFF444444) : const Color(0xFFD0D7DE))
+                          : Colors.white.withValues(alpha: 0.35),
+                      width: 1.2,
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () {
-                          setState(() {
-                            _isTextView = true;
-                          });
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () => _showAppearanceBottomSheet(context, themeProvider, strings, isDark),
+                      child: Center(
+                        child: Text(
+                          'Aa',
+                          style: TextStyle(
+                            color: _isTextView
+                                ? (isDark ? Colors.white : Colors.black)
+                                : Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                // Three Dots Overflow Menu (Settings, Feedback, FAQ)
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _isTextView
+                        ? (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEAECEF))
+                        : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isTextView
+                          ? (isDark ? const Color(0xFF444444) : const Color(0xFFD0D7DE))
+                          : Colors.white.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        popupMenuTheme: PopupMenuThemeData(
+                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                      child: PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          color: _isTextView
+                              ? (isDark ? Colors.white : Colors.black)
+                              : Colors.white,
+                          size: 24,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onSelected: (value) {
+                          if (value == 'settings') {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                            );
+                          } else if (value == 'feedback') {
+                            _showFeedbackDialog(strings, isDark);
+                          } else if (value == 'faq') {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const FaqScreen()),
+                            );
+                          }
                         },
-                        child: const Center(
-                          child: Text(
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'settings',
+                            child: Text(
+                              strings.settings,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : AppColors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'feedback',
+                            child: Text(
+                              strings.feedback,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : AppColors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'faq',
+                            child: Text(
+                              strings.faq,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : AppColors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // FLOATING MODE TOGGLE BUTTON (Right Bottom, above player bar - matching UI Speech.png)
+          Positioned(
+            right: 20,
+            bottom: bottomPadding + 110,
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(27),
+                  onTap: () {
+                    setState(() {
+                      _isTextView = !_isTextView;
+                    });
+                  },
+                  child: Center(
+                    child: _isTextView
+                        ? const Icon(
+                            Icons.image_outlined,
+                            color: Colors.black,
+                            size: 28,
+                          )
+                        : const Text(
                             'T',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
+                              color: Colors.black,
+                              fontSize: 26,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ),
-                      ),
-                    ),
                   ),
-                  const SizedBox(width: 10),
-
-                  // Settings Button with visible button container
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsScreen(),
-                            ),
-                          );
-                        },
-                        child: const Center(
-                          child: Icon(
-                            Icons.settings_outlined,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  // Font Size Controls in Text View (-, +, Badge, and Photo icon)
-                  IconButton(
-                    onPressed: () {
-                      if (_fontSize > 12) {
-                        setState(() {
-                          _fontSize -= 2;
-                        });
-                      }
-                    },
-                    icon: Icon(
-                      Icons.remove,
-                      color: isDark ? Colors.white : Colors.black,
-                      size: 26,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      if (_fontSize < 48) {
-                        setState(() {
-                          _fontSize += 2;
-                        });
-                      }
-                    },
-                    icon: Icon(
-                      Icons.add,
-                      color: isDark ? Colors.white : Colors.black,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Font Size Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isDark ? Colors.white : Colors.black,
-                        width: 1.2,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _fontSize.toInt().toString(),
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Return to Photo View Button with visible button container
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF2A2A2A)
-                          : const Color(0xFFEAECEF),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF444444)
-                            : const Color(0xFFD0D7DE),
-                        width: 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () {
-                          setState(() {
-                            _isTextView = false;
-                          });
-                        },
-                        child: Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            color: isDark ? Colors.white : Colors.black,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Settings Button in Text View
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF2A2A2A)
-                          : const Color(0xFFEAECEF),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF444444)
-                            : const Color(0xFFD0D7DE),
-                        width: 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsScreen(),
-                            ),
-                          );
-                        },
-                        child: Center(
-                          child: Icon(
-                            Icons.settings_outlined,
-                            color: isDark ? Colors.white : Colors.black,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
 
@@ -759,7 +1082,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Controls Row: Flag | Rewind | Play/Pause | Forward | Speed
+                  // Controls Row: Flag | 10s Rewind | Play/Pause | 10s Forward | Speed
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -795,7 +1118,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                         ),
                       ),
 
-                      // Rewind Button
+                      // 10s Rewind Button (matching new UI)
                       GestureDetector(
                         onTap: () {
                           setState(() {
@@ -818,9 +1141,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
                           ),
                           child: const Center(
                             child: Icon(
-                              Icons.fast_rewind_rounded,
+                              Icons.replay_10_rounded,
                               color: Colors.black,
-                              size: 26,
+                              size: 28,
                             ),
                           ),
                         ),
@@ -855,7 +1178,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                         ),
                       ),
 
-                      // Fast Forward Button
+                      // 10s Fast Forward Button (matching new UI)
                       GestureDetector(
                         onTap: () {
                           setState(() {
@@ -878,9 +1201,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
                           ),
                           child: const Center(
                             child: Icon(
-                              Icons.fast_forward_rounded,
+                              Icons.forward_10_rounded,
                               color: Colors.black,
-                              size: 26,
+                              size: 28,
                             ),
                           ),
                         ),

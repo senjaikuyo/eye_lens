@@ -61,6 +61,22 @@ class AppStrings {
   String get gallery => isIndonesian ? 'Galeri' : 'Gallery';
   String get galleryPickMsg =>
       isIndonesian ? 'Pilih gambar dari Galeri' : 'Pick image from Gallery';
+  String get imageBlurryAlert => isIndonesian
+      ? 'Gambar kurang jelas / buram. Disarankan tahan kamera lebih stabil.'
+      : 'Image is blurry or unclear. Please hold camera steady.';
+  String get feedback => isIndonesian ? 'Masukan' : 'Feedback';
+  String get feedbackTitle => isIndonesian ? 'Kirim Masukan' : 'Send Feedback';
+  String get feedbackHint => isIndonesian
+      ? 'Tulis saran atau kendala Anda di sini...'
+      : 'Write your suggestions or issues here...';
+  String get send => isIndonesian ? 'Kirim' : 'Send';
+  String get feedbackSent => isIndonesian
+      ? 'Terima kasih atas masukan Anda!'
+      : 'Thank you for your feedback!';
+  String get textSize => isIndonesian ? 'Ukuran Teks' : 'Text Size';
+  String get sizeSmall => isIndonesian ? 'Kecil' : 'Small';
+  String get sizeMedium => isIndonesian ? 'Sedang' : 'Medium';
+  String get sizeLarge => isIndonesian ? 'Besar' : 'Large';
 
   // --- Speech & Text View ---
   String get speechLanguage =>

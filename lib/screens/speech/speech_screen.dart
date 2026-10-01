@@ -975,13 +975,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
             ),
           ),
 
-          // FLOATING MODE TOGGLE BUTTON (Right Bottom, above player bar - matching UI Speech.png)
+          // FLOATING MODE TOGGLE BUTTON (Right Bottom, cleanly above player bar - matching UI Speech.png)
           Positioned(
             right: 20,
-            bottom: bottomPadding + 110,
+            bottom: bottomPadding + 148,
             child: Container(
-              width: 54,
-              height: 54,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
@@ -996,7 +996,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(27),
+                  borderRadius: BorderRadius.circular(28),
                   onTap: () {
                     setState(() {
                       _isTextView = !_isTextView;

@@ -167,27 +167,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);
 
-    final cardBorderColor = isHighContrast
+    final dividerColor = isHighContrast
         ? (isDark ? Colors.white : Colors.black)
-        : (isDark ? const Color(0xFF333333) : const Color(0xFFD9E0E8));
-    final cardBorderWidth = isHighContrast ? 2.0 : 1.0;
+        : (isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEDEDED));
+    final dividerThickness = isHighContrast ? 1.5 : 0.8;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.black : AppColors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
 
-              // Header: Back Button + "History" Title + Clear All Action
-              Row(
+            // Header: Back Button + "History" Title + Clear All Action
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: isDark
                           ? const Color(0xFF2A2A2A)
@@ -200,7 +200,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       icon: Icon(
                         Icons.arrow_back_rounded,
                         color: isDark ? Colors.white : Colors.black,
-                        size: 22,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -230,126 +230,117 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 28),
+            const SizedBox(height: 20),
+            Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-              // History list or Empty State
-              Expanded(
-                child: _historyList.isEmpty
-                    ? _buildEmptyState(strings, isDark)
-                    : ListView.separated(
-                        itemCount: _historyList.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 14),
-                        itemBuilder: (context, index) {
-                          final item = _historyList[index];
-                          return Dismissible(
-                            key: ValueKey(item.id),
-                            direction: DismissDirection.endToStart,
-                            confirmDismiss: (direction) async {
-                              _confirmDeleteSingle(index, strings, isDark);
-                              return false;
-                            },
-                            background: Container(
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
+            // History Flat List or Empty State (No outer card boxes, clean flat dividers matching UI)
+            Expanded(
+              child: _historyList.isEmpty
+                  ? _buildEmptyState(strings, isDark)
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: _historyList.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: dividerColor,
+                        thickness: dividerThickness,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = _historyList[index];
+                        return Dismissible(
+                          key: ValueKey(item.id),
+                          direction: DismissDirection.endToStart,
+                          confirmDismiss: (direction) async {
+                            _confirmDeleteSingle(index, strings, isDark);
+                            return false;
+                          },
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: const Color(0xFFEF4444),
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Colors.white,
+                              size: 28,
                             ),
-                            child: Material(
-                              color: isDark
-                                  ? const Color(0xFF1E1E1E)
-                                  : const Color(0xFFF4F6F9),
-                              borderRadius: BorderRadius.circular(14),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          SpeechScreen(text: item.fullText),
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        SpeechScreen(text: item.fullText),
                                   ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: cardBorderColor,
-                                      width: cardBorderWidth,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item.title,
-                                              style: TextStyle(
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : AppColors.black,
-                                                fontSize: 15,
-                                                fontWeight: isHighContrast
-                                                    ? FontWeight.w800
-                                                    : FontWeight.w600,
-                                              ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.title,
+                                            style: TextStyle(
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : AppColors.black,
+                                              fontSize: 15,
+                                              fontWeight: isHighContrast
+                                                  ? FontWeight.w800
+                                                  : FontWeight.w600,
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              item.date,
-                                              style: TextStyle(
-                                                color: isDark
-                                                    ? const Color(0xFF999999)
-                                                    : const Color(0xFF718096),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w400,
-                                              ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            item.date,
+                                            style: TextStyle(
+                                              color: isDark
+                                                  ? const Color(0xFF999999)
+                                                  : const Color(0xFF718096),
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w400,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline_rounded,
-                                          color: Color(0xFFEF4444),
-                                          size: 22,
-                                        ),
-                                        onPressed: () => _confirmDeleteSingle(
-                                            index, strings, isDark),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: Color(0xFFEF4444),
+                                        size: 22,
                                       ),
-                                      Icon(
-                                        Icons.chevron_right_rounded,
-                                        color: isDark
-                                            ? const Color(0xFF777777)
-                                            : const Color(0xFFA0AEC0),
-                                        size: 28,
-                                      ),
-                                    ],
-                                  ),
+                                      onPressed: () => _confirmDeleteSingle(
+                                          index, strings, isDark),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: isDark
+                                          ? const Color(0xFF777777)
+                                          : const Color(0xFFA0AEC0),
+                                      size: 26,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

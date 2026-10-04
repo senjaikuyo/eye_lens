@@ -1,0 +1,621 @@
+<mxfile host="app.diagrams.net" modified="2026-10-04T00:00:00.000Z" agent="Mozilla/5.0" version="24.0.0">
+  
+  
+  <diagram name="SD-F001-Daftar-Akun" id="sd_f001_daftar_akun">
+    
+    
+    <mxGraphModel dx="1100" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      
+      
+      <root>
+        
+        
+        <mxCell id="0"/>
+        
+        
+        <mxCell id="1" parent="0"/>
+        
+        
+        <mxCell id="frame_main" value="sd Daftar Akun (UC-001)" style="shape=umlFrame;whiteSpace=wrap;html=1;width=180;height=30;boundedLbl=1;verticalAlign=top;align=left;spacingLeft=10;fillColor=none;strokeColor=#000000;strokeWidth=1.5;fontSize=13;fontStyle=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="30" y="20" width="790" height="920" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="actor_user" value="Pengguna" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeColor=#000000;strokeWidth=1.5;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="75" y="55" width="30" height="55" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="line_user" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry x="90" y="140" width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="90" y="140"/>
+              
+              
+              <mxPoint x="90" y="920"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="box_view" value="registerForm:RegisterView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="210" y="70" width="160" height="40" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="line_view" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry x="290" y="110" width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="290" y="110"/>
+              
+              
+              <mxPoint x="290" y="920"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="box_ctrl" value="ctrlUsers:UsersController" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="420" y="70" width="160" height="40" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="line_ctrl" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry x="500" y="110" width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="500" y="110"/>
+              
+              
+              <mxPoint x="500" y="920"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="box_db" value="db:DataBase" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1.5;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="640" y="70" width="120" height="40" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="line_db" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry x="700" y="110" width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="700" y="110"/>
+              
+              
+              <mxPoint x="700" y="920"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="act_user_1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="85" y="150" width="10" height="740" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="act_view_1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="285" y="160" width="10" height="50" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="act_view_2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="285" y="240" width="10" height="650" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="act_ctrl_1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="495" y="280" width="10" height="590" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="act_db_1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="695" y="430" width="10" height="60" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_1" value="directRegister()" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="95" y="160"/>
+              
+              
+              <mxPoint x="285" y="160"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_2" value="Display register form" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="285" y="200"/>
+              
+              
+              <mxPoint x="95" y="200"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_3" value="submitData(email, password, confirmPassword)" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="95" y="240"/>
+              
+              
+              <mxPoint x="285" y="240"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_4" value="register(email, password, confirmPassword)" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="295" y="280"/>
+              
+              
+              <mxPoint x="495" y="280"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_5" value="validateFormatData()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;exitX=1;exitY=0.15;entryX=1;entryY=0.22;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="505" y="310"/>
+              
+              
+              <mxPoint x="545" y="310"/>
+              
+              
+              <mxPoint x="545" y="340"/>
+              
+              
+              <mxPoint x="505" y="340"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="alt_box" value="alt&#10;[Data Valid]" style="shape=umlFrame;whiteSpace=wrap;html=1;width=100;height=30;boundedLbl=1;verticalAlign=top;align=left;spacingLeft=8;fillColor=none;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="50" y="370" width="740" height="530" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_6" value="storeUser(email, hashPassword, role, status)" style="html=1;verticalAlign=bottom;endArrow=block;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;fontStyle=1;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="505" y="430"/>
+              
+              
+              <mxPoint x="695" y="430"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_7" value="returnSuccess" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="695" y="480"/>
+              
+              
+              <mxPoint x="505" y="480"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_8" value="registerSuccess(message)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="495" y="510"/>
+              
+              
+              <mxPoint x="295" y="510"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_9" value="directLoginPage()" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="285" y="530"/>
+              
+              
+              <mxPoint x="95" y="530"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="div_alt_1" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="50" y="560"/>
+              
+              
+              <mxPoint x="790" y="560"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="lbl_alt_1" value="[Format Email Salah / Kolom Kosong]" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="55" y="565" width="230" height="20" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_10" value="showError(&quot;Format email tidak valid / kolom kosong&quot;)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="495" y="620"/>
+              
+              
+              <mxPoint x="295" y="620"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_11" value="displayErrorMessage()" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="285" y="650"/>
+              
+              
+              <mxPoint x="95" y="650"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="div_alt_2" value="" style="endArrow=none;dashed=1;html=1;rounded=0;strokeColor=#000000;strokeWidth=1.2;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="50" y="710"/>
+              
+              
+              <mxPoint x="790" y="710"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="lbl_alt_2" value="[Password dan Confirm Password Tidak Cocok]" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          
+          
+          <mxGeometry x="55" y="715" width="260" height="20" as="geometry"/>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_12" value="showError(&quot;Confirm password tidak cocok&quot;)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="495" y="780"/>
+              
+              
+              <mxPoint x="295" y="780"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+        
+        <mxCell id="msg_13" value="displayMismatchMessage()" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;rounded=0;strokeColor=#000000;strokeWidth=1.5;fontSize=11;" parent="1" edge="1">
+          
+          
+          <mxGeometry width="50" height="50" as="geometry">
+            
+            
+            <Array as_="points">
+              
+              
+              <mxPoint x="285" y="810"/>
+              
+              
+              <mxPoint x="95" y="810"/>
+              
+            
+            </Array>
+            
+          
+          </mxGeometry>
+          
+        
+        </mxCell>
+        
+      
+      </root>
+      
+    
+    </mxGraphModel>
+    
+  
+  </diagram>
+  
+
+  <diagram name="Mermaid-Code" id="mermaid_code_page">
+    <mxGraphModel dx="1100" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="mermaid_text_box" parent="1" vertex="1" value="sequenceDiagram&#10;    autonumber&#10;    actor Pengguna as Pengguna&#10;    participant View as registerForm:RegisterView&#10;    participant Ctrl as ctrlUsers:UsersController&#10;    participant DB as db:DataBase&#10;&#10;    %% Alur Utama (Navigasi)&#10;    Pengguna-&gt;&gt;View: directRegister()&#10;    activate View&#10;    View--&gt;&gt;Pengguna: displayRegisterForm()&#10;    deactivate View&#10;&#10;    %% Alur Pengisian &amp; Submit&#10;    Pengguna-&gt;&gt;View: submitData(email, password, confirmPassword)&#10;    activate View&#10;    View-&gt;&gt;Ctrl: register(email, password, confirmPassword)&#10;    activate Ctrl&#10;&#10;    %% Validasi di Controller&#10;    Ctrl-&gt;&gt;Ctrl: validateFormatData()&#10;&#10;    %% Percabangan (Alt Fragment)&#10;    alt Data Valid (Skenario Utama)&#10;        Ctrl-&gt;&gt;DB: storeUser(email, hashPassword, role=&quot;user&quot;, status=true)&#10;        activate DB&#10;        DB--&gt;&gt;Ctrl: returnSuccess&#10;        deactivate DB&#10;        Ctrl--&gt;&gt;View: registerSuccess(message)&#10;        View--&gt;&gt;Pengguna: directLoginPage()&#10;    else Format Email Salah / Kolom Kosong&#10;        Ctrl--&gt;&gt;View: showError(&quot;Format email tidak valid / kolom kosong&quot;)&#10;        View--&gt;&gt;Pengguna: displayErrorMessage()&#10;    else Password dan Confirm Password Tidak Cocok&#10;        Ctrl--&gt;&gt;View: showError(&quot;Confirm password tidak cocok&quot;)&#10;        View--&gt;&gt;Pengguna: displayMismatchMessage()&#10;    end&#10;    deactivate Ctrl&#10;    deactivate View" style="text;whiteSpace=pre;html=1;fontSize=12;fontFamily=Courier New;fillColor=#F8FAFC;strokeColor=#CBD5E1;rounded=1;spacing=15;">
+          <mxGeometry x="40" y="40" width="760" height="680" as_="geometry"/>
+        </mxCell>
+        <UserObject id="mermaid_data_obj" label="" mermaidData="{&quot;data&quot;: &quot;sequenceDiagram\n    autonumber\n    actor Pengguna as Pengguna\n    participant View as registerForm:RegisterView\n    participant Ctrl as ctrlUsers:UsersController\n    participant DB as db:DataBase\n\n    %% Alur Utama (Navigasi)\n    Pengguna-&gt;&gt;View: directRegister()\n    activate View\n    View--&gt;&gt;Pengguna: displayRegisterForm()\n    deactivate View\n\n    %% Alur Pengisian &amp; Submit\n    Pengguna-&gt;&gt;View: submitData(email, password, confirmPassword)\n    activate View\n    View-&gt;&gt;Ctrl: register(email, password, confirmPassword)\n    activate Ctrl\n\n    %% Validasi di Controller\n    Ctrl-&gt;&gt;Ctrl: validateFormatData()\n\n    %% Percabangan (Alt Fragment)\n    alt Data Valid (Skenario Utama)\n        Ctrl-&gt;&gt;DB: storeUser(email, hashPassword, role=\&quot;user\&quot;, status=true)\n        activate DB\n        DB--&gt;&gt;Ctrl: returnSuccess\n        deactivate DB\n        Ctrl--&gt;&gt;View: registerSuccess(message)\n        View--&gt;&gt;Pengguna: directLoginPage()\n    else Format Email Salah / Kolom Kosong\n        Ctrl--&gt;&gt;View: showError(\&quot;Format email tidak valid / kolom kosong\&quot;)\n        View--&gt;&gt;Pengguna: displayErrorMessage()\n    else Password dan Confirm Password Tidak Cocok\n        Ctrl--&gt;&gt;View: showError(\&quot;Confirm password tidak cocok\&quot;)\n        View--&gt;&gt;Pengguna: displayMismatchMessage()\n    end\n    deactivate Ctrl\n    deactivate View&quot;, &quot;config&quot;: null}">
+          <mxCell id="mermaid_cell" parent="1" vertex="1" connectable="0" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;"/>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

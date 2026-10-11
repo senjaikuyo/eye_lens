@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Painter untuk garis siku-siku (sudut 90 derajat) tipis di 4 sudut jendela bidik kamera.
+/// Painter untuk siku-siku melengkung tipis di 4 sudut jendela bidik kamera
+/// Menghasilkan bingkai modern dengan sudut melengkung halus (seperti di referensi).
 class ScannerCornerPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
   final double cornerLength;
+  final double cornerRadius;
 
   const ScannerCornerPainter({
     this.color = Colors.white,
     this.strokeWidth = 2.0,
-    this.cornerLength = 32.0,
+    this.cornerLength = 36.0,
+    this.cornerRadius = 24.0,
   });
 
   @override
@@ -18,38 +21,43 @@ class ScannerCornerPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.square
-      ..strokeJoin = StrokeJoin.miter;
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     final w = size.width;
     final h = size.height;
+    final r = cornerRadius;
     final l = cornerLength;
 
-    // Top-Left Corner ┌
+    // Top-Left Corner (melengkung halus)
     final pathTL = Path()
       ..moveTo(0, l)
-      ..lineTo(0, 0)
+      ..lineTo(0, r)
+      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
       ..lineTo(l, 0);
     canvas.drawPath(pathTL, paint);
 
-    // Top-Right Corner ┐
+    // Top-Right Corner (melengkung halus)
     final pathTR = Path()
       ..moveTo(w - l, 0)
-      ..lineTo(w, 0)
+      ..lineTo(w - r, 0)
+      ..arcToPoint(Offset(w, r), radius: Radius.circular(r))
       ..lineTo(w, l);
     canvas.drawPath(pathTR, paint);
 
-    // Bottom-Left Corner └
+    // Bottom-Left Corner (melengkung halus)
     final pathBL = Path()
       ..moveTo(0, h - l)
-      ..lineTo(0, h)
+      ..lineTo(0, h - r)
+      ..arcToPoint(Offset(r, h), radius: Radius.circular(r))
       ..lineTo(l, h);
     canvas.drawPath(pathBL, paint);
 
-    // Bottom-Right Corner ┘
+    // Bottom-Right Corner (melengkung halus)
     final pathBR = Path()
       ..moveTo(w - l, h)
-      ..lineTo(w, h)
+      ..lineTo(w - r, h)
+      ..arcToPoint(Offset(w, h - r), radius: Radius.circular(r))
       ..lineTo(w, h - l);
     canvas.drawPath(pathBR, paint);
   }
@@ -58,5 +66,6 @@ class ScannerCornerPainter extends CustomPainter {
   bool shouldRepaint(covariant ScannerCornerPainter oldDelegate) =>
       color != oldDelegate.color ||
       strokeWidth != oldDelegate.strokeWidth ||
-      cornerLength != oldDelegate.cornerLength;
+      cornerLength != oldDelegate.cornerLength ||
+      cornerRadius != oldDelegate.cornerRadius;
 }

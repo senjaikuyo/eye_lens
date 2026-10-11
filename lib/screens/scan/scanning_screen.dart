@@ -220,7 +220,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
                   ),
                 ),
 
-                // Central Viewfinder Frame - Garis tipis 2.0 & Siku-Siku (Sudut 90 Derajat) di 4 sisi
+                // Central Viewfinder Frame - Garis tipis 2.0 & Siku-siku melengkung halus di 4 sudut
                 Center(
                   child: SizedBox(
                     width: size.width * 0.78,
@@ -231,7 +231,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
                             ? const Color(0xFFF59E0B)
                             : Colors.white.withValues(alpha: 0.85),
                         strokeWidth: 2.0,
-                        cornerLength: 32,
+                        cornerLength: 36,
+                        cornerRadius: 24,
                       ),
                     ),
                   ),
@@ -254,10 +255,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
             strings: strings,
           ),
 
-          // 3. Slider Zoom Vertikal di Kanan Tengah (ZoomRuler hingga 10x)
+          // 3. Slider Zoom Vertikal di Kanan Pas di Tengah (Sejajar dengan Kotak Siku-siku)
           Positioned(
             right: 0,
-            top: size.height * 0.30,
+            top: (size.height - 190) / 2,
             child: ZoomRuler(
               currentZoom: _currentZoom,
               minZoom: _minZoom,

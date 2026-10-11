@@ -1,18 +1,18 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Painter untuk siku-siku melengkung tipis di 4 sudut jendela bidik kamera
-/// Menghasilkan bingkai modern dengan sudut melengkung halus (seperti di referensi).
+/// Painter untuk 4 busur sudut melengkung halus (quarter-circle arcs)
+/// Persis seperti tampilan viewfinder focus frame / scanner reticle pada referensi:
+/// Tidak ada garis lurus berlebih, murni 4 busur 90 derajat di keempat sudut.
 class ScannerCornerPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
-  final double cornerLength;
-  final double cornerRadius;
+  final double arcRadius;
 
   const ScannerCornerPainter({
     this.color = Colors.white,
     this.strokeWidth = 2.0,
-    this.cornerLength = 36.0,
-    this.cornerRadius = 24.0,
+    this.arcRadius = 38.0,
   });
 
   @override
@@ -21,51 +21,52 @@ class ScannerCornerPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeCap = StrokeCap.round;
 
     final w = size.width;
     final h = size.height;
-    final r = cornerRadius;
-    final l = cornerLength;
+    final d = arcRadius * 2;
 
-    // Top-Left Corner (melengkung halus)
-    final pathTL = Path()
-      ..moveTo(0, l)
-      ..lineTo(0, r)
-      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
-      ..lineTo(l, 0);
-    canvas.drawPath(pathTL, paint);
+    // 1. Top-Left Arc (90 derajat busur sudut kiri atas)
+    canvas.drawArc(
+      Rect.fromLTWH(0, 0, d, d),
+      math.pi,
+      math.pi / 2,
+      false,
+      paint,
+    );
 
-    // Top-Right Corner (melengkung halus)
-    final pathTR = Path()
-      ..moveTo(w - l, 0)
-      ..lineTo(w - r, 0)
-      ..arcToPoint(Offset(w, r), radius: Radius.circular(r))
-      ..lineTo(w, l);
-    canvas.drawPath(pathTR, paint);
+    // 2. Top-Right Arc (90 derajat busur sudut kanan atas)
+    canvas.drawArc(
+      Rect.fromLTWH(w - d, 0, d, d),
+      -math.pi / 2,
+      math.pi / 2,
+      false,
+      paint,
+    );
 
-    // Bottom-Left Corner (melengkung halus)
-    final pathBL = Path()
-      ..moveTo(0, h - l)
-      ..lineTo(0, h - r)
-      ..arcToPoint(Offset(r, h), radius: Radius.circular(r))
-      ..lineTo(l, h);
-    canvas.drawPath(pathBL, paint);
+    // 3. Bottom-Right Arc (90 derajat busur sudut kanan bawah)
+    canvas.drawArc(
+      Rect.fromLTWH(w - d, h - d, d, d),
+      0,
+      math.pi / 2,
+      false,
+      paint,
+    );
 
-    // Bottom-Right Corner (melengkung halus)
-    final pathBR = Path()
-      ..moveTo(w - l, h)
-      ..lineTo(w - r, h)
-      ..arcToPoint(Offset(w, h - r), radius: Radius.circular(r))
-      ..lineTo(w, h - l);
-    canvas.drawPath(pathBR, paint);
+    // 4. Bottom-Left Arc (90 derajat busur sudut kiri bawah)
+    canvas.drawArc(
+      Rect.fromLTWH(0, h - d, d, d),
+      math.pi / 2,
+      math.pi / 2,
+      false,
+      paint,
+    );
   }
 
   @override
   bool shouldRepaint(covariant ScannerCornerPainter oldDelegate) =>
       color != oldDelegate.color ||
       strokeWidth != oldDelegate.strokeWidth ||
-      cornerLength != oldDelegate.cornerLength ||
-      cornerRadius != oldDelegate.cornerRadius;
+      arcRadius != oldDelegate.arcRadius;
 }

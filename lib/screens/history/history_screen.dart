@@ -4,6 +4,9 @@ import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
 import '../speech/speech_screen.dart';
+import 'widgets/history_delete_dialog.dart';
+import 'widgets/history_empty_state.dart';
+import 'widgets/history_tile.dart';
 
 class HistoryItemModel {
   final String id;
@@ -50,114 +53,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     ),
   ];
 
-  void _confirmDeleteSingle(int index, AppStrings strings, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          strings.deleteConfirmTitle,
-          style: TextStyle(
-            color: isDark ? Colors.white : AppColors.black,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          strings.deleteConfirmMessage,
-          style: TextStyle(
-            color: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              strings.cancel,
-              style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              setState(() {
-                _historyList.removeAt(index);
-              });
-            },
-            child: Text(
-              strings.delete,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _handleDeleteSingle(int index, AppStrings strings, bool isDark) async {
+    final confirmed = await HistoryDeleteDialog.showDeleteSingle(
+      context,
+      strings: strings,
+      isDark: isDark,
     );
+    if (confirmed == true && mounted) {
+      setState(() {
+        _historyList.removeAt(index);
+      });
+    }
   }
 
-  void _confirmClearAll(AppStrings strings, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          strings.clearAll,
-          style: TextStyle(
-            color: isDark ? Colors.white : AppColors.black,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          strings.clearAllConfirmMessage,
-          style: TextStyle(
-            color: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              strings.cancel,
-              style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              setState(() {
-                _historyList.clear();
-              });
-            },
-            child: Text(
-              strings.clearAll,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _handleClearAll(AppStrings strings, bool isDark) async {
+    final confirmed = await HistoryDeleteDialog.showClearAll(
+      context,
+      strings: strings,
+      isDark: isDark,
     );
+    if (confirmed == true && mounted) {
+      setState(() {
+        _historyList.clear();
+      });
+    }
   }
 
   @override
@@ -218,7 +137,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   if (_historyList.isNotEmpty)
                     TextButton(
-                      onPressed: () => _confirmClearAll(strings, isDark),
+                      onPressed: () => _handleClearAll(strings, isDark),
                       child: Text(
                         strings.clearAll,
                         style: const TextStyle(
@@ -235,10 +154,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(height: 20),
             Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
-            // History Flat List or Empty State (No outer card boxes, clean flat dividers matching UI)
+            // History Flat List or Empty State
             Expanded(
               child: _historyList.isEmpty
-                  ? _buildEmptyState(strings, isDark)
+                  ? HistoryEmptyState(strings: strings, isDark: isDark)
                   : ListView.separated(
                       padding: EdgeInsets.zero,
                       itemCount: _historyList.length,
@@ -249,145 +168,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final item = _historyList[index];
-                        return Dismissible(
-                          key: ValueKey(item.id),
-                          direction: DismissDirection.endToStart,
-                          confirmDismiss: (direction) async {
-                            _confirmDeleteSingle(index, strings, isDark);
-                            return false;
-                          },
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            color: const Color(0xFFEF4444),
-                            child: const Icon(
-                              Icons.delete_outline_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => SpeechScreen(
-                                      text: item.fullText,
-                                      hasImage: false,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item.title,
-                                            style: TextStyle(
-                                              color: isDark
-                                                  ? Colors.white
-                                                  : AppColors.black,
-                                              fontSize: 15,
-                                              fontWeight: isHighContrast
-                                                  ? FontWeight.w800
-                                                  : FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.date,
-                                            style: TextStyle(
-                                              color: isDark
-                                                  ? const Color(0xFF999999)
-                                                  : const Color(0xFF718096),
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: Color(0xFFEF4444),
-                                        size: 22,
-                                      ),
-                                      onPressed: () => _confirmDeleteSingle(
-                                          index, strings, isDark),
-                                    ),
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: isDark
-                                          ? const Color(0xFF777777)
-                                          : const Color(0xFFA0AEC0),
-                                      size: 26,
-                                    ),
-                                  ],
+                        return HistoryTile(
+                          item: item,
+                          isDark: isDark,
+                          isHighContrast: isHighContrast,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => SpeechScreen(
+                                  text: item.fullText,
+                                  hasImage: false,
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
+                          onDelete: () => _handleDeleteSingle(index, strings, isDark),
                         );
                       },
                     ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(AppStrings strings, bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF2F4F7),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.history_rounded,
-                color: isDark ? const Color(0xFF666666) : const Color(0xFFA0AEC0),
-                size: 46,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              strings.noHistoryTitle,
-              style: TextStyle(
-                color: isDark ? Colors.white : AppColors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              strings.noHistorySubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDark ? const Color(0xFF888888) : const Color(0xFF718096),
-                fontSize: 13.5,
-                height: 1.4,
-              ),
             ),
           ],
         ),

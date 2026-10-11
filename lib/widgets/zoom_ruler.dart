@@ -1,52 +1,49 @@
 import 'package:flutter/material.dart';
 
-class ZoomRuler extends StatefulWidget {
+class ZoomRuler extends StatelessWidget {
   final double currentZoom;
+  final double minZoom;
+  final double maxZoom;
   final ValueChanged<double>? onZoomChanged;
 
   const ZoomRuler({
     super.key,
-    this.currentZoom = 1.0,
+    required this.currentZoom,
+    this.minZoom = 1.0,
+    this.maxZoom = 10.0,
     this.onZoomChanged,
   });
 
   @override
-  State<ZoomRuler> createState() => _ZoomRulerState();
-}
-
-class _ZoomRulerState extends State<ZoomRuler> {
-  late double _zoom;
-
-  @override
-  void initState() {
-    super.initState();
-    _zoom = widget.currentZoom;
-  }
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onVerticalDragUpdate: (details) {
-        setState(() {
-          _zoom = (_zoom - details.delta.dy * 0.02).clamp(1.0, 5.0);
-        });
-        widget.onZoomChanged?.call(_zoom);
+        // Drag ke atas = zoom in, drag ke bawah = zoom out
+        final dy = details.delta.dy;
+        final sensitivity = (maxZoom - minZoom) / 180.0;
+        final newZoom = (currentZoom - dy * sensitivity).clamp(minZoom, maxZoom);
+        onZoomChanged?.call(newZoom);
       },
       child: Container(
-        width: 32,
-        height: 180,
+        width: 36,
+        height: 190,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.25),
+          color: Colors.black.withValues(alpha: 0.35),
           borderRadius: const BorderRadius.horizontal(
-            left: Radius.circular(10),
+            left: Radius.circular(16),
           ),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.25),
             width: 0.8,
           ),
         ),
         child: CustomPaint(
-          painter: _RulerPainter(zoom: _zoom),
+          painter: _RulerPainter(
+            zoom: currentZoom,
+            minZoom: minZoom,
+            maxZoom: maxZoom,
+          ),
         ),
       ),
     );
@@ -55,45 +52,62 @@ class _ZoomRulerState extends State<ZoomRuler> {
 
 class _RulerPainter extends CustomPainter {
   final double zoom;
+  final double minZoom;
+  final double maxZoom;
 
-  _RulerPainter({required this.zoom});
+  _RulerPainter({
+    required this.zoom,
+    required this.minZoom,
+    required this.maxZoom,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final tickPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..strokeWidth = 1.0;
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..strokeWidth = 1.0
+      ..strokeCap = StrokeCap.round;
+
+    final majorTickPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.9)
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
 
     final activePaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.0;
+      ..color = const Color(0xFFFACC15) // Kuning aksen
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
 
-    const totalTicks = 20;
+    const totalTicks = 19;
     final spacing = size.height / (totalTicks - 1);
 
     for (int i = 0; i < totalTicks; i++) {
       final y = i * spacing;
-      final isMajor = i % 5 == 0;
-      final tickLength = isMajor ? 18.0 : 10.0;
+      final isMajor = i % 3 == 0;
+      final tickLength = isMajor ? 18.0 : 9.0;
 
       canvas.drawLine(
         Offset(size.width - tickLength, y),
-        Offset(size.width, y),
-        tickPaint,
+        Offset(size.width - 2, y),
+        isMajor ? majorTickPaint : tickPaint,
       );
     }
 
-    // Active marker based on zoom (1.0 to 5.0)
-    final progress = (zoom - 1.0) / 4.0;
+    // Active marker garis kuning berdasarkan zoom (minZoom s.d maxZoom)
+    final range = maxZoom - minZoom;
+    final progress = range > 0 ? ((zoom - minZoom) / range).clamp(0.0, 1.0) : 0.0;
     final markerY = size.height - (progress * size.height);
+
     canvas.drawLine(
       Offset(4, markerY),
-      Offset(size.width, markerY),
+      Offset(size.width - 2, markerY),
       activePaint,
     );
   }
 
   @override
   bool shouldRepaint(covariant _RulerPainter oldDelegate) =>
-      zoom != oldDelegate.zoom;
+      zoom != oldDelegate.zoom ||
+      minZoom != oldDelegate.minZoom ||
+      maxZoom != oldDelegate.maxZoom;
 }

@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// Painter untuk siku-siku melengkung tipis di 4 sudut jendela bidik kamera
-/// Menghasilkan bingkai minimalis modern tanpa garis tebal yang menghalangi objek.
+/// Painter untuk garis siku-siku (sudut 90 derajat) tipis di 4 sudut jendela bidik kamera.
 class ScannerCornerPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
   final double cornerLength;
-  final double cornerRadius;
 
   const ScannerCornerPainter({
     this.color = Colors.white,
     this.strokeWidth = 2.0,
     this.cornerLength = 32.0,
-    this.cornerRadius = 20.0,
   });
 
   @override
@@ -21,42 +18,38 @@ class ScannerCornerPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.square
+      ..strokeJoin = StrokeJoin.miter;
 
     final w = size.width;
     final h = size.height;
-    final r = cornerRadius;
     final l = cornerLength;
 
-    // Top-Left Corner
+    // Top-Left Corner ┌
     final pathTL = Path()
       ..moveTo(0, l)
-      ..lineTo(0, r)
-      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
+      ..lineTo(0, 0)
       ..lineTo(l, 0);
     canvas.drawPath(pathTL, paint);
 
-    // Top-Right Corner
+    // Top-Right Corner ┐
     final pathTR = Path()
       ..moveTo(w - l, 0)
-      ..lineTo(w - r, 0)
-      ..arcToPoint(Offset(w, r), radius: Radius.circular(r))
+      ..lineTo(w, 0)
       ..lineTo(w, l);
     canvas.drawPath(pathTR, paint);
 
-    // Bottom-Left Corner
+    // Bottom-Left Corner └
     final pathBL = Path()
       ..moveTo(0, h - l)
-      ..lineTo(0, h - r)
-      ..arcToPoint(Offset(r, h), radius: Radius.circular(r))
+      ..lineTo(0, h)
       ..lineTo(l, h);
     canvas.drawPath(pathBL, paint);
 
-    // Bottom-Right Corner
+    // Bottom-Right Corner ┘
     final pathBR = Path()
       ..moveTo(w - l, h)
-      ..lineTo(w - r, h)
-      ..arcToPoint(Offset(w, h - r), radius: Radius.circular(r))
+      ..lineTo(w, h)
       ..lineTo(w, h - l);
     canvas.drawPath(pathBR, paint);
   }
@@ -65,6 +58,5 @@ class ScannerCornerPainter extends CustomPainter {
   bool shouldRepaint(covariant ScannerCornerPainter oldDelegate) =>
       color != oldDelegate.color ||
       strokeWidth != oldDelegate.strokeWidth ||
-      cornerLength != oldDelegate.cornerLength ||
-      cornerRadius != oldDelegate.cornerRadius;
+      cornerLength != oldDelegate.cornerLength;
 }

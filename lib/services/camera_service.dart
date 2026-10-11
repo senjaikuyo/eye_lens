@@ -55,13 +55,14 @@ class CameraService {
 
       await _controller!.initialize();
 
-      // Dapatkan batasan zoom hardware sebenarnya
+      // Dapatkan batasan zoom hardware sebenarnya (hingga 10x)
       try {
         _minZoom = await _controller!.getMinZoomLevel();
-        _maxZoom = await _controller!.getMaxZoomLevel();
+        final hwMax = await _controller!.getMaxZoomLevel();
+        _maxZoom = hwMax.clamp(1.0, 10.0);
       } catch (e) {
         _minZoom = 1.0;
-        _maxZoom = 2.0;
+        _maxZoom = 10.0;
       }
 
       _currentZoom = _minZoom;

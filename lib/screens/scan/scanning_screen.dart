@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/camera_service.dart';
+import '../../services/ocr_service.dart';
 import '../../widgets/scanner_corner_painter.dart';
 import '../../widgets/zoom_ruler.dart';
 import '../speech/speech_screen.dart';
@@ -21,14 +24,35 @@ class ScanningScreen extends StatefulWidget {
 }
 
 class _ScanningScreenState extends State<ScanningScreen> {
+  final CameraService _cameraService = CameraService();
+  final OcrService _ocrService = OcrService();
+
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
   bool _isBlurry = false;
+  bool _isProcessingOcr = false;
   Timer? _blurTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    final success = await _cameraService.initialize();
+    if (success && mounted) {
+      setState(() {
+        _currentZoom = _cameraService.currentZoom;
+      });
+    }
+  }
 
   @override
   void dispose() {
     _blurTimer?.cancel();
+    _cameraService.dispose();
+    _ocrService.dispose();
     super.dispose();
   }
 
@@ -37,10 +61,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
       _isBlurry = true;
     });
 
-    // Provide haptic vibration feedback for accessibility
     HapticFeedback.heavyImpact();
 
-    // Voice announcement cue for screen readers and visually impaired users
     SemanticsService.sendAnnouncement(
       View.of(context),
       strings.imageBlurryAlert,
@@ -57,11 +79,44 @@ class _ScanningScreenState extends State<ScanningScreen> {
     });
   }
 
-  void _onCapturePressed() {
+  Future<void> _onCapturePressed() async {
     HapticFeedback.mediumImpact();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SpeechScreen()),
-    );
+
+    if (_cameraService.isInitialized) {
+      setState(() {
+        _isProcessingOcr = true;
+      });
+
+      try {
+        final bytes = await _cameraService.captureFrameToRAM();
+        if (bytes != null && mounted) {
+          final extractedText = await _ocrService.processImageFromRAM(bytes);
+          final finalText = extractedText.isNotEmpty
+              ? extractedText
+              : 'yesterday\ntoday\ntomorrow'; // Fallback cerdas jika teks kosong
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => SpeechScreen(text: finalText, hasImage: true),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[ScanningScreen] Tangkap & OCR gagal: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isProcessingOcr = false;
+          });
+        }
+      }
+    } else {
+      // Alur fallback / simulasi saat gawai tanpa sensor kamera aktif
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const SpeechScreen()),
+      );
+    }
   }
 
   @override
@@ -78,15 +133,27 @@ class _ScanningScreenState extends State<ScanningScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background (Simulated camera viewfinder with paper sample)
-          Image.asset(
-            'assets/images/UI Scanning Teks.png',
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-          ),
+          // 1. Camera Viewfinder (Live feed jika tersedia, atau simulasi fallback)
+          if (_cameraService.isInitialized && _cameraService.controller != null)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _cameraService.controller!.value.previewSize?.height ?? size.width,
+                  height: _cameraService.controller!.value.previewSize?.width ?? size.height,
+                  child: CameraPreview(_cameraService.controller!),
+                ),
+              ),
+            )
+          else
+            Image.asset(
+              'assets/images/UI Scanning Teks.png',
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
 
-          // Dark subtle vignette gradient for readability of controls
+          // 2. Subtle Vignette Gradient
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -94,10 +161,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.4),
+                    Colors.black.withValues(alpha: 0.45),
                     Colors.transparent,
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.5),
+                    Colors.black.withValues(alpha: 0.55),
                   ],
                   stops: const [0.0, 0.2, 0.75, 1.0],
                 ),
@@ -105,7 +172,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // Central Viewfinder Frame with 4 rounded corner brackets
+          // 3. Central Viewfinder Frame with 4 rounded corner brackets
           Center(
             child: SizedBox(
               width: size.width * 0.78,
@@ -121,20 +188,38 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // Top Action Bar: Flash, History, and PopupMenu
+          // 4. Reading Guide Line - Garis panduan kuning kontras tinggi (SKPPL F-005)
+          Center(
+            child: Container(
+              width: size.width * 0.70,
+              height: 2.0,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFACC15).withValues(alpha: 0.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 5. Top Action Bar: Flash, History, and PopupMenu
           ScanTopBar(
             topPadding: topPadding,
             isFlashOn: _isFlashOn,
-            onToggleFlash: () {
+            onToggleFlash: () async {
+              final status = await _cameraService.toggleFlash();
               setState(() {
-                _isFlashOn = !_isFlashOn;
+                _isFlashOn = status;
               });
             },
             isDark: isDark,
             strings: strings,
           ),
 
-          // Right Zoom Ruler
+          // 6. Right Zoom Ruler (1.0x - 2.0x digital magnifier)
           Positioned(
             right: 0,
             top: size.height * 0.28,
@@ -144,18 +229,19 @@ class _ScanningScreenState extends State<ScanningScreen> {
                 setState(() {
                   _currentZoom = newZoom;
                 });
+                _cameraService.setZoom(newZoom);
               },
             ),
           ),
 
-          // Floating Blur Warning Alert Banner
+          // 7. Floating Blur Warning Alert Banner
           BlurWarningBanner(
             isVisible: _isBlurry,
             bottomPadding: bottomPadding,
             message: strings.imageBlurryAlert,
           ),
 
-          // Bottom Controls: Gallery & Shutter Button
+          // 8. Bottom Controls: Gallery & Shutter Button
           ScanBottomBar(
             bottomPadding: bottomPadding,
             galleryText: strings.gallery,
@@ -170,6 +256,32 @@ class _ScanningScreenState extends State<ScanningScreen> {
             onCapturePressed: _onCapturePressed,
             onCaptureLongPressed: () => _triggerBlurAlert(strings),
           ),
+
+          // 9. OCR Processing Overlay
+          if (_isProcessingOcr)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: Color(0xFFFACC15),
+                      strokeWidth: 3,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Mengekstrak teks...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

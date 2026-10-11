@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
@@ -15,11 +16,13 @@ import 'widgets/language_sheet.dart';
 class SpeechScreen extends StatefulWidget {
   final String text;
   final bool hasImage;
+  final Uint8List? imageBytes;
 
   const SpeechScreen({
     super.key,
     this.text = 'yesterday\ntoday\ntomorrow',
-    this.hasImage = true,
+    this.hasImage = false,
+    this.imageBytes,
   });
 
   @override
@@ -30,7 +33,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   late bool _isTextView;
   double _fontSize = 32.0;
   bool _isPlaying = false;
-  double _progress = 0.25;
+  double _progress = 0.0;
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   Timer? _playbackTimer;
@@ -38,7 +41,15 @@ class _SpeechScreenState extends State<SpeechScreen> {
   @override
   void initState() {
     super.initState();
-    _isTextView = !widget.hasImage;
+    // Jika tidak ada gambar jepretan, default tampilkan mode teks bersih berlatar hitam
+    _isTextView = widget.imageBytes == null && !widget.hasImage;
+
+    // Langsung bacakan teks secara otomatis saat layar dibuka (SKPPL Auto-Play)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isPlaying) {
+        _togglePlayPause();
+      }
+    });
   }
 
   @override
@@ -91,6 +102,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final size = MediaQuery.of(context).size;
+    final hasValidImage = widget.imageBytes != null || widget.hasImage;
 
     return Scaffold(
       backgroundColor: _isTextView
@@ -101,13 +113,16 @@ class _SpeechScreenState extends State<SpeechScreen> {
         children: [
           // MAIN BODY
           if (!_isTextView) ...[
-            // Photo View Background
-            Image.asset(
-              'assets/images/UI Validasi.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-            ),
+            // Photo View Background: Menampilkan foto asli hasil jepretan kamera (jika ada)
+            if (widget.imageBytes != null)
+              Image.memory(
+                widget.imageBytes!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              )
+            else
+              Container(color: Colors.black),
 
             // Subtle gradient
             Positioned.fill(
@@ -127,19 +142,19 @@ class _SpeechScreenState extends State<SpeechScreen> {
               ),
             ),
 
-            // Captured frame
+            // Captured frame preview border
             Center(
               child: Container(
                 width: size.width * 0.82,
                 height: size.width * 0.72,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 4.0),
+                  border: Border.all(color: Colors.white, width: 2.5),
                 ),
               ),
             ),
           ] else ...[
-            // Pure Text View with Dark Mode support
+            // Pure Text View with Dark Mode support (latar hitam elegan / tema aktif)
             Positioned.fill(
               child: Container(
                 color: isDark ? AppColors.black : Colors.white,
@@ -355,8 +370,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
             ),
           ),
 
-          // FLOATING MODE TOGGLE BUTTON
-          if (widget.hasImage)
+          // FLOATING MODE TOGGLE BUTTON (Hanya jika ada foto jepretan)
+          if (hasValidImage)
             Positioned(
               right: 20,
               bottom: bottomPadding + 148,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Painter untuk siku-siku melengkung tipis di 4 sudut jendela bidik kamera
+/// Menghasilkan bingkai minimalis modern tanpa garis tebal yang menghalangi objek.
 class ScannerCornerPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
@@ -8,9 +10,9 @@ class ScannerCornerPainter extends CustomPainter {
 
   const ScannerCornerPainter({
     this.color = Colors.white,
-    this.strokeWidth = 4.0,
-    this.cornerLength = 36.0,
-    this.cornerRadius = 14.0,
+    this.strokeWidth = 2.0,
+    this.cornerLength = 32.0,
+    this.cornerRadius = 20.0,
   });
 
   @override

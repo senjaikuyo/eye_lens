@@ -6,13 +6,12 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
-import '../../widgets/feedback_dialog.dart';
 import '../../widgets/scanner_corner_painter.dart';
 import '../../widgets/zoom_ruler.dart';
-import '../history/history_screen.dart';
-import '../settings/faq_screen.dart';
-import '../settings/settings_screen.dart';
 import '../speech/speech_screen.dart';
+import 'widgets/blur_warning_banner.dart';
+import 'widgets/scan_bottom_bar.dart';
+import 'widgets/scan_top_bar.dart';
 
 class ScanningScreen extends StatefulWidget {
   const ScanningScreen({super.key});
@@ -59,21 +58,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
   }
 
   void _onCapturePressed() {
-    // Direct navigation to SpeechScreen (bypassing validation screen)
     HapticFeedback.mediumImpact();
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const SpeechScreen()),
     );
-  }
-
-  void _onHistoryPressed() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const HistoryScreen()),
-    );
-  }
-
-  void _showFeedbackDialog(AppStrings strings, bool isDark) {
-    FeedbackDialog.show(context, strings: strings, isDark: isDark);
   }
 
   @override
@@ -133,188 +121,17 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // Top Action Bar: Flash (Left) | History & Menu (Right) - Clean White Buttons (matching Frame 4533979 / Image 4)
-          Positioned(
-            top: topPadding + 10,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Flash Toggle Button (Clean White Circle 48x48)
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD0D7DE),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        setState(() {
-                          _isFlashOn = !_isFlashOn;
-                        });
-                      },
-                      child: Center(
-                        child: Icon(
-                          _isFlashOn
-                              ? Icons.flash_on_rounded
-                              : Icons.flash_off_rounded,
-                          color: _isFlashOn ? const Color(0xFFE58E1B) : Colors.black,
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Right Actions: History & PopupMenu (Clean White Circles 48x48)
-                Row(
-                  children: [
-                    // History Button (Clock Icon)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFD0D7DE),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(24),
-                          onTap: _onHistoryPressed,
-                          child: const Center(
-                            child: Icon(
-                              Icons.history_rounded,
-                              color: Colors.black,
-                              size: 26,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Three Dots Overflow Menu (Settings, Feedback, FAQ)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFD0D7DE),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            popupMenuTheme: PopupMenuThemeData(
-                              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                          ),
-                          child: PopupMenuButton<String>(
-                            icon: const Icon(
-                              Icons.more_vert_rounded,
-                              color: Colors.black,
-                              size: 26,
-                            ),
-                            padding: EdgeInsets.zero,
-                            onSelected: (value) {
-                              if (value == 'settings') {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const SettingsScreen(),
-                                  ),
-                                );
-                              } else if (value == 'feedback') {
-                                _showFeedbackDialog(strings, isDark);
-                              } else if (value == 'faq') {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const FaqScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'settings',
-                                child: Text(
-                                  strings.settings,
-                                  style: TextStyle(
-                                    color: isDark ? Colors.white : AppColors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'feedback',
-                                child: Text(
-                                  strings.feedback,
-                                  style: TextStyle(
-                                    color: isDark ? Colors.white : AppColors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'faq',
-                                child: Text(
-                                  strings.faq,
-                                  style: TextStyle(
-                                    color: isDark ? Colors.white : AppColors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          // Top Action Bar: Flash, History, and PopupMenu
+          ScanTopBar(
+            topPadding: topPadding,
+            isFlashOn: _isFlashOn,
+            onToggleFlash: () {
+              setState(() {
+                _isFlashOn = !_isFlashOn;
+              });
+            },
+            isDark: isDark,
+            strings: strings,
           ),
 
           // Right Zoom Ruler
@@ -331,133 +148,27 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // Floating Blur Warning Alert Banner (above shutter)
-          if (_isBlurry)
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: bottomPadding + 130,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                opacity: _isBlurry ? 1.0 : 0.0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Color(0xFFF59E0B),
-                        size: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          strings.imageBlurryAlert,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // Floating Blur Warning Alert Banner
+          BlurWarningBanner(
+            isVisible: _isBlurry,
+            bottomPadding: bottomPadding,
+            message: strings.imageBlurryAlert,
+          ),
 
-          // Bottom Controls (Gallery & Shutter Button)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottomPadding + 36,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Gallery Button on the left
-                Positioned(
-                  left: 40,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2E384D).withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: IconButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(strings.galleryPickMsg),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.photo_library_outlined,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        strings.gallery,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+          // Bottom Controls: Gallery & Shutter Button
+          ScanBottomBar(
+            bottomPadding: bottomPadding,
+            galleryText: strings.gallery,
+            onGalleryPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(strings.galleryPickMsg),
+                  duration: const Duration(seconds: 1),
                 ),
-
-                // Shutter Camera Button (Center)
-                GestureDetector(
-                  onTap: _onCapturePressed,
-                  onLongPress: () => _triggerBlurAlert(strings), // Hold to test blur warning
-                  child: Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.camera_alt_outlined,
-                        color: Colors.black,
-                        size: 36,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
+            onCapturePressed: _onCapturePressed,
+            onCaptureLongPressed: () => _triggerBlurAlert(strings),
           ),
         ],
       ),

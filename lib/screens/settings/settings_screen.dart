@@ -4,9 +4,11 @@ import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../auth/login_screen.dart';
 import 'change_password_screen.dart';
 import 'faq_screen.dart';
+import 'widgets/language_selector_tile.dart';
+import 'widgets/logout_dialog.dart';
+import 'widgets/settings_list_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,90 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoPlayAudio = false;
-
-  void _showLogoutDialog(BuildContext context, AppStrings strings, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          strings.logOutConfirmTitle,
-          style: TextStyle(
-            color: isDark ? Colors.white : AppColors.black,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          strings.logOutConfirmMessage,
-          style: TextStyle(
-            color: isDark ? const Color(0xFFCCCCCC) : const Color(0xFF555555),
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              strings.cancel,
-              style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            child: Text(
-              strings.logOut,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListTile({
-    required Widget icon,
-    required Widget child,
-    VoidCallback? onTap,
-    Widget? trailing,
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: padding,
-          child: Row(
-            children: [
-              icon,
-              const SizedBox(width: 16),
-              Expanded(child: child),
-              ?trailing,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 24),
 
-              // 1. Header Email Section (clean flat text)
+              // 1. Email Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -173,8 +91,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       strings.email,
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFF888888) : const Color(0xFF888888),
+                      style: const TextStyle(
+                        color: Color(0xFF888888),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -196,19 +114,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
               // 2. Change Password
-              _buildListTile(
+              SettingsListTile(
                 icon: Icon(
                   Icons.lock_outline_rounded,
                   color: isDark ? Colors.white : Colors.black,
                   size: 24,
-                ),
-                child: Text(
-                  strings.changePassword,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
-                  ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -222,24 +132,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   );
                 },
-              ),
-
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
-
-              // 3. Auto-Play Audio (with graphic_eq waveform icon from new UI)
-              _buildListTile(
-                icon: Icon(
-                  Icons.graphic_eq_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
                 child: Text(
-                  strings.autoPlayAudio,
+                  strings.changePassword,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
                     fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
+                ),
+              ),
+
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+
+              // 3. Auto-Play Audio
+              SettingsListTile(
+                icon: Icon(
+                  Icons.graphic_eq_rounded,
+                  color: isDark ? Colors.white : Colors.black,
+                  size: 24,
                 ),
                 trailing: Switch(
                   value: _autoPlayAudio,
@@ -250,194 +160,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     });
                   },
                 ),
-              ),
-
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
-
-              // 4. Language App Selector (with translate icon from new UI)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.translate_rounded,
-                      color: isDark ? Colors.white : Colors.black,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.languageApp,
-                            style: TextStyle(
-                              color: isDark ? Colors.white : AppColors.black,
-                              fontSize: 15,
-                              fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              // Indonesian Radio Pill
-                              Expanded(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(10),
-                                    onTap: () {
-                                      context.read<LanguageProvider>().setLanguage('Indonesian');
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: isHighContrast
-                                              ? (isDark ? Colors.white : Colors.black)
-                                              : (isDark ? const Color(0xFF555555) : Colors.black),
-                                          width: isHighContrast ? 1.8 : 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            strings.indonesian,
-                                            style: TextStyle(
-                                              color: isDark ? Colors.white : Colors.black,
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          Container(
-                                            width: 16,
-                                            height: 16,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: isDark ? Colors.white : Colors.black,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            child: selectedLanguage == 'Indonesian'
-                                                ? Center(
-                                                    child: Container(
-                                                      width: 8,
-                                                      height: 8,
-                                                      decoration: BoxDecoration(
-                                                        color: isDark ? Colors.white : Colors.black,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : null,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-
-                              // English Radio Pill
-                              Expanded(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(10),
-                                    onTap: () {
-                                      context.read<LanguageProvider>().setLanguage('English');
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: isHighContrast
-                                              ? (isDark ? Colors.white : Colors.black)
-                                              : (isDark ? const Color(0xFF555555) : Colors.black),
-                                          width: isHighContrast ? 1.8 : 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            strings.english,
-                                            style: TextStyle(
-                                              color: isDark ? Colors.white : Colors.black,
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          Container(
-                                            width: 16,
-                                            height: 16,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: isDark ? Colors.white : Colors.black,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            child: selectedLanguage == 'English'
-                                                ? Center(
-                                                    child: Container(
-                                                      width: 8,
-                                                      height: 8,
-                                                      decoration: BoxDecoration(
-                                                        color: isDark ? Colors.white : Colors.black,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : null,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
-
-              // 5. FAQ
-              _buildListTile(
-                icon: Icon(
-                  Icons.help_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
                 child: Text(
-                  strings.faq,
+                  strings.autoPlayAudio,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
                     fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
+                ),
+              ),
+
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+
+              // 4. Language App Selector
+              LanguageSelectorTile(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
+                strings: strings,
+                selectedLanguage: selectedLanguage,
+                onLanguageSelected: (lang) {
+                  context.read<LanguageProvider>().setLanguage(lang);
+                },
+              ),
+
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+
+              // 5. FAQ
+              SettingsListTile(
+                icon: Icon(
+                  Icons.help_outline_rounded,
+                  color: isDark ? Colors.white : Colors.black,
+                  size: 24,
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -451,24 +204,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   );
                 },
-              ),
-
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
-
-              // 6. About
-              _buildListTile(
-                icon: Icon(
-                  Icons.info_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
                 child: Text(
-                  strings.about,
+                  strings.faq,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
                     fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
+                ),
+              ),
+
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+
+              // 6. About
+              SettingsListTile(
+                icon: Icon(
+                  Icons.info_outline_rounded,
+                  color: isDark ? Colors.white : Colors.black,
+                  size: 24,
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -483,17 +236,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     applicationLegalese: '© 2026 EyeLens Inc.',
                   );
                 },
+                child: Text(
+                  strings.about,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : AppColors.black,
+                    fontSize: 15,
+                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
               ),
 
               Divider(color: dividerColor, thickness: dividerThickness, height: 1),
 
               const SizedBox(height: 18),
 
-              // 7. LOGOUT ROW with soft pink container (matching new UI setting.png)
+              // 7. Logout Row
               Material(
                 color: isDark ? const Color(0xFF2A1517) : const Color(0xFFFFF1F2),
                 child: InkWell(
-                  onTap: () => _showLogoutDialog(context, strings, isDark),
+                  onTap: () => LogoutDialog.show(context, strings: strings, isDark: isDark),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     child: Row(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
+import '../../widgets/feedback_dialog.dart';
 import '../settings/faq_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -79,73 +80,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   }
 
   void _showFeedbackDialog(AppStrings strings, bool isDark) {
-    final textController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          strings.feedbackTitle,
-          style: TextStyle(
-            color: isDark ? Colors.white : AppColors.black,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: TextField(
-          controller: textController,
-          maxLines: 4,
-          cursorColor: isDark ? Colors.white : Colors.black,
-          style: TextStyle(
-            color: isDark ? Colors.white : AppColors.black,
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            hintText: strings.feedbackHint,
-            hintStyle: TextStyle(
-              color: isDark ? const Color(0xFF777777) : const Color(0xFFAAAAAA),
-              fontSize: 13,
-            ),
-            filled: true,
-            fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF2F4F7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              strings.cancel,
-              style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : AppColors.black,
-              foregroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(strings.feedbackSent),
-                  backgroundColor: AppColors.black,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Text(strings.send, style: const TextStyle(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
+    FeedbackDialog.show(context, strings: strings, isDark: isDark);
   }
 
   void _showAppearanceBottomSheet(

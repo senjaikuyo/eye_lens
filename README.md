@@ -108,11 +108,10 @@ eye_lens/
 
 ---
 
-## 🔒 Kebijakan Privasi & Keamanan
-- Foto pengguna **tidak pernah disimpan ke galeri ponsel** maupun diunggah ke server.
-- Data teks riwayat yang disinkronkan ke server cloud dienkripsi secara dua arah menggunakan algoritma **AES-256-CBC** sebelum disimpan ke basis data MySQL server.
+##  Kebijakan Privasi & Keamanan
+-
 
 ---
 
-## 👥 Pengembang
+##  Pengembang
 Dibuat sebagai solusi aksesibilitas digital untuk presbiopia & low vision (EyeLens Team).

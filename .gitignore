@@ -12,46 +12,63 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ / IDE
 *.iml
 *.ipr
 *.iws
 .idea/
+.vscode/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-android/build/
-.gradle/
-android/.gradle/
-linux/flutter/ephemeral/
-
-# Widget Preview related
-.widget_preview/
-devtools_options.yaml
+# Media / Binaries
 *.apk
 *.mp4
 *.gif
 *.jpeg
+devtools_options.yaml
+
+# ==========================================
+# Frontend (Flutter) Ignored
+# ==========================================
+frontend/.dart_tool/
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/coverage/
+frontend/.gradle/
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/debug
+frontend/android/app/profile
+frontend/android/app/release
+frontend/android/local.properties
+frontend/linux/flutter/ephemeral/
+frontend/windows/flutter/ephemeral/
+frontend/ios/Flutter/ephemeral/
+frontend/macos/Flutter/ephemeral/
+frontend/.widget_preview/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+
+# ==========================================
+# Backend (Laravel) Ignored
+# ==========================================
+backend/vendor/
+backend/node_modules/
+backend/public/build
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/.phpunit.result.cache
+backend/Homestead.json
+backend/Homestead.yaml
+backend/npm-debug.log
+backend/yarn-error.log
+backend/.fleet
+backend/.idea
+backend/.vscode

@@ -1,10 +1,10 @@
-# EyeLens 👁️🔍
+# EyeLens 
 
 **EyeLens** adalah aplikasi pembaca teks mandiri berbasis mobile (*Flutter*) dan backend cloud (*Laravel*) yang dirancang khusus untuk membantu **lansia (45+ tahun) dengan presbiopia** dan penderita **low vision**. Aplikasi ini mengusung arsitektur **Hybrid Offline-First**, memungkinkan pengguna memotret dan mendengarkan teks obat, struk, atau dokumen cetak secara instan tanpa membutuhkan kuota internet.
 
 ---
 
-## 🌟 Fitur Utama
+##  Fitur Utama
 - **Digital Magnifier (1.0x – 10.0x)**: Perbesaran kamera fleksibel via slider kanan atau swipe 1 jari vertikal.
 - **On-Device OCR (<500 ms)**: Ekstraksi teks aksara Latin langsung di memori RAM via Google ML Kit tanpa internet.
 - **Ephemeral Memory (Privasi Terjaga)**: Citra kamera hanya ditahan di RAM untuk ekstraksi teks dan langsung dimusnahkan (`0 byte` file foto tersimpan di penyimpanan gawai).
@@ -14,7 +14,7 @@
 
 ---
 
-## 📁 Struktur Monorepo
+##  Struktur Monorepo
 ```text
 eye_lens/
 ├── frontend/    # Aplikasi Mobile Flutter (Android, iOS)
@@ -23,7 +23,7 @@ eye_lens/
 
 ---
 
-## 🚀 Panduan Setup & Menjalankan Proyek
+## Setup
 
 ### 1. Prasyarat Sistem
 - **Flutter SDK**: v3.24+ / 3.35+

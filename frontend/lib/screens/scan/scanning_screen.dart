@@ -1,9 +1,12 @@
 import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
@@ -26,6 +29,7 @@ class ScanningScreen extends StatefulWidget {
 class _ScanningScreenState extends State<ScanningScreen> {
   final CameraService _cameraService = CameraService();
   final OcrService _ocrService = OcrService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
@@ -144,6 +148,78 @@ class _ScanningScreenState extends State<ScanningScreen> {
     }
   }
 
+  Future<void> _onGalleryPressed() async {
+    HapticFeedback.selectionClick();
+
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 90,
+      );
+
+      if (pickedFile == null || !mounted) return;
+
+      setState(() {
+        _isProcessingOcr = true;
+      });
+
+      final bytes = await pickedFile.readAsBytes();
+      final extractedText = await _ocrService.processImageFromFile(
+        pickedFile.path,
+      );
+
+      if (!mounted) return;
+
+      if (extractedText.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.of(context).isIndonesian
+                  ? 'Tidak ditemukan teks pada gambar galeri.'
+                  : 'No readable text found in the gallery image.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            backgroundColor: AppColors.black,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SpeechScreen(
+              text: extractedText,
+              hasImage: true,
+              imageBytes: bytes,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[ScanningScreen] Ambil gambar galeri gagal: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.of(context).isIndonesian
+                  ? 'Gagal memuat gambar dari galeri.'
+                  : 'Failed to pick image from gallery.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            backgroundColor: AppColors.black,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingOcr = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -182,13 +258,26 @@ class _ScanningScreenState extends State<ScanningScreen> {
               fit: StackFit.expand,
               children: [
                 // Live Camera Preview atau fallback
-                if (_cameraService.isInitialized && _cameraService.controller != null)
+                if (_cameraService.isInitialized &&
+                    _cameraService.controller != null)
                   SizedBox.expand(
                     child: FittedBox(
                       fit: BoxFit.cover,
                       child: SizedBox(
-                        width: _cameraService.controller!.value.previewSize?.height ?? size.width,
-                        height: _cameraService.controller!.value.previewSize?.width ?? size.height,
+                        width:
+                            _cameraService
+                                .controller!
+                                .value
+                                .previewSize
+                                ?.height ??
+                            size.width,
+                        height:
+                            _cameraService
+                                .controller!
+                                .value
+                                .previewSize
+                                ?.width ??
+                            size.height,
                         child: CameraPreview(_cameraService.controller!),
                       ),
                     ),
@@ -275,7 +364,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
               child: GestureDetector(
                 onTap: () => _updateZoom(1.0), // Tap untuk reset cepat ke 1.0x
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.65),
                     borderRadius: BorderRadius.circular(20),
@@ -316,14 +408,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
           ScanBottomBar(
             bottomPadding: bottomPadding,
             galleryText: strings.gallery,
-            onGalleryPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(strings.galleryPickMsg),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
+            onGalleryPressed: _onGalleryPressed,
             onCapturePressed: _onCapturePressed,
             onCaptureLongPressed: () => _triggerBlurAlert(strings),
           ),
@@ -332,20 +417,22 @@ class _ScanningScreenState extends State<ScanningScreen> {
           if (_isProcessingOcr)
             Container(
               color: Colors.black54,
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(
+                    const CircularProgressIndicator(
                       color: Color(0xFFFACC15),
                       strokeWidth: 3,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
-                      'Mengekstrak teks...',
-                      style: TextStyle(
+                      strings.isIndonesian
+                          ? 'Mengekstrak teks...'
+                          : 'Extracting text...',
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

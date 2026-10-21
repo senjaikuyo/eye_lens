@@ -27,36 +27,43 @@ class ScanBottomBar extends StatelessWidget {
         children: [
           // Gallery Button on the left
           Positioned(
-            left: 40,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E384D).withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: IconButton(
-                    onPressed: onGalleryPressed,
-                    icon: const Icon(
-                      Icons.photo_library_outlined,
-                      color: Colors.white,
-                      size: 26,
+            left: 36,
+            child: Semantics(
+              button: true,
+              label: galleryText,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onGalleryPressed,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E384D).withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.photo_library_outlined,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      galleryText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  galleryText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
 

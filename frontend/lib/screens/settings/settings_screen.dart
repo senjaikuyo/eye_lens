@@ -9,6 +9,7 @@ import 'faq_screen.dart';
 import 'widgets/language_selector_tile.dart';
 import 'widgets/logout_dialog.dart';
 import 'widgets/settings_list_tile.dart';
+import 'widgets/theme_selector_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -168,6 +169,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
+              ),
+
+              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+
+              // Theme Selector
+              ThemeSelectorTile(
+                isDark: isDark,
+                isHighContrast: isHighContrast,
+                strings: strings,
+                selectedThemeMode: themeProvider.themeMode,
+                onThemeSelected: (mode) {
+                  themeProvider.setThemeMode(mode);
+                },
               ),
 
               Divider(color: dividerColor, thickness: dividerThickness, height: 1),

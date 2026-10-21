@@ -55,57 +55,7 @@ class AppearanceBottomSheet {
                   ),
                   const SizedBox(height: 18),
 
-                  // 1. Theme Row
-                  _buildRow(
-                    icon: Icon(
-                      currentIsDark ? Icons.nightlight_round_outlined : Icons.wb_sunny_outlined,
-                      color: currentIsDark ? Colors.white : Colors.black,
-                      size: 24,
-                    ),
-                    label: strings.theme,
-                    currentIsDark: currentIsDark,
-                    trailing: PopupMenuButton<ThemeMode>(
-                      initialValue: themeProvider.themeMode,
-                      onSelected: (mode) {
-                        themeProvider.setThemeMode(mode);
-                        setSheetState(() {});
-                      },
-                      color: currentIsDark ? const Color(0xFF2A2A2A) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(value: ThemeMode.light, child: Text(strings.themeLight)),
-                        PopupMenuItem(value: ThemeMode.dark, child: Text(strings.themeDark)),
-                        PopupMenuItem(value: ThemeMode.system, child: Text(strings.themeSystem)),
-                      ],
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            themeProvider.themeMode == ThemeMode.dark
-                                ? strings.themeDark
-                                : themeProvider.themeMode == ThemeMode.light
-                                    ? strings.themeLight
-                                    : strings.themeSystem,
-                            style: TextStyle(
-                              color: currentIsDark ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.unfold_more_rounded,
-                            color: currentIsDark ? const Color(0xFF888888) : const Color(0xFF8E9BAE),
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const Divider(height: 24, thickness: 0.8),
-
-                  // 2. Cursor Color Row
+                  // 1. Cursor Color Row
                   _buildRow(
                     icon: Icon(
                       Icons.navigation_outlined,

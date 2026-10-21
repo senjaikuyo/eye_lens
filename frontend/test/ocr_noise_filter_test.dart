@@ -278,5 +278,209 @@ void main() {
         expect(slice, word.text);
       }
     });
+
+    test('9. Jam di zona atas (status bar) harus dibuang', () {
+      final lines = [
+        const OcrLineData(
+          text: '5:51',
+          boundingBox: Rect.fromLTWH(50, 20, 80, 25), // Zona atas (y: 20 <= 80px)
+        ),
+        const OcrLineData(
+          text: '05.51',
+          boundingBox: Rect.fromLTWH(50, 40, 80, 25), // Zona atas
+        ),
+        const OcrLineData(
+          text: 'Judul Dokumen Resmi',
+          boundingBox: Rect.fromLTWH(100, 200, 400, 30),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: lines,
+        imageSize: defaultImageSize,
+      );
+
+      expect(result.acceptedLines.length, 1);
+      expect(result.acceptedLines.first.text, 'Judul Dokumen Resmi');
+      expect(result.rejectedLines.length, 2);
+      expect(result.rejectedLines[0].reason, NoiseRejectionReason.clockPattern);
+      expect(result.rejectedLines[1].reason, NoiseRejectionReason.clockPattern);
+    });
+
+    test('10. Persen baterai, nama operator, dan sinyal di zona atas harus dibuang', () {
+      final lines = [
+        const OcrLineData(
+          text: '85%',
+          boundingBox: Rect.fromLTWH(850, 20, 60, 25), // Baterai di kanan atas
+        ),
+        const OcrLineData(
+          text: 'Telkomsel 4G',
+          boundingBox: Rect.fromLTWH(50, 20, 150, 25), // Operator + sinyal di kiri atas
+        ),
+        const OcrLineData(
+          text: 'LTE',
+          boundingBox: Rect.fromLTWH(220, 20, 50, 25), // Sinyal
+        ),
+        const OcrLineData(
+          text: 'Wi-Fi',
+          boundingBox: Rect.fromLTWH(280, 20, 60, 25), // Wi-Fi
+        ),
+        const OcrLineData(
+          text: 'Bab 1 Pendahuluan Penelitian',
+          boundingBox: Rect.fromLTWH(100, 250, 400, 30),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: lines,
+        imageSize: defaultImageSize,
+      );
+
+      expect(result.acceptedLines.length, 1);
+      expect(result.acceptedLines.first.text, 'Bab 1 Pendahuluan Penelitian');
+      expect(result.rejectedLines.length, 4);
+      for (final rej in result.rejectedLines) {
+        expect(rej.reason, NoiseRejectionReason.statusBarPattern);
+      }
+    });
+
+    test('11. Jam di dalam tabel jadwal harus tetap lolos', () {
+      // Dalam tabel jadwal, jam berdekatan dengan baris kegiatan
+      final lines = [
+        const OcrLineData(
+          text: 'JADWAL ACARA SEMINAR',
+          boundingBox: Rect.fromLTWH(100, 200, 400, 30),
+        ),
+        const OcrLineData(
+          text: '08:00',
+          boundingBox: Rect.fromLTWH(100, 260, 80, 25),
+        ),
+        const OcrLineData(
+          text: 'Registrasi dan Sarapan Pagi',
+          boundingBox: Rect.fromLTWH(200, 260, 300, 25),
+        ),
+        const OcrLineData(
+          text: '09:00',
+          boundingBox: Rect.fromLTWH(100, 300, 80, 25),
+        ),
+        const OcrLineData(
+          text: 'Sambutan dan Pembukaan',
+          boundingBox: Rect.fromLTWH(200, 300, 300, 25),
+        ),
+        const OcrLineData(
+          text: '10:30',
+          boundingBox: Rect.fromLTWH(100, 340, 80, 25),
+        ),
+        const OcrLineData(
+          text: 'Sesi Diskusi Panel',
+          boundingBox: Rect.fromLTWH(200, 340, 300, 25),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: lines,
+        imageSize: defaultImageSize,
+      );
+
+      // Seluruh baris jadwal termasuk jam ("08:00", "09:00", "10:30") harus lolos
+      expect(result.acceptedLines.length, 7);
+      expect(result.rejectedLines.isEmpty, true);
+      expect(result.acceptedLines.any((l) => l.text == '08:00'), true);
+      expect(result.acceptedLines.any((l) => l.text == '09:00'), true);
+      expect(result.acceptedLines.any((l) => l.text == '10:30'), true);
+    });
+
+    test('12. Kalimat yang memuat waktu/jam harus tetap lolos', () {
+      final lines = [
+        const OcrLineData(
+          text: 'Pertemuan akan dimulai pukul 14:30 WIB di ruang rapat utama.',
+          boundingBox: Rect.fromLTWH(100, 300, 500, 28),
+        ),
+        const OcrLineData(
+          text: 'Penerbangan dijadwalkan tiba pada 5:51 PM waktu setempat.',
+          boundingBox: Rect.fromLTWH(100, 340, 500, 28),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: lines,
+        imageSize: defaultImageSize,
+      );
+
+      expect(result.acceptedLines.length, 2);
+      expect(result.rejectedLines.isEmpty, true);
+    });
+
+    test('13. Angka biasa seperti harga atau nomor halaman harus tetap lolos', () {
+      final lines = [
+        const OcrLineData(
+          text: 'Total Belanja:',
+          boundingBox: Rect.fromLTWH(100, 200, 200, 28),
+        ),
+        const OcrLineData(
+          text: 'Rp 50.000',
+          boundingBox: Rect.fromLTWH(100, 240, 150, 28),
+        ),
+        const OcrLineData(
+          text: '15.99', // Harga desimal bukan waktu
+          boundingBox: Rect.fromLTWH(100, 280, 80, 28),
+        ),
+        const OcrLineData(
+          text: '42', // Angka biasa
+          boundingBox: Rect.fromLTWH(100, 320, 40, 28),
+        ),
+        const OcrLineData(
+          text: '12', // Nomor halaman di bagian bawah (y: 950 >= 920)
+          boundingBox: Rect.fromLTWH(500, 950, 30, 25),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: lines,
+        imageSize: defaultImageSize,
+      );
+
+      expect(result.acceptedLines.length, 5);
+      expect(result.rejectedLines.isEmpty, true);
+      expect(result.acceptedLines.any((l) => l.text == 'Rp 50.000'), true);
+      expect(result.acceptedLines.any((l) => l.text == '15.99'), true);
+      expect(result.acceptedLines.any((l) => l.text == '12'), true);
+    });
+
+    test('14. Deteksi tangkapan layar antarmuka memperketat zona tepi', () {
+      // 5 baris pendek khas komponen UI
+      final screenshotLines = [
+        const OcrLineData(
+          text: '9:41', // Status bar atas (y: 90 berada di zona 12% tangkapan layar)
+          boundingBox: Rect.fromLTWH(40, 90, 60, 20),
+        ),
+        const OcrLineData(
+          text: 'Beranda',
+          boundingBox: Rect.fromLTWH(50, 300, 80, 20),
+        ),
+        const OcrLineData(
+          text: 'Profil',
+          boundingBox: Rect.fromLTWH(50, 350, 80, 20),
+        ),
+        const OcrLineData(
+          text: 'Pengaturan',
+          boundingBox: Rect.fromLTWH(50, 400, 100, 20),
+        ),
+        const OcrLineData(
+          text: 'Keluar',
+          boundingBox: Rect.fromLTWH(50, 450, 80, 20),
+        ),
+      ];
+
+      final result = OcrNoiseFilter.filter(
+        lines: screenshotLines,
+        imageSize: defaultImageSize,
+      );
+
+      // Jam 9:41 di y=90 dibuang karena zona tepi screenshot diperketat (12% = 120px)
+      expect(result.rejectedLines.any((r) => r.reason == NoiseRejectionReason.clockPattern), true);
+      expect(result.acceptedLines.any((l) => l.text == 'Beranda'), true);
+      expect(result.acceptedLines.any((l) => l.text == 'Pengaturan'), true);
+    });
   });
 }

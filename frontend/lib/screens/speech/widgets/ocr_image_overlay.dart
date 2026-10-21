@@ -43,10 +43,20 @@ class OcrImageOverlay extends StatefulWidget {
   State<OcrImageOverlay> createState() => _OcrImageOverlayState();
 }
 
+class _RejectedScreenItem {
+  final Rect rect;
+  final RejectedLineInfo info;
+
+  const _RejectedScreenItem({
+    required this.rect,
+    required this.info,
+  });
+}
+
 class _OcrImageOverlayState extends State<OcrImageOverlay> {
   // Simpan bounding box di layar untuk deteksi sentuhan cepat
   final Map<String, Rect> _screenRects = {};
-  final Map<String, Rect> _rejectedScreenRects = {};
+  final List<_RejectedScreenItem> _rejectedScreenItems = [];
 
   void _calculateScreenRects(Size containerSize) {
     if (widget.imageSize.width <= 0 || widget.imageSize.height <= 0) return;
@@ -71,7 +81,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
       _screenRects[elem.id] = rect;
     }
 
-    _rejectedScreenRects.clear();
+    _rejectedScreenItems.clear();
     for (int i = 0; i < widget.rejectedLines.length; i++) {
       final rej = widget.rejectedLines[i];
       final rect = Rect.fromLTWH(
@@ -80,7 +90,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
         rej.line.boundingBox.width * scale,
         rej.line.boundingBox.height * scale,
       );
-      _rejectedScreenRects['rej_$i'] = rect;
+      _rejectedScreenItems.add(_RejectedScreenItem(rect: rect, info: rej));
     }
   }
 
@@ -167,7 +177,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
               child: CustomPaint(
                 painter: _OcrBoxesPainter(
                   screenRects: _screenRects,
-                  rejectedScreenRects: _rejectedScreenRects,
+                  rejectedScreenItems: _rejectedScreenItems,
                   selectedIds: widget.selectedIds,
                   highlightColor: widget.highlightColor,
                   isHighContrast: widget.isHighContrast,
@@ -194,7 +204,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
                     border: Border.all(color: Colors.white24),
                   ),
                   child: Text(
-                    'Debug OCR: ${widget.elements.length} lolos (hijau) | ${widget.rejectedLines.length} dibuang (merah)',
+                    'Debug OCR: ${widget.elements.length} lolos (hijau) | ${widget.rejectedLines.length} dibuang (merah/oranye)',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -283,14 +293,14 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
 
 class _OcrBoxesPainter extends CustomPainter {
   final Map<String, Rect> screenRects;
-  final Map<String, Rect> rejectedScreenRects;
+  final List<_RejectedScreenItem> rejectedScreenItems;
   final Set<String> selectedIds;
   final Color highlightColor;
   final bool isHighContrast;
 
   _OcrBoxesPainter({
     required this.screenRects,
-    required this.rejectedScreenRects,
+    required this.rejectedScreenItems,
     required this.selectedIds,
     required this.highlightColor,
     required this.isHighContrast,
@@ -299,19 +309,38 @@ class _OcrBoxesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (kDebugMode) {
-      // 1. Gambar kotak merah untuk baris yang dibuang (noise)
-      final rejectedFill = Paint()
+      // 1. Gambar kotak untuk baris yang dibuang
+      // Kotak merah: noise umum (confidence, ukuran, tepi, keterpencilan, simbol)
+      // Kotak oranye: jam atau elemen status bar (clockPattern, statusBarPattern)
+      final generalRejectedFill = Paint()
         ..color = const Color(0xFFEF4444).withValues(alpha: 0.22)
         ..style = PaintingStyle.fill;
-      final rejectedBorder = Paint()
+      final generalRejectedBorder = Paint()
         ..color = const Color(0xFFEF4444)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
 
-      for (final rect in rejectedScreenRects.values) {
-        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
-        canvas.drawRRect(rrect, rejectedFill);
-        canvas.drawRRect(rrect, rejectedBorder);
+      final uiClockRejectedFill = Paint()
+        ..color = const Color(0xFFF97316).withValues(alpha: 0.25)
+        ..style = PaintingStyle.fill;
+      final uiClockRejectedBorder = Paint()
+        ..color = const Color(0xFFF97316)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      for (final item in rejectedScreenItems) {
+        final isUiOrClock =
+            item.info.reason == NoiseRejectionReason.clockPattern ||
+                item.info.reason == NoiseRejectionReason.statusBarPattern;
+
+        final fill = isUiOrClock ? uiClockRejectedFill : generalRejectedFill;
+        final border =
+            isUiOrClock ? uiClockRejectedBorder : generalRejectedBorder;
+
+        final rrect =
+            RRect.fromRectAndRadius(item.rect, const Radius.circular(4));
+        canvas.drawRRect(rrect, fill);
+        canvas.drawRRect(rrect, border);
       }
 
       // 2. Gambar kotak hijau untuk baris yang lolos seleksi
@@ -393,7 +422,7 @@ class _OcrBoxesPainter extends CustomPainter {
   bool shouldRepaint(covariant _OcrBoxesPainter oldDelegate) {
     return oldDelegate.selectedIds != selectedIds ||
         oldDelegate.screenRects != screenRects ||
-        oldDelegate.rejectedScreenRects != rejectedScreenRects ||
+        oldDelegate.rejectedScreenItems != rejectedScreenItems ||
         oldDelegate.highlightColor != highlightColor;
   }
 }

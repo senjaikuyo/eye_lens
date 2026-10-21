@@ -12,6 +12,8 @@ enum NoiseRejectionReason {
   lowAlphaNumericRatio,
   symbolOnly,
   emptyOrWhitespace,
+  clockPattern,
+  statusBarPattern,
 }
 
 /// Informasi baris yang ditolak beserta alasan penolakannya untuk kemudahan inspeksi debug.
@@ -56,8 +58,26 @@ class OcrNoiseFilterConfig {
   /// Rasio minimal karakter huruf dan angka terhadap karakter non-spasi (0.5 = 50%).
   final double minAlphaNumericRatio;
 
+  /// Rasio tinggi citra untuk zona tepi atas dan bawah (0.08 = 8%).
+  final double edgeZoneHeightRatio;
+
+  /// Pengatur sensitivitas zona tepi jika terdeteksi tangkapan layar UI antarmuka (default 1.5).
+  final double screenshotSensitivity;
+
+  /// Rasio minimal baris pendek untuk mendeteksi tata letak UI antarmuka (0.50 = 50%).
+  final double screenshotShortLinesRatio;
+
+  /// Batas karakter baris pendek untuk deteksi tangkapan layar antarmuka.
+  final int screenshotShortLineCharLimit;
+
+  /// Minimal jumlah baris untuk menjalankan deteksi tangkapan layar antarmuka.
+  final int screenshotMinLines;
+
   /// Daftar kata pendek sah yang tidak boleh dibuang (case-insensitive).
   final Set<String> validShortWords;
+
+  /// Daftar nama operator telekomunikasi populer (case-insensitive).
+  final Set<String> knownCarriers;
 
   const OcrNoiseFilterConfig({
     this.minConfidence = 0.5,
@@ -67,6 +87,11 @@ class OcrNoiseFilterConfig {
     this.isolationShortCharCount = 15,
     this.isolationMinLineCount = 3,
     this.minAlphaNumericRatio = 0.5,
+    this.edgeZoneHeightRatio = 0.08,
+    this.screenshotSensitivity = 1.5,
+    this.screenshotShortLinesRatio = 0.50,
+    this.screenshotShortLineCharLimit = 20,
+    this.screenshotMinLines = 4,
     this.validShortWords = const {
       'a',
       'i',
@@ -92,6 +117,33 @@ class OcrNoiseFilterConfig {
       'is',
       'it',
       'as',
+    },
+    this.knownCarriers = const {
+      'telkomsel',
+      'indosat',
+      'indosat ooredoo',
+      'xl',
+      'xl axiata',
+      'smartfren',
+      'axis',
+      'tri',
+      'three',
+      '3',
+      'verizon',
+      'at&t',
+      't-mobile',
+      'sprint',
+      'vodafone',
+      'orange',
+      'o2',
+      'claro',
+      'movistar',
+      'jio',
+      'airtel',
+      'no sim',
+      'emergency calls only',
+      'panggilan darurat',
+      'darurat',
     },
   });
 }
@@ -141,6 +193,92 @@ class OcrNoiseFilter {
   static final RegExp _numberRegex = RegExp(r'^\d+(\.\d+)?$');
   static final RegExp _alphaNumericRegex = RegExp(r'[a-zA-Z0-9]');
 
+  /// Pola jam: 1-2 digit, titik dua atau titik, 2 digit menit, opsional detik atau AM/PM.
+  /// Contoh: 5:51, 05.51, 17:30, 5:51 PM, 05:51:30 AM
+  static final RegExp _clockRegex = RegExp(
+    r'^\s*\d{1,2}[:.][0-5]\d(?::[0-5]\d)?(?:\s*(?:AM|PM|am|pm))?\s*$',
+    caseSensitive: false,
+  );
+
+  /// Pola persen status bar: 85%, 100 %, dsb.
+  static final RegExp _statusBarPercentRegex = RegExp(
+    r'^\s*\d{1,3}\s*%\s*$',
+  );
+
+  /// Pola indikator sinyal/jaringan: 4G, 5G, LTE, Wi-Fi, WiFi, VoLTE, dsb.
+  static final RegExp _statusBarNetworkRegex = RegExp(
+    r'^\s*(?:[2345]G\+?|LTE|VoLTE\d?|VoWiFi|Wi-?Fi|H\+?|EDGE|GPRS)\s*$',
+    caseSensitive: false,
+  );
+
+  /// Pola pemisah token pada baris status bar (spasi, bullet, garis tegak, slash).
+  static final RegExp _statusBarPunctuationRegex = RegExp(r'[\s|•·/\\,]+');
+
+  /// Memeriksa apakah teks cocok dengan pola jam/waktu murni.
+  static bool isClockPattern(String text) {
+    return _clockRegex.hasMatch(text.trim());
+  }
+
+  /// Memeriksa apakah teks cocok dengan pola elemen status bar
+  /// (persen baterai, nama operator, atau kombinasi 4G, 5G, LTE, Wi-Fi).
+  static bool isStatusBarPattern(String text, OcrNoiseFilterConfig config) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+
+    // 1. Persen baterai tunggal
+    if (_statusBarPercentRegex.hasMatch(trimmed)) return true;
+
+    // 2. Sinyal / konektivitas tunggal
+    if (_statusBarNetworkRegex.hasMatch(trimmed)) return true;
+
+    // 3. Nama operator tunggal
+    if (config.knownCarriers.contains(trimmed.toLowerCase())) return true;
+
+    // 4. Kombinasi elemen status bar (misal "Telkomsel 4G", "4G 85%", "Wi-Fi | 5G")
+    return _isCompoundStatusBar(trimmed, config);
+  }
+
+  static bool _isCompoundStatusBar(String text, OcrNoiseFilterConfig config) {
+    final tokens = text
+        .split(_statusBarPunctuationRegex)
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    if (tokens.isEmpty) return false;
+
+    for (final token in tokens) {
+      final isPercent = _statusBarPercentRegex.hasMatch(token);
+      final isNetwork = _statusBarNetworkRegex.hasMatch(token);
+      final isCarrier = config.knownCarriers.contains(token.toLowerCase());
+
+      if (!isPercent && !isNetwork && !isCarrier) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /// Mendeteksi apakah tata letak teks menyerupai antarmuka aplikasi / tangkapan layar (screenshot).
+  /// Ditandai dengan banyaknya komponen/baris teks pendek khas antarmuka.
+  static bool isLikelyScreenshot({
+    required List<OcrLineData> lines,
+    required Size imageSize,
+    required OcrNoiseFilterConfig config,
+  }) {
+    if (lines.length < config.screenshotMinLines) return false;
+
+    int shortCount = 0;
+    for (final line in lines) {
+      if (line.text.trim().length <= config.screenshotShortLineCharLimit) {
+        shortCount++;
+      }
+    }
+
+    final ratio = shortCount / lines.length;
+    return ratio >= config.screenshotShortLinesRatio;
+  }
+
   /// Menjalankan filter secara asynchronous pada background isolate via [compute].
   static Future<NoiseFilterResult> filterWithCompute(
     OcrNoiseFilterInput input,
@@ -189,6 +327,33 @@ class OcrNoiseFilter {
                     validHeights[validHeights.length ~/ 2]) /
                 2.0)
         : 0.0;
+
+    // Deteksi apakah citra bertipe tangkapan layar antarmuka aplikasi
+    final bool isScreenshot = isLikelyScreenshot(
+      lines: lines,
+      imageSize: imageSize,
+      config: config,
+    );
+
+    // Sensitivitas zona tepi lebih ketat untuk tangkapan layar UI
+    final double effectiveEdgeZoneRatio = isScreenshot
+        ? (config.edgeZoneHeightRatio * config.screenshotSensitivity)
+            .clamp(0.0, 0.4)
+        : config.edgeZoneHeightRatio;
+
+    final double topEdgeBoundary = imageSize.height > 0
+        ? imageSize.height * effectiveEdgeZoneRatio
+        : 0.0;
+    final double bottomEdgeBoundary = imageSize.height > 0
+        ? imageSize.height * (1.0 - effectiveEdgeZoneRatio)
+        : double.infinity;
+
+    bool isInEdgeZone(Rect box) {
+      if (imageSize.height <= 0) return false;
+      final inTop = box.top <= topEdgeBoundary || box.center.dy <= topEdgeBoundary;
+      final inBottom = box.bottom >= bottomEdgeBoundary || box.center.dy >= bottomEdgeBoundary;
+      return inTop || inBottom;
+    }
 
     final List<OcrLineData> accepted = [];
     final List<RejectedLineInfo> rejected = [];
@@ -262,9 +427,20 @@ class OcrNoiseFilter {
       }
 
       // Aturan 4: Keterpencilan (Isolation)
-      // Buang baris pendek yang jauh dari kelompok teks utama (> 5x tinggi median)
+      // Buang baris pendek yang jauh dari kelompok teks utama (> 5x tinggi median).
+      // Catatan:
+      // - Angka sah (seperti nomor halaman di bawah/atas) dikecualikan agar tidak terbuang.
+      // - Pola jam dan elemen status bar didelegasikan ke Aturan 6 agar tercatat dengan
+      //   NoiseRejectionReason.clockPattern / statusBarPattern yang tepat untuk mode debug.
+      final isNumber = _numberRegex.hasMatch(trimmed);
+      final isClock = isClockPattern(trimmed);
+      final isStatusBar = isStatusBarPattern(trimmed, config);
+
       final isShort = trimmed.length <= config.isolationShortCharCount;
-      if (lines.length >= config.isolationMinLineCount &&
+      if (!isNumber &&
+          !isClock &&
+          !isStatusBar &&
+          lines.length >= config.isolationMinLineCount &&
           isShort &&
           medianHeight > 0) {
         double minDistance = double.infinity;
@@ -306,29 +482,87 @@ class OcrNoiseFilter {
         continue;
       }
 
-      // Pengecualian: jangan buang kata pendek sah, angka, atau item daftar
+      // Evaluasi rasio alfanumerik (pengecualian untuk kata pendek sah, angka, dan item daftar)
       final lowerTrimmed = trimmed.toLowerCase();
       final isShortValidWord = config.validShortWords.contains(lowerTrimmed);
-      final isNumber = _numberRegex.hasMatch(trimmed);
       final isListItem = _listItemRegex.hasMatch(trimmed);
 
-      if (isShortValidWord || isNumber || isListItem) {
-        accepted.add(line);
-        continue;
+      if (!isShortValidWord && !isNumber && !isListItem) {
+        final ratio = alphaNumericCount / nonWhitespace.length;
+        if (ratio < config.minAlphaNumericRatio) {
+          rejected.add(
+            RejectedLineInfo(
+              line: line,
+              reason: NoiseRejectionReason.lowAlphaNumericRatio,
+              explanation:
+                  'Rasio alfanumerik ${(ratio * 100).toStringAsFixed(1)}% < batas minimal ${(config.minAlphaNumericRatio * 100).toStringAsFixed(0)}%.',
+            ),
+          );
+          continue;
+        }
       }
 
-      // Hitung rasio huruf dan angka terhadap seluruh karakter non-spasi
-      final ratio = alphaNumericCount / nonWhitespace.length;
-      if (ratio < config.minAlphaNumericRatio) {
-        rejected.add(
-          RejectedLineInfo(
-            line: line,
-            reason: NoiseRejectionReason.lowAlphaNumericRatio,
-            explanation:
-                'Rasio alfanumerik ${(ratio * 100).toStringAsFixed(1)}% < batas minimal ${(config.minAlphaNumericRatio * 100).toStringAsFixed(0)}%.',
-          ),
-        );
-        continue;
+      // Aturan 6: Elemen Antarmuka dan Jam (Status Bar & Clock Filter)
+      final inEdge = isInEdgeZone(line.boundingBox);
+
+      if (inEdge) {
+        // Pada zona tepi (atas/bawah): buang baris jika cocok pola jam atau status bar
+        if (isClockPattern(trimmed)) {
+          rejected.add(
+            RejectedLineInfo(
+              line: line,
+              reason: NoiseRejectionReason.clockPattern,
+              explanation:
+                  'Pola jam pada zona tepi citra ($trimmed, y: ${line.boundingBox.top.toStringAsFixed(1)}).',
+            ),
+          );
+          continue;
+        }
+
+        if (isStatusBarPattern(trimmed, config)) {
+          rejected.add(
+            RejectedLineInfo(
+              line: line,
+              reason: NoiseRejectionReason.statusBarPattern,
+              explanation:
+                  'Pola elemen status bar pada zona tepi citra ($trimmed).',
+            ),
+          );
+          continue;
+        }
+      } else {
+        // Di luar zona tepi: buang baris berpola jam HANYA jika baris itu pendek, berdiri sendiri,
+        // dan jauh dari kelompok teks utama. Jam di dalam tabel jadwal atau kalimat tetap lolos.
+        if (isClockPattern(trimmed)) {
+          final isShort = trimmed.length <= config.isolationShortCharCount;
+          if (lines.length >= config.isolationMinLineCount &&
+              isShort &&
+              medianHeight > 0) {
+            double minDistance = double.infinity;
+            for (final other in lines) {
+              if (identical(line, other)) continue;
+              final d =
+                  _calculateRectDistance(line.boundingBox, other.boundingBox);
+              if (d < minDistance) {
+                minDistance = d;
+              }
+            }
+
+            final maxAllowedDistance =
+                config.isolationDistanceFactor * medianHeight;
+            if (minDistance > maxAllowedDistance) {
+              rejected.add(
+                RejectedLineInfo(
+                  line: line,
+                  reason: NoiseRejectionReason.clockPattern,
+                  explanation:
+                      'Pola jam berdiri sendiri terpencil di luar kelompok teks utama ($trimmed, jarak: ${minDistance.toStringAsFixed(1)} > batas ${maxAllowedDistance.toStringAsFixed(1)}).',
+                ),
+              );
+              continue;
+            }
+          }
+        }
       }
 
       // Lolos semua kriteria penyaringan

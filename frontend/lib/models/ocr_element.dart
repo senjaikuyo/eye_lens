@@ -28,6 +28,7 @@ class OcrResult {
   final bool hasLowQualityWarning;
   final bool allLinesFilteredOut;
   final int rawLinesCount;
+  final List<OcrLineData> rawLines;
 
   const OcrResult({
     required this.fullText,
@@ -40,6 +41,7 @@ class OcrResult {
     this.hasLowQualityWarning = false,
     this.allLinesFilteredOut = false,
     this.rawLinesCount = 0,
+    this.rawLines = const [],
   });
 
   static const OcrResult empty = OcrResult(
@@ -53,5 +55,6 @@ class OcrResult {
     hasLowQualityWarning: false,
     allLinesFilteredOut: false,
     rawLinesCount: 0,
+    rawLines: [],
   );
 }

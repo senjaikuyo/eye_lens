@@ -40,12 +40,26 @@ class OcrService {
       originalBlockTexts.add(block.text);
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
+          final List<OcrWordData> words = [];
+          for (final elem in line.elements) {
+            if (elem.text.trim().isNotEmpty) {
+              words.add(
+                OcrWordData(
+                  text: elem.text,
+                  boundingBox: elem.boundingBox,
+                  confidence: elem.confidence,
+                ),
+              );
+            }
+          }
+
           allLines.add(
             OcrLineData(
               text: line.text,
               boundingBox: line.boundingBox,
               confidence: line.confidence,
               blockIndex: bIdx,
+              elements: words,
             ),
           );
         }
@@ -89,6 +103,7 @@ class OcrService {
     final documentData = OcrDocumentData(
       blocks: filteredBlocks,
       rawText: filterResult.acceptedLines.map((l) => l.text).join('\n'),
+      allRawLines: allLines,
     );
 
     // 3. Rapikan hasil teks menggunakan TextFormatter murni di isolate
@@ -123,6 +138,7 @@ class OcrService {
       hasLowQualityWarning: filterResult.hasLowQualityWarning,
       allLinesFilteredOut: filterResult.allLinesFilteredOut,
       rawLinesCount: allLines.length,
+      rawLines: allLines,
     );
   }
 

@@ -93,19 +93,35 @@ class FormattedTextResult {
   }
 }
 
-/// DTO baris OCR murni dengan koordinat bounding box, opsional confidence, dan indeks blok.
+/// DTO kata OCR murni dengan teks, bounding box, dan opsional confidence.
+@immutable
+class OcrWordData {
+  final String text;
+  final Rect boundingBox;
+  final double? confidence;
+
+  const OcrWordData({
+    required this.text,
+    required this.boundingBox,
+    this.confidence,
+  });
+}
+
+/// DTO baris OCR murni dengan koordinat bounding box, opsional confidence, indeks blok, dan daftar kata.
 @immutable
 class OcrLineData {
   final String text;
   final Rect boundingBox;
   final double? confidence;
   final int blockIndex;
+  final List<OcrWordData> elements;
 
   const OcrLineData({
     required this.text,
     required this.boundingBox,
     this.confidence,
     this.blockIndex = 0,
+    this.elements = const [],
   });
 }
 
@@ -128,14 +144,17 @@ class OcrBlockData {
 class OcrDocumentData {
   final List<OcrBlockData> blocks;
   final String rawText;
+  final List<OcrLineData> allRawLines;
 
   const OcrDocumentData({
     required this.blocks,
     required this.rawText,
+    this.allRawLines = const [],
   });
 
   static const OcrDocumentData empty = OcrDocumentData(
     blocks: [],
     rawText: '',
+    allRawLines: [],
   );
 }

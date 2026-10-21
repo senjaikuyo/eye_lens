@@ -1,14 +1,19 @@
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../models/ocr_element.dart';
+import '../../models/text_formatter_models.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/lens_selection_helper.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/feedback_dialog.dart';
+import '../scan/widgets/no_text_alert_banner.dart';
 import '../settings/faq_screen.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/appearance_sheet.dart';
@@ -48,47 +53,90 @@ class _SpeechScreenState extends State<SpeechScreen> {
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
 
-  List<OcrElement> _selectedElements = [];
-  Set<String> _selectedIds = {};
+  late String _currentFramedText;
+  FormattedTextResult? _currentFramedFormattedResult;
+  bool _hasTextInFrame = true;
+  String _noTextAlertMessage = '';
+  bool _showNoTextAlert = false;
+  Timer? _noTextAlertDismissTimer;
 
-  String get _activeText {
-    if (_selectedElements.isNotEmpty) {
-      return _selectedElements.map((e) => e.text).join('\n');
-    }
-    return widget.text;
-  }
+  String get _activeText => _currentFramedText;
 
-  void _onSelectionChanged(List<OcrElement> selected) {
-    setState(() {
-      _selectedElements = selected;
-      _selectedIds = selected.map((e) => e.id).toSet();
-    });
+  void _onFrameChanging() {
+    _ttsService.stop();
+    _isPlayingNotifier.value = false;
     _progressNotifier.value = 0.0;
     _currentCharIndexNotifier.value = 0;
-
-    if (_isPlayingNotifier.value) {
-      _startSpeech();
-    }
   }
 
-  void _onClearSelection() {
+  void _onSelectionComputed(LensSelectionResult result) {
+    if (!mounted) return;
     setState(() {
-      _selectedElements.clear();
-      _selectedIds.clear();
+      _hasTextInFrame = result.hasText;
+      if (result.hasText) {
+        _currentFramedText = result.text;
+        _currentFramedFormattedResult = result.formattedResult;
+        _dismissNoTextAlert();
+      } else {
+        _currentFramedText = '';
+        _currentFramedFormattedResult = null;
+        final strings = AppStrings.of(context);
+        _noTextAlertMessage = result.validation.getAlertMessage(strings);
+      }
     });
-    _progressNotifier.value = 0.0;
-    _currentCharIndexNotifier.value = 0;
+  }
 
-    if (_isPlayingNotifier.value) {
-      _startSpeech();
+  void _triggerNoTextAlert(String message) {
+    _dismissNoTextAlert();
+    _ttsService.stop();
+    _isPlayingNotifier.value = false;
+
+    setState(() {
+      _showNoTextAlert = true;
+      _noTextAlertMessage = message;
+    });
+
+    HapticFeedback.mediumImpact();
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      TextDirection.ltr,
+    );
+
+    final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
+    _ttsService.setLanguage(langCode);
+    _ttsService.speak(message);
+
+    _noTextAlertDismissTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showNoTextAlert = false;
+        });
+      }
+    });
+  }
+
+  void _dismissNoTextAlert() {
+    _noTextAlertDismissTimer?.cancel();
+    if (_showNoTextAlert) {
+      setState(() {
+        _showNoTextAlert = false;
+      });
     }
   }
 
   Future<void> _startSpeech() async {
-    if (_selectedElements.isNotEmpty) {
-      await _ttsService.speak(_activeText);
-    } else if (widget.ocrResult?.formattedResult != null) {
-      await _ttsService.speakFormattedResult(widget.ocrResult!.formattedResult!);
+    if (!_hasTextInFrame || _activeText.trim().isEmpty) {
+      final strings = AppStrings.of(context);
+      final msg = _noTextAlertMessage.isNotEmpty
+          ? _noTextAlertMessage
+          : strings.noTextFoundAlert;
+      _triggerNoTextAlert(msg);
+      return;
+    }
+
+    if (_currentFramedFormattedResult != null) {
+      await _ttsService.speakFormattedResult(_currentFramedFormattedResult!);
     } else {
       await _ttsService.speak(_activeText);
     }
@@ -100,6 +148,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
     _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
+
+    _currentFramedText = widget.text;
+    _currentFramedFormattedResult = widget.ocrResult?.formattedResult;
+    _hasTextInFrame = widget.text.trim().isNotEmpty;
 
     _ttsService.onProgress = (double progress, String word, [int? charIndex]) {
       if (!mounted) return;
@@ -130,7 +182,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
       await _ttsService.setLanguage(langCode);
       await _ttsService.setSpeed(_speed);
-      if (mounted) {
+      if (mounted && _hasTextInFrame) {
         await _startSpeech();
       }
     });
@@ -138,6 +190,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   @override
   void dispose() {
+    _noTextAlertDismissTimer?.cancel();
     _ttsService.stop();
     _ttsService.onProgress = null;
     _ttsService.onStart = null;
@@ -156,6 +209,28 @@ class _SpeechScreenState extends State<SpeechScreen> {
       _ttsService.pause();
     } else {
       _startSpeech();
+    }
+  }
+
+  void _onToggleTextView() {
+    if (!_isTextView) {
+      // Ingin beralih dari gambar ke teks
+      if (!_hasTextInFrame || _activeText.trim().isEmpty) {
+        final strings = AppStrings.of(context);
+        final msg = _noTextAlertMessage.isNotEmpty
+            ? _noTextAlertMessage
+            : strings.noTextFoundAlert;
+        _triggerNoTextAlert(msg);
+        return;
+      }
+      setState(() {
+        _isTextView = true;
+      });
+    } else {
+      // Kembali dari teks ke gambar
+      setState(() {
+        _isTextView = false;
+      });
     }
   }
 
@@ -199,14 +274,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 child: OcrImageOverlay(
                   imageBytes: widget.imageBytes!,
                   imageSize: widget.ocrResult?.imageSize ?? Size.zero,
+                  rawLines: widget.ocrResult?.rawLines ?? const [],
                   elements: widget.ocrResult?.elements ?? const [],
                   rejectedLines: widget.ocrResult?.rejectedLines ?? const [],
-                  selectedIds: _selectedIds,
-                  highlightColor: themeProvider.highlightColor,
                   isDark: isDark,
                   isHighContrast: themeProvider.isHighContrast,
-                  onSelectionChanged: _onSelectionChanged,
-                  onClearSelection: _onClearSelection,
+                  onFrameChanging: _onFrameChanging,
+                  onSelectionComputed: _onSelectionComputed,
                 ),
               )
             else
@@ -233,9 +307,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                             builder: (context, charIndex, _) {
                               return HighlightedTextView(
                                 text: _activeText,
-                                formattedResult: _selectedElements.isEmpty
-                                    ? widget.ocrResult?.formattedResult
-                                    : null,
+                                formattedResult: _currentFramedFormattedResult,
                                 currentCharIndex: charIndex,
                                 fontSize: currentFontSize,
                                 cursorColorEnabled: themeProvider.cursorColor,
@@ -314,13 +386,17 @@ class _SpeechScreenState extends State<SpeechScreen> {
               bottom: bottomPadding + 148,
               child: SpeechModeToggleButton(
                 isTextView: _isTextView,
-                onToggle: () {
-                  setState(() {
-                    _isTextView = !_isTextView;
-                  });
-                },
+                onToggle: _onToggleTextView,
               ),
             ),
+
+          // ALERT BANNER JIKA TANPA TEKS DI DALAM BINGKAI
+          NoTextAlertBanner(
+            isVisible: _showNoTextAlert,
+            message: _noTextAlertMessage,
+            bottomPadding: bottomPadding + 140,
+            onClose: _dismissNoTextAlert,
+          ),
 
           // BOTTOM AUDIO PLAYER CONTROLS
           Positioned(

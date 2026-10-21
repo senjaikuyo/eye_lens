@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 
 class AudioPlayerBar extends StatelessWidget {
@@ -58,9 +59,7 @@ class AudioPlayerBar extends StatelessWidget {
         color: isTextView
             ? (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF4F4F6))
             : Colors.black.withValues(alpha: 0.35),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -72,15 +71,10 @@ class AudioPlayerBar extends StatelessWidget {
               activeTrackColor: sliderActiveColor,
               inactiveTrackColor: sliderInactiveColor,
               trackHeight: 4.0,
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: 7,
-              ),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
               overlayShape: SliderComponentShape.noOverlay,
             ),
-            child: Slider(
-              value: progress,
-              onChanged: onProgressChanged,
-            ),
+            child: Slider(value: progress, onChanged: onProgressChanged),
           ),
           const SizedBox(height: 12),
 
@@ -92,8 +86,8 @@ class AudioPlayerBar extends StatelessWidget {
               GestureDetector(
                 onTap: onLanguageTap,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -111,8 +105,8 @@ class AudioPlayerBar extends StatelessWidget {
                         selectedLanguage == 'English'
                             ? 'assets/images/flag_usa.png'
                             : 'assets/images/flag_indonesia.png',
-                        width: 34,
-                        height: 34,
+                        width: 36,
+                        height: 36,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -124,8 +118,8 @@ class AudioPlayerBar extends StatelessWidget {
               GestureDetector(
                 onTap: onRewind,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -141,7 +135,7 @@ class AudioPlayerBar extends StatelessWidget {
                     child: Icon(
                       Icons.replay_10_rounded,
                       color: Colors.black,
-                      size: 28,
+                      size: 30,
                     ),
                   ),
                 ),
@@ -180,8 +174,8 @@ class AudioPlayerBar extends StatelessWidget {
               GestureDetector(
                 onTap: onForward,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -197,7 +191,7 @@ class AudioPlayerBar extends StatelessWidget {
                     child: Icon(
                       Icons.forward_10_rounded,
                       color: Colors.black,
-                      size: 28,
+                      size: 30,
                     ),
                   ),
                 ),
@@ -207,8 +201,8 @@ class AudioPlayerBar extends StatelessWidget {
               GestureDetector(
                 onTap: onSpeedTap,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -226,7 +220,7 @@ class AudioPlayerBar extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: 18,
                     ),
                   ),
                 ),

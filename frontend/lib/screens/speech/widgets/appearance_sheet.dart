@@ -17,6 +17,8 @@ class AppearanceBottomSheet {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (bottomSheetContext) {
+        double currentFontSize = fontSize;
+
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final currentIsDark = themeProvider.isDark(context);
@@ -54,6 +56,10 @@ class AppearanceBottomSheet {
                           ),
                         ),
                         IconButton(
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
                           onPressed: () =>
                               Navigator.of(bottomSheetContext).pop(),
                           icon: Icon(
@@ -61,7 +67,7 @@ class AppearanceBottomSheet {
                             color: currentIsDark
                                 ? Colors.white
                                 : AppColors.black,
-                            size: 24,
+                            size: 26,
                           ),
                         ),
                       ],
@@ -76,7 +82,7 @@ class AppearanceBottomSheet {
                         icon: Icon(
                           Icons.navigation_outlined,
                           color: currentIsDark ? Colors.white : Colors.black,
-                          size: 24,
+                          size: 26,
                         ),
                         label: strings.cursorColor,
                         currentIsDark: currentIsDark,
@@ -102,8 +108,8 @@ class AppearanceBottomSheet {
                                   child: Row(
                                     children: [
                                       Container(
-                                        width: 20,
-                                        height: 20,
+                                        width: 22,
+                                        height: 22,
                                         decoration: BoxDecoration(
                                           color: color,
                                           shape: BoxShape.circle,
@@ -113,7 +119,7 @@ class AppearanceBottomSheet {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
+                                      const SizedBox(width: 12),
                                       Text(
                                         color ==
                                                 ThemeProvider.highlightColors[0]
@@ -131,48 +137,59 @@ class AppearanceBottomSheet {
                                                       .highlightColors[3]
                                             ? 'Green'
                                             : 'Purple',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 );
                               }).toList(),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: themeProvider.highlightColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 48,
+                            ),
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: themeProvider.highlightColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                themeProvider.cursorColor
-                                    ? 'Active'
-                                    : 'Default',
-                                style: TextStyle(
-                                  color: currentIsDark
-                                      ? const Color(0xFFAAAAAA)
-                                      : const Color(0xFF666666),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(width: 8),
+                                Text(
+                                  themeProvider.cursorColor
+                                      ? 'Active'
+                                      : 'Default',
+                                  style: TextStyle(
+                                    color: currentIsDark
+                                        ? const Color(0xFFAAAAAA)
+                                        : const Color(0xFF666666),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                color: currentIsDark
-                                    ? const Color(0xFF888888)
-                                    : const Color(0xFF8E9BAE),
-                                size: 18,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.unfold_more_rounded,
+                                  color: currentIsDark
+                                      ? const Color(0xFF888888)
+                                      : const Color(0xFF8E9BAE),
+                                  size: 22,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -188,7 +205,7 @@ class AppearanceBottomSheet {
                         icon: Icon(
                           Icons.contrast_rounded,
                           color: currentIsDark ? Colors.white : Colors.black,
-                          size: 24,
+                          size: 26,
                         ),
                         label: strings.highContrast,
                         currentIsDark: currentIsDark,
@@ -200,10 +217,15 @@ class AppearanceBottomSheet {
                             setSheetState(() {});
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                            constraints: const BoxConstraints(
+                              minWidth: 64,
+                              minHeight: 48,
                             ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: currentHighContrast
                                   ? (currentIsDark
@@ -212,7 +234,7 @@ class AppearanceBottomSheet {
                                   : (currentIsDark
                                         ? const Color(0xFF333333)
                                         : const Color(0xFFE5E7EB)),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               currentHighContrast ? 'On' : 'Off',
@@ -224,7 +246,7 @@ class AppearanceBottomSheet {
                                     : (currentIsDark
                                           ? const Color(0xFFAAAAAA)
                                           : const Color(0xFF666666)),
-                                fontSize: 13,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -249,46 +271,60 @@ class AppearanceBottomSheet {
                                 children: [
                                   Icon(
                                     Icons.format_size_rounded,
-                                    color: currentIsDark ? Colors.white : Colors.black,
-                                    size: 24,
+                                    color: currentIsDark
+                                        ? Colors.white
+                                        : Colors.black,
+                                    size: 26,
                                   ),
                                   const SizedBox(width: 16),
                                   Text(
                                     strings.textSize,
                                     style: TextStyle(
-                                      color: currentIsDark ? Colors.white : AppColors.black,
-                                      fontSize: 16,
+                                      color: currentIsDark
+                                          ? Colors.white
+                                          : AppColors.black,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 64,
+                                  minHeight: 48,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: currentIsDark
                                       ? const Color(0xFF333333)
                                       : const Color(0xFFE5E7EB),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  '${((fontSize / 18.0) * 100).round()}%',
+                                  '${((currentFontSize / 18.0) * 100).round()}%',
                                   style: TextStyle(
-                                    color: currentIsDark ? Colors.white : AppColors.black,
-                                    fontSize: 13,
+                                    color: currentIsDark
+                                        ? Colors.white
+                                        : AppColors.black,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               Text(
                                 'A',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: currentIsDark
                                       ? const Color(0xFFAAAAAA)
@@ -298,20 +334,34 @@ class AppearanceBottomSheet {
                               Expanded(
                                 child: SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
-                                    activeTrackColor: currentIsDark ? Colors.white : AppColors.black,
+                                    activeTrackColor: currentIsDark
+                                        ? Colors.white
+                                        : AppColors.black,
                                     inactiveTrackColor: currentIsDark
                                         ? const Color(0xFF444444)
                                         : const Color(0xFFE5E7EB),
-                                    thumbColor: currentIsDark ? Colors.white : AppColors.black,
-                                    overlayColor: (currentIsDark ? Colors.white : AppColors.black)
-                                        .withValues(alpha: 0.12),
-                                    trackHeight: 4,
+                                    thumbColor: currentIsDark
+                                        ? Colors.white
+                                        : AppColors.black,
+                                    overlayColor:
+                                        (currentIsDark
+                                                ? Colors.white
+                                                : AppColors.black)
+                                            .withValues(alpha: 0.12),
+                                    trackHeight: 6,
+                                    thumbShape: const RoundSliderThumbShape(
+                                      enabledThumbRadius: 14,
+                                    ),
+                                    overlayShape: const RoundSliderOverlayShape(
+                                      overlayRadius: 24,
+                                    ),
                                   ),
                                   child: Slider(
-                                    value: fontSize.clamp(18.0, 54.0),
+                                    value: currentFontSize.clamp(18.0, 54.0),
                                     min: 18.0,
                                     max: 54.0,
                                     onChanged: (newSize) {
+                                      currentFontSize = newSize;
                                       onFontSizeChanged(newSize);
                                       setSheetState(() {});
                                     },
@@ -321,9 +371,11 @@ class AppearanceBottomSheet {
                               Text(
                                 'A',
                                 style: TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 26,
                                   fontWeight: FontWeight.w700,
-                                  color: currentIsDark ? Colors.white : AppColors.black,
+                                  color: currentIsDark
+                                      ? Colors.white
+                                      : AppColors.black,
                                 ),
                               ),
                             ],
@@ -383,7 +435,7 @@ class AppearanceBottomSheet {
             label,
             style: TextStyle(
               color: currentIsDark ? Colors.white : AppColors.black,
-              fontSize: 15,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),

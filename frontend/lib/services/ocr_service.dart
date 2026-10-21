@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 import '../models/ocr_element.dart';
+import '../utils/image_dimension_helper.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
 /// - Menggunakan model Latin Script berkecepatan tinggi (< 500 ms).
@@ -24,12 +24,7 @@ class OcrService {
 
     File? tempFile;
     try {
-      final decodedImage = await decodeImageFromList(bytes);
-      final imageSize = Size(
-        decodedImage.width.toDouble(),
-        decodedImage.height.toDouble(),
-      );
-      decodedImage.dispose();
+      final imageSize = await ImageDimensionHelper.getImageSize(bytes);
 
       final tempDir = Directory.systemTemp;
       final tempPath =
@@ -84,12 +79,7 @@ class OcrService {
 
     try {
       final bytes = await File(filePath).readAsBytes();
-      final decodedImage = await decodeImageFromList(bytes);
-      final imageSize = Size(
-        decodedImage.width.toDouble(),
-        decodedImage.height.toDouble(),
-      );
-      decodedImage.dispose();
+      final imageSize = await ImageDimensionHelper.getImageSize(bytes);
 
       final inputImage = InputImage.fromFilePath(filePath);
       final RecognizedText recognizedText = await _textRecognizer.processImage(

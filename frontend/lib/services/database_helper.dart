@@ -73,7 +73,11 @@ class DatabaseHelper {
       )
     ''');
 
-    // 3. Trigger trg_limit_riwayat_50
+    // 3. Trigger trg_limit_riwayat_50 & Index
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_riwayat_waktu ON tbl_riwayat (waktu DESC, id_riwayat DESC)
+    ''');
+
     await db.execute('''
       CREATE TRIGGER trg_limit_riwayat_50 AFTER INSERT ON tbl_riwayat BEGIN
         DELETE FROM tbl_riwayat WHERE id_riwayat NOT IN (

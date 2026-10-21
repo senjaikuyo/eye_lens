@@ -16,6 +16,8 @@ import 'widgets/audio_player_bar.dart';
 import 'widgets/highlighted_text_view.dart';
 import 'widgets/language_sheet.dart';
 import 'widgets/ocr_image_overlay.dart';
+import 'widgets/speech_mode_toggle_button.dart';
+import 'widgets/speech_top_action_bar.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
@@ -38,8 +40,8 @@ class SpeechScreen extends StatefulWidget {
 class _SpeechScreenState extends State<SpeechScreen> {
   late bool _isTextView;
   double _fontSize = 32.0;
-  bool _isPlaying = false;
-  double _progress = 0.0;
+  final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
@@ -58,10 +60,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
     setState(() {
       _selectedElements = selected;
       _selectedIds = selected.map((e) => e.id).toSet();
-      _progress = 0.0;
     });
+    _progressNotifier.value = 0.0;
 
-    if (_isPlaying) {
+    if (_isPlayingNotifier.value) {
       _ttsService.speak(_activeText);
     }
   }
@@ -70,10 +72,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
     setState(() {
       _selectedElements.clear();
       _selectedIds.clear();
-      _progress = 0.0;
     });
+    _progressNotifier.value = 0.0;
 
-    if (_isPlaying) {
+    if (_isPlayingNotifier.value) {
       _ttsService.speak(_activeText);
     }
   }
@@ -81,43 +83,30 @@ class _SpeechScreenState extends State<SpeechScreen> {
   @override
   void initState() {
     super.initState();
-    // Inisialisasi ukuran font dari preferensi pengguna yang tersimpan
     _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
-
-    // Jika tidak ada gambar jepretan, default tampilkan mode teks bersih berlatar hitam
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
-    // Pasang callback TTS native
     _ttsService.onProgress = (progress, word) {
       if (!mounted) return;
-      setState(() {
-        _progress = progress;
-      });
+      _progressNotifier.value = progress;
     };
 
     _ttsService.onStart = () {
       if (!mounted) return;
-      setState(() {
-        _isPlaying = true;
-      });
+      _isPlayingNotifier.value = true;
     };
 
     _ttsService.onPause = () {
       if (!mounted) return;
-      setState(() {
-        _isPlaying = false;
-      });
+      _isPlayingNotifier.value = false;
     };
 
     _ttsService.onCompletion = () {
       if (!mounted) return;
-      setState(() {
-        _isPlaying = false;
-        _progress = 0.0;
-      });
+      _isPlayingNotifier.value = false;
+      _progressNotifier.value = 0.0;
     };
 
-    // Langsung bacakan teks secara otomatis saat layar dibuka (SKPPL Auto-Play)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
       await _ttsService.setLanguage(langCode);
@@ -136,11 +125,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _ttsService.onPause = null;
     _ttsService.onCompletion = null;
     _ttsService.onError = null;
+    _progressNotifier.dispose();
+    _isPlayingNotifier.dispose();
     super.dispose();
   }
 
   void _togglePlayPause() {
-    if (_isPlaying) {
+    if (_isPlayingNotifier.value) {
       _ttsService.pause();
     } else {
       _ttsService.speak(_activeText);
@@ -180,7 +171,6 @@ class _SpeechScreenState extends State<SpeechScreen> {
         children: [
           // MAIN BODY
           if (!_isTextView) ...[
-            // Photo View with Google Lens Text Selection Overlay
             if (widget.imageBytes != null)
               Positioned.fill(
                 top: topPadding + 64,
@@ -200,7 +190,6 @@ class _SpeechScreenState extends State<SpeechScreen> {
             else
               Container(color: Colors.black),
           ] else ...[
-            // Pure Text View with Dark Mode support (latar hitam elegan / tema aktif)
             Positioned.fill(
               child: Container(
                 color: isDark ? AppColors.black : Colors.white,
@@ -211,18 +200,21 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   bottom: 160,
                 ),
                 child: SingleChildScrollView(
-                  child: HighlightedTextView(
-                    text: _activeText,
-                    fontSize: _fontSize,
-                    cursorColorEnabled: themeProvider.cursorColor,
-                    highlightColor: themeProvider.highlightColor,
-                    isDark: isDark,
-                    isHighContrast: themeProvider.isHighContrast,
-                    progress: _progress,
-                    onProgressChanged: (val) {
-                      setState(() {
-                        _progress = val;
-                      });
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _progressNotifier,
+                    builder: (context, progress, _) {
+                      return HighlightedTextView(
+                        text: _activeText,
+                        fontSize: _fontSize,
+                        cursorColorEnabled: themeProvider.cursorColor,
+                        highlightColor: themeProvider.highlightColor,
+                        isDark: isDark,
+                        isHighContrast: themeProvider.isHighContrast,
+                        progress: progress,
+                        onProgressChanged: (val) {
+                          _progressNotifier.value = val;
+                        },
+                      );
                     },
                   ),
                 ),
@@ -230,255 +222,59 @@ class _SpeechScreenState extends State<SpeechScreen> {
             ),
           ],
 
-          // TOP ACTION BAR: Back (Left) | Aa & Three Dots (Right)
+          // TOP ACTION BAR
           Positioned(
             top: topPadding + 10,
             left: 16,
             right: 16,
-            child: Row(
-              children: [
-                // Back Button
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD0D7DE),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+            child: SpeechTopActionBar(
+              isDark: isDark,
+              strings: strings,
+              onBackPressed: () => Navigator.of(context).pop(),
+              onAppearancePressed: () {
+                AppearanceBottomSheet.show(
+                  context,
+                  themeProvider: themeProvider,
+                  strings: strings,
+                  fontSize: _fontSize,
+                  onFontSizeChanged: (newSize) {
+                    setState(() {
+                      _fontSize = newSize;
+                    });
+                    themeProvider.setFontSize(newSize);
+                  },
+                );
+              },
+              onSettingsTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: Colors.black,
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // "Aa" Appearance Button
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD0D7DE),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () {
-                        AppearanceBottomSheet.show(
-                          context,
-                          themeProvider: themeProvider,
-                          strings: strings,
-                          fontSize: _fontSize,
-                          onFontSizeChanged: (newSize) {
-                            setState(() {
-                              _fontSize = newSize;
-                            });
-                            themeProvider.setFontSize(newSize);
-                          },
-                        );
-                      },
-                      child: const Center(
-                        child: Text(
-                          'Aa',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Three Dots Overflow Menu
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD0D7DE),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        popupMenuTheme: PopupMenuThemeData(
-                          color: isDark
-                              ? const Color(0xFF1E1E1E)
-                              : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                      child: PopupMenuButton<String>(
-                        icon: const Icon(
-                          Icons.more_vert_rounded,
-                          color: Colors.black,
-                          size: 26,
-                        ),
-                        padding: EdgeInsets.zero,
-                        onSelected: (value) {
-                          if (value == 'settings') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsScreen(),
-                              ),
-                            );
-                          } else if (value == 'feedback') {
-                            FeedbackDialog.show(
-                              context,
-                              strings: strings,
-                              isDark: isDark,
-                            );
-                          } else if (value == 'faq') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const FaqScreen(),
-                              ),
-                            );
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'settings',
-                            height: 52,
-                            child: Text(
-                              strings.settings,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : AppColors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'feedback',
-                            height: 52,
-                            child: Text(
-                              strings.feedback,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : AppColors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'faq',
-                            height: 52,
-                            child: Text(
-                              strings.faq,
-                              style: TextStyle(
-                                color: isDark ? Colors.white : AppColors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
+              onFeedbackTap: () {
+                FeedbackDialog.show(context, strings: strings, isDark: isDark);
+              },
+              onFaqTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const FaqScreen()),
+                );
+              },
             ),
           ),
 
-          // FLOATING MODE TOGGLE BUTTON (Hanya jika ada foto jepretan)
+          // FLOATING MODE TOGGLE BUTTON
           if (hasValidImage)
             Positioned(
               right: 20,
               bottom: bottomPadding + 148,
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(28),
-                    onTap: () {
-                      setState(() {
-                        _isTextView = !_isTextView;
-                      });
-                    },
-                    child: Center(
-                      child: _isTextView
-                          ? const Icon(
-                              Icons.image_outlined,
-                              color: Colors.black,
-                              size: 28,
-                            )
-                          : const Text(
-                              'T',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
+              child: SpeechModeToggleButton(
+                isTextView: _isTextView,
+                onToggle: () {
+                  setState(() {
+                    _isTextView = !_isTextView;
+                  });
+                },
               ),
             ),
 
@@ -487,48 +283,58 @@ class _SpeechScreenState extends State<SpeechScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: AudioPlayerBar(
-              isTextView: _isTextView,
-              isDark: isDark,
-              cursorColorEnabled: themeProvider.cursorColor,
-              highlightColor: themeProvider.highlightColor,
-              progress: _progress,
-              onProgressChanged: (val) {
-                setState(() {
-                  _progress = val;
-                });
-                _ttsService.seekTo(val);
-              },
-              selectedLanguage: _selectedLanguage,
-              onLanguageTap: () {
-                LanguageBottomSheet.show(
-                  context,
-                  strings: strings,
-                  isDark: isDark,
-                  selectedLanguage: _selectedLanguage,
-                  onLanguageSelected: (lang) async {
-                    setState(() {
-                      _selectedLanguage = lang;
-                    });
-                    final langCode = lang == 'Indonesia' ? 'id-ID' : 'en-US';
-                    await _ttsService.setLanguage(langCode);
-                    if (_isPlaying) {
-                      await _ttsService.speak(_activeText);
-                    }
+            child: ValueListenableBuilder<double>(
+              valueListenable: _progressNotifier,
+              builder: (context, progress, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: _isPlayingNotifier,
+                  builder: (context, isPlaying, _) {
+                    return AudioPlayerBar(
+                      isTextView: _isTextView,
+                      isDark: isDark,
+                      cursorColorEnabled: themeProvider.cursorColor,
+                      highlightColor: themeProvider.highlightColor,
+                      progress: progress,
+                      onProgressChanged: (val) {
+                        _progressNotifier.value = val;
+                        _ttsService.seekTo(val);
+                      },
+                      selectedLanguage: _selectedLanguage,
+                      onLanguageTap: () {
+                        LanguageBottomSheet.show(
+                          context,
+                          strings: strings,
+                          isDark: isDark,
+                          selectedLanguage: _selectedLanguage,
+                          onLanguageSelected: (lang) async {
+                            setState(() {
+                              _selectedLanguage = lang;
+                            });
+                            final langCode = lang == 'Indonesia'
+                                ? 'id-ID'
+                                : 'en-US';
+                            await _ttsService.setLanguage(langCode);
+                            if (_isPlayingNotifier.value) {
+                              await _ttsService.speak(_activeText);
+                            }
+                          },
+                        );
+                      },
+                      onRewind: () {
+                        _ttsService.seekRelative(-0.1);
+                      },
+                      isPlaying: isPlaying,
+                      onPlayPause: _togglePlayPause,
+                      onForward: () {
+                        _ttsService.seekRelative(0.1);
+                      },
+                      speed: _speed,
+                      onSpeedTap: _onSpeedTap,
+                      bottomPadding: bottomPadding,
+                    );
                   },
                 );
               },
-              onRewind: () {
-                _ttsService.seekRelative(-0.1);
-              },
-              isPlaying: _isPlaying,
-              onPlayPause: _togglePlayPause,
-              onForward: () {
-                _ttsService.seekRelative(0.1);
-              },
-              speed: _speed,
-              onSpeedTap: _onSpeedTap,
-              bottomPadding: bottomPadding,
             ),
           ),
         ],

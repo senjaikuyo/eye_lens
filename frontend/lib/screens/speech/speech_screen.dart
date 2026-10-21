@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/tts_service.dart';
 import '../../widgets/feedback_dialog.dart';
 import '../settings/faq_screen.dart';
 import '../settings/settings_screen.dart';
@@ -38,7 +38,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   double _progress = 0.0;
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
-  Timer? _playbackTimer;
+  final TtsService _ttsService = TtsService();
 
   @override
   void initState() {
@@ -49,41 +49,63 @@ class _SpeechScreenState extends State<SpeechScreen> {
     // Jika tidak ada gambar jepretan, default tampilkan mode teks bersih berlatar hitam
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
+    // Pasang callback TTS native
+    _ttsService.onProgress = (progress, word) {
+      if (!mounted) return;
+      setState(() {
+        _progress = progress;
+      });
+    };
+
+    _ttsService.onStart = () {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = true;
+      });
+    };
+
+    _ttsService.onPause = () {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = false;
+      });
+    };
+
+    _ttsService.onCompletion = () {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = false;
+        _progress = 0.0;
+      });
+    };
+
     // Langsung bacakan teks secara otomatis saat layar dibuka (SKPPL Auto-Play)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_isPlaying) {
-        _togglePlayPause();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
+      await _ttsService.setLanguage(langCode);
+      await _ttsService.setSpeed(_speed);
+      if (mounted) {
+        await _ttsService.speak(widget.text);
       }
     });
   }
 
   @override
   void dispose() {
-    _playbackTimer?.cancel();
+    _ttsService.stop();
+    _ttsService.onProgress = null;
+    _ttsService.onStart = null;
+    _ttsService.onPause = null;
+    _ttsService.onCompletion = null;
+    _ttsService.onError = null;
     super.dispose();
   }
 
   void _togglePlayPause() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-
     if (_isPlaying) {
-      _playbackTimer = Timer.periodic(const Duration(milliseconds: 200), (
-        timer,
-      ) {
-        if (!mounted) return;
-        setState(() {
-          _progress += 0.01 * _speed;
-          if (_progress >= 1.0) {
-            _progress = 0.0;
-            _isPlaying = false;
-            timer.cancel();
-          }
-        });
-      });
+      _ttsService.pause();
     } else {
-      _playbackTimer?.cancel();
+      _ttsService.speak(widget.text);
     }
   }
 
@@ -99,6 +121,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _speed = 1.0;
       }
     });
+    _ttsService.setSpeed(_speed);
   }
 
   @override
@@ -458,6 +481,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 setState(() {
                   _progress = val;
                 });
+                _ttsService.seekTo(val);
               },
               selectedLanguage: _selectedLanguage,
               onLanguageTap: () {
@@ -466,24 +490,25 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   strings: strings,
                   isDark: isDark,
                   selectedLanguage: _selectedLanguage,
-                  onLanguageSelected: (lang) {
+                  onLanguageSelected: (lang) async {
                     setState(() {
                       _selectedLanguage = lang;
                     });
+                    final langCode = lang == 'Indonesia' ? 'id-ID' : 'en-US';
+                    await _ttsService.setLanguage(langCode);
+                    if (_isPlaying) {
+                      await _ttsService.speak(widget.text);
+                    }
                   },
                 );
               },
               onRewind: () {
-                setState(() {
-                  _progress = (_progress - 0.1).clamp(0.0, 1.0);
-                });
+                _ttsService.seekRelative(-0.1);
               },
               isPlaying: _isPlaying,
               onPlayPause: _togglePlayPause,
               onForward: () {
-                setState(() {
-                  _progress = (_progress + 0.1).clamp(0.0, 1.0);
-                });
+                _ttsService.seekRelative(0.1);
               },
               speed: _speed,
               onSpeedTap: _onSpeedTap,

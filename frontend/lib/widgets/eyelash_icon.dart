@@ -15,7 +15,8 @@ class EyelashIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final effectiveColor = color ?? (isDark ? Colors.white : const Color(0xFF1E1E1E));
+    final effectiveColor =
+        color ?? (isDark ? Colors.white : const Color(0xFF1E1E1E));
 
     return GestureDetector(
       onTap: onTap,
@@ -27,11 +28,7 @@ class EyelashIcon extends StatelessWidget {
                 size: const Size(26, 18),
                 painter: _ClosedEyePainter(color: effectiveColor),
               )
-            : Icon(
-                Icons.visibility_outlined,
-                color: effectiveColor,
-                size: 22,
-              ),
+            : Icon(Icons.visibility_outlined, color: effectiveColor, size: 22),
       ),
     );
   }

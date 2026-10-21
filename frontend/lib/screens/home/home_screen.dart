@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../scan/scanning_screen.dart';
 
 class HomeScreen extends StatelessWidget {

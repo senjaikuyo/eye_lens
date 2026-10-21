@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 
@@ -20,7 +21,8 @@ class CameraService {
   bool _isFlashOn = false;
 
   CameraController? get controller => _controller;
-  bool get isInitialized => _isInitialized && _controller != null && _controller!.value.isInitialized;
+  bool get isInitialized =>
+      _isInitialized && _controller != null && _controller!.value.isInitialized;
   bool get isAvailable => _cameras.isNotEmpty;
   double get minZoom => _minZoom;
   double get maxZoom => _maxZoom;
@@ -121,7 +123,9 @@ class CameraService {
           await tempFile.delete();
         }
       } catch (e) {
-        debugPrint('[CameraService] Gagal menghapus file sementara (diabaikan): $e');
+        debugPrint(
+          '[CameraService] Gagal menghapus file sementara (diabaikan): $e',
+        );
       }
 
       return bytes;

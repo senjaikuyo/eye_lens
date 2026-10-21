@@ -1,6 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../models/ocr_element.dart';
 
 /// Widget untuk menampilkan citra hasil scan dengan overlay kotak teks interaktif mirip Google Lens.
@@ -163,8 +165,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
                 right: 0,
                 child: Center(
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(20),
@@ -201,7 +205,9 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEF4444),
                               borderRadius: BorderRadius.circular(10),

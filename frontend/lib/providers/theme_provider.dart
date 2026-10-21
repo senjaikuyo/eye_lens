@@ -70,7 +70,9 @@ class ThemeProvider extends ChangeNotifier {
       }
 
       final savedFontSize = prefs.getDouble('speech_font_size');
-      if (savedFontSize != null && savedFontSize >= 18.0 && savedFontSize <= 54.0) {
+      if (savedFontSize != null &&
+          savedFontSize >= 18.0 &&
+          savedFontSize <= 54.0) {
         _fontSize = savedFontSize;
       }
 

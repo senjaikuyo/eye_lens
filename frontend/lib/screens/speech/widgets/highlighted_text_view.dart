@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 
 /// Komponen visualisasi teks bacaan yang otomatis menyorot kata/baris
@@ -50,8 +51,9 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
     }
 
     if (_lines.isNotEmpty) {
-      final activeIndex =
-          (widget.progress * _lines.length).clamp(0, _lines.length - 1).toInt();
+      final activeIndex = (widget.progress * _lines.length)
+          .clamp(0, _lines.length - 1)
+          .toInt();
 
       if (activeIndex != _lastActiveIndex) {
         _lastActiveIndex = activeIndex;
@@ -92,7 +94,8 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
       if (keyContext != null) {
         Scrollable.ensureVisible(
           keyContext,
-          alignment: 0.35, // Posisikan teks aktif di sepertiga atas area pandang layar
+          alignment:
+              0.35, // Posisikan teks aktif di sepertiga atas area pandang layar
           duration: const Duration(milliseconds: 350),
           curve: Curves.easeInOutCubic,
         );

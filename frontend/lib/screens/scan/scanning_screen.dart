@@ -117,7 +117,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
       try {
         final bytes = await _cameraService.captureFrameToRAM();
         if (bytes != null && mounted) {
-          final ocrResult = await _ocrService.processImageWithCoordinates(bytes);
+          final ocrResult = await _ocrService.processImageWithCoordinates(
+            bytes,
+          );
           final finalText = ocrResult.fullText.isNotEmpty
               ? ocrResult.fullText
               : 'yesterday\ntoday\ntomorrow';
@@ -125,9 +127,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
           if (mounted) {
             // Simpan hasil pemindaian langsung ke SQLite
             context.read<HistoryProvider>().addRiwayat(
-                  text: finalText,
-                  sumber: 'kamera',
-                );
+              text: finalText,
+              sumber: 'kamera',
+            );
 
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -205,9 +207,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
       } else {
         // Simpan hasil pemindaian galeri langsung ke SQLite
         context.read<HistoryProvider>().addRiwayat(
-              text: extractedText,
-              sumber: 'galeri',
-            );
+          text: extractedText,
+          sumber: 'galeri',
+        );
 
         Navigator.of(context).push(
           MaterialPageRoute(

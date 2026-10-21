@@ -200,6 +200,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   imageBytes: widget.imageBytes!,
                   imageSize: widget.ocrResult?.imageSize ?? Size.zero,
                   elements: widget.ocrResult?.elements ?? const [],
+                  rejectedLines: widget.ocrResult?.rejectedLines ?? const [],
                   selectedIds: _selectedIds,
                   highlightColor: themeProvider.highlightColor,
                   isDark: isDark,

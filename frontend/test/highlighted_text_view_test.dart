@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/screens/speech/widgets/highlighted_text_view.dart';
 import 'package:eye_lens/services/text_formatter.dart';
 

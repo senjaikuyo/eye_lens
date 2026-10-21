@@ -7,6 +7,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
+import 'ocr_noise_filter.dart';
 import 'text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
@@ -23,55 +24,95 @@ class OcrService {
     : _textRecognizer = TextRecognizer(script: script);
 
   /// Helper untuk membangun OcrResult lengkap dari RecognizedText dan imageSize.
+  /// Menerapkan OcrNoiseFilter sebelum TextFormatter agar teks sampah tidak masuk
+  /// ke hasil, halaman speech, maupun TTS.
   Future<OcrResult> _buildOcrResult({
     required RecognizedText recognizedText,
     required Size imageSize,
   }) async {
-    final List<OcrElement> elements = [];
-    final List<OcrBlockData> blocks = [];
-    int elementIndex = 0;
+    final List<OcrLineData> allLines = [];
+    final List<Rect> originalBlockBounds = [];
+    final List<String> originalBlockTexts = [];
 
-    for (final block in recognizedText.blocks) {
-      final List<OcrLineData> blockLines = [];
+    for (int bIdx = 0; bIdx < recognizedText.blocks.length; bIdx++) {
+      final block = recognizedText.blocks[bIdx];
+      originalBlockBounds.add(block.boundingBox);
+      originalBlockTexts.add(block.text);
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
-          elements.add(
-            OcrElement(
-              id: 'elem_${elementIndex++}',
-              text: line.text,
-              boundingBox: line.boundingBox,
-            ),
-          );
-          blockLines.add(
+          allLines.add(
             OcrLineData(
               text: line.text,
               boundingBox: line.boundingBox,
+              confidence: line.confidence,
+              blockIndex: bIdx,
             ),
           );
         }
       }
-      if (blockLines.isNotEmpty) {
-        blocks.add(
-          OcrBlockData(
-            text: block.text,
-            boundingBox: block.boundingBox,
-            lines: blockLines,
-          ),
-        );
-      }
+    }
+
+    // 1. Jalankan penyaring noise di background isolate
+    final filterResult = await OcrNoiseFilter.filterWithCompute(
+      OcrNoiseFilterInput(
+        lines: allLines,
+        imageSize: imageSize,
+      ),
+    );
+
+    // 2. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
+    final Map<int, List<OcrLineData>> blockMap = {};
+    for (final line in filterResult.acceptedLines) {
+      blockMap.putIfAbsent(line.blockIndex, () => []).add(line);
+    }
+
+    final List<OcrBlockData> filteredBlocks = [];
+    for (final entry in blockMap.entries) {
+      final bIdx = entry.key;
+      final linesInBlock = entry.value;
+      final originalBounds = (bIdx >= 0 && bIdx < originalBlockBounds.length)
+          ? originalBlockBounds[bIdx]
+          : linesInBlock.first.boundingBox;
+      final originalText = (bIdx >= 0 && bIdx < originalBlockTexts.length)
+          ? originalBlockTexts[bIdx]
+          : linesInBlock.map((l) => l.text).join('\n');
+
+      filteredBlocks.add(
+        OcrBlockData(
+          text: originalText,
+          boundingBox: originalBounds,
+          lines: linesInBlock,
+        ),
+      );
     }
 
     final documentData = OcrDocumentData(
-      blocks: blocks,
-      rawText: recognizedText.text,
+      blocks: filteredBlocks,
+      rawText: filterResult.acceptedLines.map((l) => l.text).join('\n'),
     );
 
+    // 3. Rapikan hasil teks menggunakan TextFormatter murni di isolate
     final FormattedTextResult formattedResult =
         await TextFormatter.formatWithCompute(documentData);
 
     final String finalText = formattedResult.fullText.isNotEmpty
         ? formattedResult.fullText
-        : recognizedText.text.trim();
+        : (filterResult.acceptedLines.isNotEmpty
+            ? filterResult.acceptedLines.map((l) => l.text).join('\n')
+            : recognizedText.text.trim());
+
+    // 4. Siapkan OcrElement hanya untuk baris yang lolos filter
+    final List<OcrElement> elements = [];
+    int elementIndex = 0;
+    for (final line in filterResult.acceptedLines) {
+      elements.add(
+        OcrElement(
+          id: 'elem_${elementIndex++}',
+          text: line.text,
+          boundingBox: line.boundingBox,
+        ),
+      );
+    }
 
     return OcrResult(
       fullText: finalText,
@@ -79,6 +120,9 @@ class OcrService {
       imageSize: imageSize,
       documentData: documentData,
       formattedResult: formattedResult,
+      rejectedLines: filterResult.rejectedLines,
+      fallbackUsed: filterResult.fallbackUsed,
+      hasLowQualityWarning: filterResult.hasLowQualityWarning,
     );
   }
 

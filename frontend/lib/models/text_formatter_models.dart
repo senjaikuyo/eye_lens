@@ -93,15 +93,19 @@ class FormattedTextResult {
   }
 }
 
-/// DTO baris OCR murni dengan koordinat bounding box.
+/// DTO baris OCR murni dengan koordinat bounding box, opsional confidence, dan indeks blok.
 @immutable
 class OcrLineData {
   final String text;
   final Rect boundingBox;
+  final double? confidence;
+  final int blockIndex;
 
   const OcrLineData({
     required this.text,
     required this.boundingBox,
+    this.confidence,
+    this.blockIndex = 0,
   });
 }
 

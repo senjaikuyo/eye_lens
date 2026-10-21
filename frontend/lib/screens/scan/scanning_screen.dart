@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../models/ocr_element.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/camera_service.dart';
@@ -125,6 +126,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
               : 'yesterday\ntoday\ntomorrow';
 
           if (mounted) {
+            _checkAndShowLowQualityWarning(ocrResult);
+
             // Simpan hasil pemindaian langsung ke SQLite
             context.read<HistoryProvider>().addRiwayat(
               text: finalText,
@@ -205,6 +208,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
           ),
         );
       } else {
+        _checkAndShowLowQualityWarning(ocrResult);
+
         // Simpan hasil pemindaian galeri langsung ke SQLite
         context.read<HistoryProvider>().addRiwayat(
           text: extractedText,
@@ -243,6 +248,23 @@ class _ScanningScreenState extends State<ScanningScreen> {
           _isProcessingOcr = false;
         });
       }
+    }
+  }
+
+  void _checkAndShowLowQualityWarning(OcrResult ocrResult) {
+    if (ocrResult.hasLowQualityWarning && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.of(context).isIndonesian
+                ? 'Gambar kurang jelas, teks mungkin kurang akurat.'
+                : 'Image is unclear, text may be less accurate.',
+            style: const TextStyle(fontSize: 16),
+          ),
+          backgroundColor: const Color(0xFFE58E1B),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../services/ocr_noise_filter.dart';
 import 'text_formatter_models.dart';
 
 /// Representasi elemen teks dengan posisi koordinat pada citra asli.
@@ -22,6 +23,9 @@ class OcrResult {
   final Size imageSize;
   final OcrDocumentData? documentData;
   final FormattedTextResult? formattedResult;
+  final List<RejectedLineInfo> rejectedLines;
+  final bool fallbackUsed;
+  final bool hasLowQualityWarning;
 
   const OcrResult({
     required this.fullText,
@@ -29,6 +33,9 @@ class OcrResult {
     required this.imageSize,
     this.documentData,
     this.formattedResult,
+    this.rejectedLines = const [],
+    this.fallbackUsed = false,
+    this.hasLowQualityWarning = false,
   });
 
   static const OcrResult empty = OcrResult(
@@ -37,5 +44,8 @@ class OcrResult {
     imageSize: Size.zero,
     documentData: null,
     formattedResult: null,
+    rejectedLines: [],
+    fallbackUsed: false,
+    hasLowQualityWarning: false,
   );
 }

@@ -1,19 +1,23 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/ocr_element.dart';
+import '../../../services/ocr_noise_filter.dart';
 
 /// Widget untuk menampilkan citra hasil scan dengan overlay kotak teks interaktif mirip Google Lens.
 /// Mendukung:
 /// - Ketuk (tap) untuk memilih/membatalkan satu kotak teks.
 /// - Seret jari (pan/drag) untuk memilih banyak kotak teks sekaligus dalam satu usapan.
 /// - Kotak terpilih otomatis diurutkan dari atas-ke-bawah dan kiri-ke-kanan.
+/// - Mode Debug (hanya aktif pada build debug): kotak hijau untuk baris yang lolos dan kotak merah untuk baris yang dibuang.
 class OcrImageOverlay extends StatefulWidget {
   final Uint8List imageBytes;
   final Size imageSize;
   final List<OcrElement> elements;
+  final List<RejectedLineInfo> rejectedLines;
   final Set<String> selectedIds;
   final ValueChanged<List<OcrElement>> onSelectionChanged;
   final VoidCallback onClearSelection;
@@ -26,6 +30,7 @@ class OcrImageOverlay extends StatefulWidget {
     required this.imageBytes,
     required this.imageSize,
     required this.elements,
+    this.rejectedLines = const [],
     required this.selectedIds,
     required this.onSelectionChanged,
     required this.onClearSelection,
@@ -41,6 +46,7 @@ class OcrImageOverlay extends StatefulWidget {
 class _OcrImageOverlayState extends State<OcrImageOverlay> {
   // Simpan bounding box di layar untuk deteksi sentuhan cepat
   final Map<String, Rect> _screenRects = {};
+  final Map<String, Rect> _rejectedScreenRects = {};
 
   void _calculateScreenRects(Size containerSize) {
     if (widget.imageSize.width <= 0 || widget.imageSize.height <= 0) return;
@@ -63,6 +69,18 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
         elem.boundingBox.height * scale,
       );
       _screenRects[elem.id] = rect;
+    }
+
+    _rejectedScreenRects.clear();
+    for (int i = 0; i < widget.rejectedLines.length; i++) {
+      final rej = widget.rejectedLines[i];
+      final rect = Rect.fromLTWH(
+        offsetX + rej.line.boundingBox.left * scale,
+        offsetY + rej.line.boundingBox.top * scale,
+        rej.line.boundingBox.width * scale,
+        rej.line.boundingBox.height * scale,
+      );
+      _rejectedScreenRects['rej_$i'] = rect;
     }
   }
 
@@ -149,6 +167,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
               child: CustomPaint(
                 painter: _OcrBoxesPainter(
                   screenRects: _screenRects,
+                  rejectedScreenRects: _rejectedScreenRects,
                   selectedIds: widget.selectedIds,
                   highlightColor: widget.highlightColor,
                   isHighContrast: widget.isHighContrast,
@@ -156,6 +175,34 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
                 size: Size.infinite,
               ),
             ),
+
+            // Mode Debug: Indikator informasi jumlah baris lolos vs dibuang
+            if (kDebugMode &&
+                (widget.elements.isNotEmpty ||
+                    widget.rejectedLines.isNotEmpty))
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Text(
+                    'Debug OCR: ${widget.elements.length} lolos (hijau) | ${widget.rejectedLines.length} dibuang (merah)',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
 
             // Floating Badge Counter & Reset Button jika ada yang terpilih
             if (widget.selectedIds.isNotEmpty)
@@ -236,12 +283,14 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
 
 class _OcrBoxesPainter extends CustomPainter {
   final Map<String, Rect> screenRects;
+  final Map<String, Rect> rejectedScreenRects;
   final Set<String> selectedIds;
   final Color highlightColor;
   final bool isHighContrast;
 
   _OcrBoxesPainter({
     required this.screenRects,
+    required this.rejectedScreenRects,
     required this.selectedIds,
     required this.highlightColor,
     required this.isHighContrast,
@@ -249,6 +298,60 @@ class _OcrBoxesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (kDebugMode) {
+      // 1. Gambar kotak merah untuk baris yang dibuang (noise)
+      final rejectedFill = Paint()
+        ..color = const Color(0xFFEF4444).withValues(alpha: 0.22)
+        ..style = PaintingStyle.fill;
+      final rejectedBorder = Paint()
+        ..color = const Color(0xFFEF4444)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      for (final rect in rejectedScreenRects.values) {
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
+        canvas.drawRRect(rrect, rejectedFill);
+        canvas.drawRRect(rrect, rejectedBorder);
+      }
+
+      // 2. Gambar kotak hijau untuk baris yang lolos seleksi
+      final acceptedBorder = Paint()
+        ..color = const Color(0xFF22C55E)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      final acceptedFill = Paint()
+        ..color = const Color(0xFF22C55E).withValues(alpha: 0.16)
+        ..style = PaintingStyle.fill;
+
+      final selectedFill = Paint()
+        ..color = isHighContrast
+            ? const Color(0xFFFFE500).withValues(alpha: 0.65)
+            : highlightColor.withValues(alpha: 0.45)
+        ..style = PaintingStyle.fill;
+
+      final selectedBorder = Paint()
+        ..color = isHighContrast ? Colors.white : highlightColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isHighContrast ? 2.5 : 2.5;
+
+      for (final entry in screenRects.entries) {
+        final id = entry.key;
+        final rect = entry.value;
+        final isSelected = selectedIds.contains(id);
+        final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(5));
+
+        if (isSelected) {
+          canvas.drawRRect(rrect, selectedFill);
+          canvas.drawRRect(rrect, selectedBorder);
+        } else {
+          canvas.drawRRect(rrect, acceptedFill);
+          canvas.drawRRect(rrect, acceptedBorder);
+        }
+      }
+      return;
+    }
+
+    // Mode Produksi: Gambar kotak netral putih dan kotak terpilih
     final unselectedFill = Paint()
       ..color = Colors.white.withValues(alpha: 0.22)
       ..style = PaintingStyle.fill;
@@ -290,6 +393,7 @@ class _OcrBoxesPainter extends CustomPainter {
   bool shouldRepaint(covariant _OcrBoxesPainter oldDelegate) {
     return oldDelegate.selectedIds != selectedIds ||
         oldDelegate.screenRects != screenRects ||
+        oldDelegate.rejectedScreenRects != rejectedScreenRects ||
         oldDelegate.highlightColor != highlightColor;
   }
 }

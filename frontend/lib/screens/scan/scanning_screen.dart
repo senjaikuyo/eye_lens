@@ -14,10 +14,13 @@ import '../../providers/theme_provider.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
 import '../../services/ocr_service.dart';
+import '../../services/ocr_text_validator.dart';
+import '../../services/tts_service.dart';
 import '../../widgets/zoom_ruler.dart';
 import '../speech/speech_screen.dart';
 import 'widgets/blur_warning_banner.dart';
 import 'widgets/camera_viewfinder.dart';
+import 'widgets/no_text_alert_banner.dart';
 import 'widgets/ocr_processing_overlay.dart';
 import 'widgets/scan_bottom_bar.dart';
 import 'widgets/scan_top_bar.dart';
@@ -35,12 +38,17 @@ class _ScanningScreenState extends State<ScanningScreen> {
   final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
   final HardwareKeyService _hardwareKeyService = HardwareKeyService();
+  final TtsService _ttsService = TtsService();
 
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
   bool _isBlurry = false;
   bool _isProcessingOcr = false;
   Timer? _blurTimer;
+
+  bool _isNoTextAlertVisible = false;
+  String _noTextMessage = '';
+  Timer? _noTextAlertTimer;
 
   static const double _minZoom = 1.0;
   static const double _maxZoom = 10.0;
@@ -69,9 +77,55 @@ class _ScanningScreenState extends State<ScanningScreen> {
   void dispose() {
     _hardwareKeyService.stopListening();
     _blurTimer?.cancel();
+    _noTextAlertTimer?.cancel();
     _cameraService.dispose();
     _ocrService.dispose();
     super.dispose();
+  }
+
+  Future<void> _showNoTextAlert(String message) async {
+    _noTextAlertTimer?.cancel();
+    if (!mounted) return;
+
+    setState(() {
+      _noTextMessage = message;
+      _isNoTextAlertVisible = true;
+    });
+
+    HapticFeedback.mediumImpact();
+
+    final isIndo = AppStrings.of(context, listen: false).isIndonesian;
+
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      TextDirection.ltr,
+    );
+
+    try {
+      await _ttsService.stop();
+      await _ttsService.setLanguage(isIndo ? 'id-ID' : 'en-US');
+      await _ttsService.speak(message);
+    } catch (e) {
+      debugPrint('[ScanningScreen] TTS no-text alert failed: $e');
+    }
+
+    _noTextAlertTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isNoTextAlertVisible = false;
+        });
+      }
+    });
+  }
+
+  void _dismissNoTextAlert() {
+    _noTextAlertTimer?.cancel();
+    if (_isNoTextAlertVisible && mounted) {
+      setState(() {
+        _isNoTextAlertVisible = false;
+      });
+    }
   }
 
   void _triggerBlurAlert(AppStrings strings) {
@@ -108,6 +162,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
   }
 
   Future<void> _onCapturePressed() async {
+    if (_isProcessingOcr) return;
+
+    _dismissNoTextAlert();
     HapticFeedback.mediumImpact();
 
     if (_cameraService.isInitialized) {
@@ -121,9 +178,20 @@ class _ScanningScreenState extends State<ScanningScreen> {
           final ocrResult = await _ocrService.processImageWithCoordinates(
             bytes,
           );
-          final finalText = ocrResult.fullText.isNotEmpty
-              ? ocrResult.fullText
-              : 'yesterday\ntoday\ntomorrow';
+          final check = OcrTextValidator.validateResult(ocrResult);
+
+          if (!check.hasText) {
+            if (mounted) {
+              setState(() {
+                _isProcessingOcr = false;
+              });
+              final strings = AppStrings.of(context, listen: false);
+              await _showNoTextAlert(check.getAlertMessage(strings));
+            }
+            return;
+          }
+
+          final finalText = check.text;
 
           if (mounted) {
             _checkAndShowLowQualityWarning(ocrResult);
@@ -170,6 +238,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
   }
 
   Future<void> _onGalleryPressed() async {
+    if (_isProcessingOcr) return;
+
+    _dismissNoTextAlert();
     HapticFeedback.selectionClick();
 
     try {
@@ -190,24 +261,18 @@ class _ScanningScreenState extends State<ScanningScreen> {
       final ocrResult = await _ocrService.processFileWithCoordinates(
         pickedFile.path,
       );
-      final extractedText = ocrResult.fullText;
+      final check = OcrTextValidator.validateResult(ocrResult);
 
       if (!mounted) return;
 
-      if (extractedText.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppStrings.of(context).isIndonesian
-                  ? 'Tidak ditemukan teks pada gambar galeri.'
-                  : 'No readable text found in the gallery image.',
-              style: const TextStyle(fontSize: 16),
-            ),
-            backgroundColor: AppColors.black,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+      if (!check.hasText) {
+        setState(() {
+          _isProcessingOcr = false;
+        });
+        final strings = AppStrings.of(context, listen: false);
+        await _showNoTextAlert(check.getAlertMessage(strings));
       } else {
+        final extractedText = check.text;
         _checkAndShowLowQualityWarning(ocrResult);
 
         // Simpan hasil pemindaian galeri langsung ke SQLite
@@ -335,6 +400,15 @@ class _ScanningScreenState extends State<ScanningScreen> {
             message: strings.imageBlurryAlert,
           ),
 
+          // 5b. Floating No-Text Alert Banner di atas tombol rana
+          NoTextAlertBanner(
+            isVisible: _isNoTextAlertVisible,
+            bottomPadding: bottomPadding,
+            message: _noTextMessage,
+            onClose: _dismissNoTextAlert,
+            closeLabel: strings.close,
+          ),
+
           // 6. Bottom Controls: Galeri & Shutter
           ScanBottomBar(
             bottomPadding: bottomPadding,
@@ -342,6 +416,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
             onGalleryPressed: _onGalleryPressed,
             onCapturePressed: _onCapturePressed,
             onCaptureLongPressed: () => _triggerBlurAlert(strings),
+            isProcessing: _isProcessingOcr,
           ),
 
           // 7. OCR Processing Overlay

@@ -155,17 +155,22 @@ class NoiseFilterResult {
   final List<RejectedLineInfo> rejectedLines;
   final bool fallbackUsed;
   final bool hasLowQualityWarning;
+  final bool allLinesFilteredOut;
 
   const NoiseFilterResult({
     required this.acceptedLines,
     required this.rejectedLines,
     this.fallbackUsed = false,
     this.hasLowQualityWarning = false,
+    this.allLinesFilteredOut = false,
   });
 
   static const NoiseFilterResult empty = NoiseFilterResult(
     acceptedLines: [],
     rejectedLines: [],
+    fallbackUsed: false,
+    hasLowQualityWarning: false,
+    allLinesFilteredOut: false,
   );
 }
 
@@ -569,22 +574,15 @@ class OcrNoiseFilter {
       accepted.add(line);
     }
 
-    // Fallback: Jika seluruh baris tersaring habis, kembalikan seluruh baris asli tanpa filter ketat
-    // dan beri penanda peringatan gambar kurang jelas.
-    if (accepted.isEmpty && lines.isNotEmpty) {
-      return NoiseFilterResult(
-        acceptedLines: List.unmodifiable(lines),
-        rejectedLines: List.unmodifiable(rejected),
-        fallbackUsed: true,
-        hasLowQualityWarning: true,
-      );
-    }
+    // Jika seluruh baris tersaring habis, perlakukan sebagai tidak ada teks (jangan kembalikan OCR mentah).
+    final bool allFiltered = accepted.isEmpty && lines.isNotEmpty;
 
     return NoiseFilterResult(
       acceptedLines: List.unmodifiable(accepted),
       rejectedLines: List.unmodifiable(rejected),
       fallbackUsed: false,
-      hasLowQualityWarning: false,
+      hasLowQualityWarning: allFiltered,
+      allLinesFilteredOut: allFiltered,
     );
   }
 

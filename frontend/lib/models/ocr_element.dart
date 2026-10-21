@@ -26,6 +26,8 @@ class OcrResult {
   final List<RejectedLineInfo> rejectedLines;
   final bool fallbackUsed;
   final bool hasLowQualityWarning;
+  final bool allLinesFilteredOut;
+  final int rawLinesCount;
 
   const OcrResult({
     required this.fullText,
@@ -36,6 +38,8 @@ class OcrResult {
     this.rejectedLines = const [],
     this.fallbackUsed = false,
     this.hasLowQualityWarning = false,
+    this.allLinesFilteredOut = false,
+    this.rawLinesCount = 0,
   });
 
   static const OcrResult empty = OcrResult(
@@ -47,5 +51,7 @@ class OcrResult {
     rejectedLines: [],
     fallbackUsed: false,
     hasLowQualityWarning: false,
+    allLinesFilteredOut: false,
+    rawLinesCount: 0,
   );
 }

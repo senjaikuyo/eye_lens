@@ -202,7 +202,7 @@ void main() {
       expect(result.rejectedLines.isEmpty, true);
     });
 
-    test('7. Fallback aktif jika semua baris tersaring habis', () {
+    test('7. Semua baris tersaring habis ditandai allLinesFilteredOut tanpa fallback OCR mentah', () {
       final noisyLines = [
         const OcrLineData(
           text: '~~~',
@@ -219,10 +219,11 @@ void main() {
         imageSize: defaultImageSize,
       );
 
-      // Fallback harus menyertakan baris asli dan menandai warning
-      expect(result.fallbackUsed, true);
+      // Semua baris tersaring harus menghasilkan acceptedLines kosong dan penanda allLinesFilteredOut
+      expect(result.acceptedLines.isEmpty, true);
+      expect(result.allLinesFilteredOut, true);
       expect(result.hasLowQualityWarning, true);
-      expect(result.acceptedLines.length, 2);
+      expect(result.fallbackUsed, false);
     });
 
     test('8. Filter terintegrasi dengan TextFormatter menjaga akurasi sorotan TTS', () {

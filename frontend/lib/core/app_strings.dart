@@ -74,6 +74,13 @@ class AppStrings {
   String get imageBlurryAlert => isIndonesian
       ? 'Gambar kurang jelas / buram. Disarankan tahan kamera lebih stabil.'
       : 'Image is blurry or unclear. Please hold camera steady.';
+  String get noTextFoundAlert => isIndonesian
+      ? 'Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'
+      : 'No text found. Point the camera at text and try again.';
+  String get unclearImageNoTextAlert => isIndonesian
+      ? 'Gambar kurang jelas. Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'
+      : 'Image is unclear. No text found. Point the camera at text and try again.';
+  String get close => isIndonesian ? 'Tutup' : 'Close';
   String get feedback => isIndonesian ? 'Masukan' : 'Feedback';
   String get feedbackTitle => isIndonesian ? 'Kirim Masukan' : 'Send Feedback';
   String get feedbackHint => isIndonesian

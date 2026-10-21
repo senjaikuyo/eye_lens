@@ -97,9 +97,7 @@ class OcrService {
 
     final String finalText = formattedResult.fullText.isNotEmpty
         ? formattedResult.fullText
-        : (filterResult.acceptedLines.isNotEmpty
-            ? filterResult.acceptedLines.map((l) => l.text).join('\n')
-            : recognizedText.text.trim());
+        : filterResult.acceptedLines.map((l) => l.text).join('\n');
 
     // 4. Siapkan OcrElement hanya untuk baris yang lolos filter
     final List<OcrElement> elements = [];
@@ -123,6 +121,8 @@ class OcrService {
       rejectedLines: filterResult.rejectedLines,
       fallbackUsed: filterResult.fallbackUsed,
       hasLowQualityWarning: filterResult.hasLowQualityWarning,
+      allLinesFilteredOut: filterResult.allLinesFilteredOut,
+      rawLinesCount: allLines.length,
     );
   }
 

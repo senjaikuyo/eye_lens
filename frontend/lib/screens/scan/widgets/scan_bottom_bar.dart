@@ -6,6 +6,7 @@ class ScanBottomBar extends StatelessWidget {
   final VoidCallback onGalleryPressed;
   final VoidCallback onCapturePressed;
   final VoidCallback onCaptureLongPressed;
+  final bool isProcessing;
 
   const ScanBottomBar({
     super.key,
@@ -14,6 +15,7 @@ class ScanBottomBar extends StatelessWidget {
     required this.onGalleryPressed,
     required this.onCapturePressed,
     required this.onCaptureLongPressed,
+    this.isProcessing = false,
   });
 
   @override
@@ -33,35 +35,38 @@ class ScanBottomBar extends StatelessWidget {
               label: galleryText,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: onGalleryPressed,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2E384D).withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.photo_library_outlined,
-                          color: Colors.white,
-                          size: 26,
+                onTap: isProcessing ? null : onGalleryPressed,
+                child: Opacity(
+                  opacity: isProcessing ? 0.6 : 1.0,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E384D).withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.photo_library_outlined,
+                            color: Colors.white,
+                            size: 26,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      galleryText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 6),
+                      Text(
+                        galleryText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -69,27 +74,30 @@ class ScanBottomBar extends StatelessWidget {
 
           // Shutter Camera Button (Center)
           GestureDetector(
-            onTap: onCapturePressed,
-            onLongPress: onCaptureLongPressed,
-            child: Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            onTap: isProcessing ? null : onCapturePressed,
+            onLongPress: isProcessing ? null : onCaptureLongPressed,
+            child: Opacity(
+              opacity: isProcessing ? 0.6 : 1.0,
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.black,
+                    size: 36,
                   ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.camera_alt_outlined,
-                  color: Colors.black,
-                  size: 36,
                 ),
               ),
             ),

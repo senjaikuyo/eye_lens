@@ -235,72 +235,100 @@ class AppearanceBottomSheet {
 
                     const SizedBox(height: 12),
 
-                    // 3. Text Size Box
+                    // 3. Text Size Box (Slider 100% - 300% / 18px - 54px)
                     _buildBox(
                       currentIsDark: currentIsDark,
                       isHighContrast: currentHighContrast,
-                      child: _buildRow(
-                        icon: Icon(
-                          Icons.format_size_rounded,
-                          color: currentIsDark ? Colors.white : Colors.black,
-                          size: 24,
-                        ),
-                        label: strings.textSize,
-                        currentIsDark: currentIsDark,
-                        trailing: PopupMenuButton<double>(
-                          initialValue: fontSize,
-                          onSelected: (size) {
-                            onFontSizeChanged(size);
-                            setSheetState(() {});
-                          },
-                          color: currentIsDark
-                              ? const Color(0xFF2A2A2A)
-                              : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 20.0,
-                              child: Text(strings.sizeSmall),
-                            ),
-                            PopupMenuItem(
-                              value: 32.0,
-                              child: Text(strings.sizeMedium),
-                            ),
-                            PopupMenuItem(
-                              value: 42.0,
-                              child: Text(strings.sizeLarge),
-                            ),
-                          ],
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                fontSize <= 24
-                                    ? strings.sizeSmall
-                                    : fontSize <= 36
-                                    ? strings.sizeMedium
-                                    : strings.sizeLarge,
-                                style: TextStyle(
-                                  color: currentIsDark
-                                      ? const Color(0xFFAAAAAA)
-                                      : const Color(0xFF666666),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.format_size_rounded,
+                                    color: currentIsDark ? Colors.white : Colors.black,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text(
+                                    strings.textSize,
+                                    style: TextStyle(
+                                      color: currentIsDark ? Colors.white : AppColors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                color: currentIsDark
-                                    ? const Color(0xFF888888)
-                                    : const Color(0xFF8E9BAE),
-                                size: 18,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: currentIsDark
+                                      ? const Color(0xFF333333)
+                                      : const Color(0xFFE5E7EB),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${((fontSize / 18.0) * 100).round()}%',
+                                  style: TextStyle(
+                                    color: currentIsDark ? Colors.white : AppColors.black,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Text(
+                                'A',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: currentIsDark
+                                      ? const Color(0xFFAAAAAA)
+                                      : const Color(0xFF666666),
+                                ),
+                              ),
+                              Expanded(
+                                child: SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    activeTrackColor: currentIsDark ? Colors.white : AppColors.black,
+                                    inactiveTrackColor: currentIsDark
+                                        ? const Color(0xFF444444)
+                                        : const Color(0xFFE5E7EB),
+                                    thumbColor: currentIsDark ? Colors.white : AppColors.black,
+                                    overlayColor: (currentIsDark ? Colors.white : AppColors.black)
+                                        .withValues(alpha: 0.12),
+                                    trackHeight: 4,
+                                  ),
+                                  child: Slider(
+                                    value: fontSize.clamp(18.0, 54.0),
+                                    min: 18.0,
+                                    max: 54.0,
+                                    onChanged: (newSize) {
+                                      onFontSizeChanged(newSize);
+                                      setSheetState(() {});
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'A',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: currentIsDark ? Colors.white : AppColors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
 

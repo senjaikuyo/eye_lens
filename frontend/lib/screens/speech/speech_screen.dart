@@ -41,6 +41,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
   @override
   void initState() {
     super.initState();
+    // Inisialisasi ukuran font dari preferensi pengguna yang tersimpan
+    _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
+
     // Jika tidak ada gambar jepretan, default tampilkan mode teks bersih berlatar hitam
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
@@ -261,6 +264,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                             setState(() {
                               _fontSize = newSize;
                             });
+                            themeProvider.setFontSize(newSize);
                           },
                         );
                       },

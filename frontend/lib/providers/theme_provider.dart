@@ -8,6 +8,7 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.light;
   bool _highContrast = false;
   bool _cursorColor = true;
+  double _fontSize = 32.0; // Baseline range: 18.0 (100%) to 54.0 (300%)
 
   // 5 Preset Colors from Figma (Component Color)
   static const List<Color> highlightColors = [
@@ -28,6 +29,7 @@ class ThemeProvider extends ChangeNotifier {
   bool get isHighContrast => _highContrast;
   bool get cursorColor => _cursorColor;
   Color get highlightColor => _highlightColor;
+  double get fontSize => _fontSize;
 
   bool isDark(BuildContext context) {
     if (_themeMode == ThemeMode.system) {
@@ -65,6 +67,11 @@ class ThemeProvider extends ChangeNotifier {
           savedColorIndex >= 0 &&
           savedColorIndex < highlightColors.length) {
         _highlightColor = highlightColors[savedColorIndex];
+      }
+
+      final savedFontSize = prefs.getDouble('speech_font_size');
+      if (savedFontSize != null && savedFontSize >= 18.0 && savedFontSize <= 54.0) {
+        _fontSize = savedFontSize;
       }
 
       notifyListeners();
@@ -126,6 +133,19 @@ class ThemeProvider extends ChangeNotifier {
       if (idx != -1) {
         await prefs.setInt('highlight_color_index', idx);
       }
+    } catch (_) {}
+  }
+
+  void setFontSize(double size) {
+    _fontSize = size;
+    notifyListeners();
+    _saveFontSize(size);
+  }
+
+  Future<void> _saveFontSize(double size) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('speech_font_size', size);
     } catch (_) {}
   }
 }

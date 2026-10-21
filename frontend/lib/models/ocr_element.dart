@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'text_formatter_models.dart';
+
 /// Representasi elemen teks dengan posisi koordinat pada citra asli.
 class OcrElement {
   final String id;
@@ -18,16 +20,22 @@ class OcrResult {
   final String fullText;
   final List<OcrElement> elements;
   final Size imageSize;
+  final OcrDocumentData? documentData;
+  final FormattedTextResult? formattedResult;
 
   const OcrResult({
     required this.fullText,
     required this.elements,
     required this.imageSize,
+    this.documentData,
+    this.formattedResult,
   });
 
   static const OcrResult empty = OcrResult(
     fullText: '',
     elements: [],
     imageSize: Size.zero,
+    documentData: null,
+    formattedResult: null,
   );
 }

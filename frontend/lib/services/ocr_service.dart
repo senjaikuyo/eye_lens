@@ -1,14 +1,18 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 import '../models/ocr_element.dart';
+import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
+import 'text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
 /// - Menggunakan model Latin Script berkecepatan tinggi (< 500 ms).
 /// - Mendukung ekstraksi teks penuh maupun koordinat bounding box setiap elemen/baris.
+/// - Merapikan hasil teks otomatis sesuai paragraf asli dan multi-kolom via TextFormatter.
 /// - Menjaga privasi: memproses citra via ephemeral temp file yang langsung
 ///   dimusnahkan di blok `finally` (0 byte penulisan permanen di gawai).
 class OcrService {
@@ -17,6 +21,66 @@ class OcrService {
 
   OcrService({TextRecognitionScript script = TextRecognitionScript.latin})
     : _textRecognizer = TextRecognizer(script: script);
+
+  /// Helper untuk membangun OcrResult lengkap dari RecognizedText dan imageSize.
+  Future<OcrResult> _buildOcrResult({
+    required RecognizedText recognizedText,
+    required Size imageSize,
+  }) async {
+    final List<OcrElement> elements = [];
+    final List<OcrBlockData> blocks = [];
+    int elementIndex = 0;
+
+    for (final block in recognizedText.blocks) {
+      final List<OcrLineData> blockLines = [];
+      for (final line in block.lines) {
+        if (line.text.trim().isNotEmpty) {
+          elements.add(
+            OcrElement(
+              id: 'elem_${elementIndex++}',
+              text: line.text,
+              boundingBox: line.boundingBox,
+            ),
+          );
+          blockLines.add(
+            OcrLineData(
+              text: line.text,
+              boundingBox: line.boundingBox,
+            ),
+          );
+        }
+      }
+      if (blockLines.isNotEmpty) {
+        blocks.add(
+          OcrBlockData(
+            text: block.text,
+            boundingBox: block.boundingBox,
+            lines: blockLines,
+          ),
+        );
+      }
+    }
+
+    final documentData = OcrDocumentData(
+      blocks: blocks,
+      rawText: recognizedText.text,
+    );
+
+    final FormattedTextResult formattedResult =
+        await TextFormatter.formatWithCompute(documentData);
+
+    final String finalText = formattedResult.fullText.isNotEmpty
+        ? formattedResult.fullText
+        : recognizedText.text.trim();
+
+    return OcrResult(
+      fullText: finalText,
+      elements: elements,
+      imageSize: imageSize,
+      documentData: documentData,
+      formattedResult: formattedResult,
+    );
+  }
 
   /// Mengekstrak teks lengkap beserta koordinat bounding box setiap elemen dari RAM (Uint8List).
   Future<OcrResult> processImageWithCoordinates(Uint8List bytes) async {
@@ -37,26 +101,8 @@ class OcrService {
         inputImage,
       );
 
-      final List<OcrElement> elements = [];
-      int elementIndex = 0;
-
-      for (final block in recognizedText.blocks) {
-        for (final line in block.lines) {
-          if (line.text.trim().isNotEmpty) {
-            elements.add(
-              OcrElement(
-                id: 'elem_${elementIndex++}',
-                text: line.text,
-                boundingBox: line.boundingBox,
-              ),
-            );
-          }
-        }
-      }
-
-      return OcrResult(
-        fullText: recognizedText.text.trim(),
-        elements: elements,
+      return await _buildOcrResult(
+        recognizedText: recognizedText,
         imageSize: imageSize,
       );
     } catch (e) {
@@ -86,26 +132,8 @@ class OcrService {
         inputImage,
       );
 
-      final List<OcrElement> elements = [];
-      int elementIndex = 0;
-
-      for (final block in recognizedText.blocks) {
-        for (final line in block.lines) {
-          if (line.text.trim().isNotEmpty) {
-            elements.add(
-              OcrElement(
-                id: 'elem_${elementIndex++}',
-                text: line.text,
-                boundingBox: line.boundingBox,
-              ),
-            );
-          }
-        }
-      }
-
-      return OcrResult(
-        fullText: recognizedText.text.trim(),
-        elements: elements,
+      return await _buildOcrResult(
+        recognizedText: recognizedText,
         imageSize: imageSize,
       );
     } catch (e) {

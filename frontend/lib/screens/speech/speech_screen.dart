@@ -43,6 +43,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   final ValueNotifier<double> _fontSizeNotifier = ValueNotifier<double>(32.0);
   final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<int> _currentCharIndexNotifier = ValueNotifier<int>(0);
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
@@ -63,9 +64,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
       _selectedIds = selected.map((e) => e.id).toSet();
     });
     _progressNotifier.value = 0.0;
+    _currentCharIndexNotifier.value = 0;
 
     if (_isPlayingNotifier.value) {
-      _ttsService.speak(_activeText);
+      _startSpeech();
     }
   }
 
@@ -75,9 +77,20 @@ class _SpeechScreenState extends State<SpeechScreen> {
       _selectedIds.clear();
     });
     _progressNotifier.value = 0.0;
+    _currentCharIndexNotifier.value = 0;
 
     if (_isPlayingNotifier.value) {
-      _ttsService.speak(_activeText);
+      _startSpeech();
+    }
+  }
+
+  Future<void> _startSpeech() async {
+    if (_selectedElements.isNotEmpty) {
+      await _ttsService.speak(_activeText);
+    } else if (widget.ocrResult?.formattedResult != null) {
+      await _ttsService.speakFormattedResult(widget.ocrResult!.formattedResult!);
+    } else {
+      await _ttsService.speak(_activeText);
     }
   }
 
@@ -88,9 +101,12 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
-    _ttsService.onProgress = (progress, word) {
+    _ttsService.onProgress = (double progress, String word, [int? charIndex]) {
       if (!mounted) return;
       _progressNotifier.value = progress;
+      if (charIndex != null) {
+        _currentCharIndexNotifier.value = charIndex;
+      }
     };
 
     _ttsService.onStart = () {
@@ -107,6 +123,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       if (!mounted) return;
       _isPlayingNotifier.value = false;
       _progressNotifier.value = 0.0;
+      _currentCharIndexNotifier.value = 0;
     };
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -114,7 +131,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       await _ttsService.setLanguage(langCode);
       await _ttsService.setSpeed(_speed);
       if (mounted) {
-        await _ttsService.speak(_activeText);
+        await _startSpeech();
       }
     });
   }
@@ -127,6 +144,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _ttsService.onPause = null;
     _ttsService.onCompletion = null;
     _ttsService.onError = null;
+    _currentCharIndexNotifier.dispose();
     _progressNotifier.dispose();
     _isPlayingNotifier.dispose();
     _fontSizeNotifier.dispose();
@@ -137,7 +155,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     if (_isPlayingNotifier.value) {
       _ttsService.pause();
     } else {
-      _ttsService.speak(_activeText);
+      _startSpeech();
     }
   }
 
@@ -209,16 +227,30 @@ class _SpeechScreenState extends State<SpeechScreen> {
                       return ValueListenableBuilder<double>(
                         valueListenable: _progressNotifier,
                         builder: (context, progress, _) {
-                          return HighlightedTextView(
-                            text: _activeText,
-                            fontSize: currentFontSize,
-                            cursorColorEnabled: themeProvider.cursorColor,
-                            highlightColor: themeProvider.highlightColor,
-                            isDark: isDark,
-                            isHighContrast: themeProvider.isHighContrast,
-                            progress: progress,
-                            onProgressChanged: (val) {
-                              _progressNotifier.value = val;
+                          return ValueListenableBuilder<int>(
+                            valueListenable: _currentCharIndexNotifier,
+                            builder: (context, charIndex, _) {
+                              return HighlightedTextView(
+                                text: _activeText,
+                                formattedResult: _selectedElements.isEmpty
+                                    ? widget.ocrResult?.formattedResult
+                                    : null,
+                                currentCharIndex: charIndex,
+                                fontSize: currentFontSize,
+                                cursorColorEnabled: themeProvider.cursorColor,
+                                highlightColor: themeProvider.highlightColor,
+                                isDark: isDark,
+                                isHighContrast: themeProvider.isHighContrast,
+                                progress: progress,
+                                onProgressChanged: (val) {
+                                  _progressNotifier.value = val;
+                                  _ttsService.seekTo(val);
+                                },
+                                onCharIndexChanged: (idx) {
+                                  _currentCharIndexNotifier.value = idx;
+                                  _ttsService.seekToCharIndex(idx);
+                                },
+                              );
                             },
                           );
                         },
@@ -326,18 +358,18 @@ class _SpeechScreenState extends State<SpeechScreen> {
                                 : 'en-US';
                             await _ttsService.setLanguage(langCode);
                             if (_isPlayingNotifier.value) {
-                              await _ttsService.speak(_activeText);
+                              await _startSpeech();
                             }
                           },
                         );
                       },
                       onRewind: () {
-                        _ttsService.seekRelative(-0.1);
+                        _ttsService.seekSeconds(-10.0);
                       },
                       isPlaying: isPlaying,
                       onPlayPause: _togglePlayPause,
                       onForward: () {
-                        _ttsService.seekRelative(0.1);
+                        _ttsService.seekSeconds(10.0);
                       },
                       speed: _speed,
                       onSpeedTap: _onSpeedTap,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 
@@ -32,8 +33,8 @@ class _FaqScreenState extends State<FaqScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: isDark
                           ? const Color(0xFF2A2A2A)
@@ -46,7 +47,7 @@ class _FaqScreenState extends State<FaqScreen> {
                       icon: Icon(
                         Icons.arrow_back_rounded,
                         color: isDark ? Colors.white : Colors.black,
-                        size: 22,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -71,7 +72,9 @@ class _FaqScreenState extends State<FaqScreen> {
               child: ListView.separated(
                 itemCount: faqList.length,
                 separatorBuilder: (context, index) => Divider(
-                  color: isDark ? const Color(0xFF333333) : const Color(0xFF222222),
+                  color: isDark
+                      ? const Color(0xFF333333)
+                      : const Color(0xFF222222),
                   thickness: 0.8,
                   height: 1,
                 ),
@@ -80,9 +83,8 @@ class _FaqScreenState extends State<FaqScreen> {
                   final isExpanded = _expandedIndex == index;
 
                   return Theme(
-                    data: Theme.of(context).copyWith(
-                      dividerColor: Colors.transparent,
-                    ),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       tilePadding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -104,8 +106,8 @@ class _FaqScreenState extends State<FaqScreen> {
                         item['q'] ?? '',
                         style: TextStyle(
                           color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       children: [
@@ -123,8 +125,8 @@ class _FaqScreenState extends State<FaqScreen> {
                                 color: isDark
                                     ? const Color(0xFFB0B0C3)
                                     : const Color(0xFF555555),
-                                fontSize: 14,
-                                height: 1.4,
+                                fontSize: 16,
+                                height: 1.45,
                               ),
                             ),
                           ),

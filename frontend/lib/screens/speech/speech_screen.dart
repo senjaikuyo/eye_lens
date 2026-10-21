@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/theme_provider.dart';
@@ -67,7 +69,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
     });
 
     if (_isPlaying) {
-      _playbackTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      _playbackTimer = Timer.periodic(const Duration(milliseconds: 200), (
+        timer,
+      ) {
         if (!mounted) return;
         setState(() {
           _progress += 0.01 * _speed;
@@ -308,7 +312,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     child: Theme(
                       data: Theme.of(context).copyWith(
                         popupMenuTheme: PopupMenuThemeData(
-                          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -324,43 +330,57 @@ class _SpeechScreenState extends State<SpeechScreen> {
                         onSelected: (value) {
                           if (value == 'settings') {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsScreen(),
+                              ),
                             );
                           } else if (value == 'feedback') {
-                            FeedbackDialog.show(context, strings: strings, isDark: isDark);
+                            FeedbackDialog.show(
+                              context,
+                              strings: strings,
+                              isDark: isDark,
+                            );
                           } else if (value == 'faq') {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const FaqScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => const FaqScreen(),
+                              ),
                             );
                           }
                         },
                         itemBuilder: (context) => [
                           PopupMenuItem(
                             value: 'settings',
+                            height: 52,
                             child: Text(
                               strings.settings,
                               style: TextStyle(
                                 color: isDark ? Colors.white : AppColors.black,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           PopupMenuItem(
                             value: 'feedback',
+                            height: 52,
                             child: Text(
                               strings.feedback,
                               style: TextStyle(
                                 color: isDark ? Colors.white : AppColors.black,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           PopupMenuItem(
                             value: 'faq',
+                            height: 52,
                             child: Text(
                               strings.faq,
                               style: TextStyle(
                                 color: isDark ? Colors.white : AppColors.black,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

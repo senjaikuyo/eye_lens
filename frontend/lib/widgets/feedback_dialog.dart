@@ -55,7 +55,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         strings.feedbackTitle,
         style: TextStyle(
           color: isDark ? Colors.white : AppColors.black,
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -65,13 +65,13 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         cursorColor: isDark ? Colors.white : Colors.black,
         style: TextStyle(
           color: isDark ? Colors.white : AppColors.black,
-          fontSize: 16,
+          fontSize: 18,
         ),
         decoration: InputDecoration(
           hintText: strings.feedbackHint,
           hintStyle: TextStyle(
             color: isDark ? const Color(0xFF777777) : const Color(0xFFAAAAAA),
-            fontSize: 16,
+            fontSize: 18,
           ),
           filled: true,
           fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF2F4F7),
@@ -83,12 +83,13 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
       ),
       actions: [
         TextButton(
+          style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
           onPressed: () => Navigator.of(context).pop(),
           child: Text(
             strings.cancel,
             style: TextStyle(
               color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -98,9 +99,10 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
             backgroundColor: isDark ? Colors.white : AppColors.black,
             foregroundColor: isDark ? Colors.black : Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            minimumSize: const Size(80, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           onPressed: () {
             Navigator.of(context).pop();
@@ -108,7 +110,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
               SnackBar(
                 content: Text(
                   strings.feedbackSent,
-                  style: const TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 16),
                 ),
                 backgroundColor: AppColors.black,
                 duration: const Duration(seconds: 2),
@@ -117,7 +119,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
           },
           child: Text(
             strings.send,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
         ),
       ],

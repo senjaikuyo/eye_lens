@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 
@@ -20,7 +21,9 @@ class LanguageBottomSheet {
             return Container(
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Column(
@@ -40,11 +43,15 @@ class LanguageBottomSheet {
                         ),
                       ),
                       IconButton(
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
                         onPressed: () => Navigator.of(bottomSheetContext).pop(),
                         icon: Icon(
                           Icons.close,
                           color: isDark ? Colors.white : AppColors.black,
-                          size: 24,
+                          size: 26,
                         ),
                       ),
                     ],
@@ -98,7 +105,7 @@ class LanguageBottomSheet {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: isSelected
                 ? (isDark ? const Color(0xFF2A3444) : const Color(0xFFEDF4FC))
@@ -107,21 +114,23 @@ class LanguageBottomSheet {
             border: Border.all(
               color: isSelected
                   ? (isDark ? const Color(0xFF3B82F6) : AppColors.black)
-                  : (isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD0D7DE)),
+                  : (isDark
+                        ? const Color(0xFF3A3A3A)
+                        : const Color(0xFFD0D7DE)),
               width: isSelected ? 1.8 : 1.0,
             ),
           ),
           child: Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 decoration: const BoxDecoration(shape: BoxShape.circle),
                 child: ClipOval(
                   child: Image.asset(
                     flagAsset,
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -132,31 +141,35 @@ class LanguageBottomSheet {
                   title,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 16,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 18,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
               ),
               Container(
-                width: 20,
-                height: 20,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected
                         ? (isDark ? const Color(0xFF3B82F6) : AppColors.black)
-                        : (isDark ? const Color(0xFF666666) : const Color(0xFF999999)),
+                        : (isDark
+                              ? const Color(0xFF666666)
+                              : const Color(0xFF999999)),
                     width: 2.0,
                   ),
                 ),
                 child: isSelected
                     ? Center(
                         child: Container(
-                          width: 10,
-                          height: 10,
+                          width: 12,
+                          height: 12,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isDark ? const Color(0xFF3B82F6) : AppColors.black,
+                            color: isDark
+                                ? const Color(0xFF3B82F6)
+                                : AppColors.black,
                           ),
                         ),
                       )

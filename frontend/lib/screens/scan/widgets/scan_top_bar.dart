@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 import '../../../widgets/feedback_dialog.dart';
@@ -47,7 +48,9 @@ class ScanTopBar extends StatelessWidget {
               _buildCircleButton(
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const HistoryScreen(),
+                    ),
                   );
                 },
                 child: const Icon(
@@ -77,43 +80,57 @@ class ScanTopBar extends StatelessWidget {
                     onSelected: (value) {
                       if (value == 'settings') {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
                         );
                       } else if (value == 'feedback') {
-                        FeedbackDialog.show(context, strings: strings, isDark: isDark);
+                        FeedbackDialog.show(
+                          context,
+                          strings: strings,
+                          isDark: isDark,
+                        );
                       } else if (value == 'faq') {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const FaqScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const FaqScreen(),
+                          ),
                         );
                       }
                     },
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'settings',
+                        height: 52,
                         child: Text(
                           strings.settings,
                           style: TextStyle(
                             color: isDark ? Colors.white : AppColors.black,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                       PopupMenuItem(
                         value: 'feedback',
+                        height: 52,
                         child: Text(
                           strings.feedback,
                           style: TextStyle(
                             color: isDark ? Colors.white : AppColors.black,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                       PopupMenuItem(
                         value: 'faq',
+                        height: 52,
                         child: Text(
                           strings.faq,
                           style: TextStyle(
                             color: isDark ? Colors.white : AppColors.black,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -136,10 +153,7 @@ class ScanTopBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFFD0D7DE),
-          width: 1.0,
-        ),
+        border: Border.all(color: const Color(0xFFD0D7DE), width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.18),

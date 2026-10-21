@@ -120,8 +120,9 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
             return Container(
               key: _lineKeys[index],
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Text(
-                line,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
                 style: TextStyle(
                   color: widget.isDark ? Colors.white : AppColors.black,
                   fontSize: widget.fontSize,
@@ -130,6 +131,7 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
                       ? FontWeight.w800
                       : FontWeight.w600,
                 ),
+                child: Text(line),
               ),
             );
           }
@@ -166,8 +168,9 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
                       ]
                     : null,
               ),
-              child: Text(
-                line,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
                 style: TextStyle(
                   color: isActive
                       ? Colors.white
@@ -178,6 +181,7 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
                       ? FontWeight.w900
                       : (isActive ? FontWeight.w700 : FontWeight.w600),
                 ),
+                child: Text(line),
               ),
             ),
           );

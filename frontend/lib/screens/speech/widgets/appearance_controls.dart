@@ -232,12 +232,13 @@ class HighContrastTile extends StatelessWidget {
   }
 }
 
-class TextSizeSliderTile extends StatelessWidget {
+class TextSizeSliderTile extends StatefulWidget {
   final bool isDark;
   final bool isHighContrast;
   final String label;
   final double fontSize;
   final ValueChanged<double> onFontSizeChanged;
+  final ValueChanged<double>? onFontSizeChangeEnd;
 
   const TextSizeSliderTile({
     super.key,
@@ -246,13 +247,35 @@ class TextSizeSliderTile extends StatelessWidget {
     required this.label,
     required this.fontSize,
     required this.onFontSizeChanged,
+    this.onFontSizeChangeEnd,
   });
+
+  @override
+  State<TextSizeSliderTile> createState() => _TextSizeSliderTileState();
+}
+
+class _TextSizeSliderTileState extends State<TextSizeSliderTile> {
+  late double _currentValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentValue = widget.fontSize.clamp(18.0, 54.0);
+  }
+
+  @override
+  void didUpdateWidget(covariant TextSizeSliderTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fontSize != widget.fontSize) {
+      _currentValue = widget.fontSize.clamp(18.0, 54.0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppearanceBoxContainer(
-      isDark: isDark,
-      isHighContrast: isHighContrast,
+      isDark: widget.isDark,
+      isHighContrast: widget.isHighContrast,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -263,14 +286,14 @@ class TextSizeSliderTile extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.format_size_rounded,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: widget.isDark ? Colors.white : Colors.black,
                     size: 26,
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    label,
+                    widget.label,
                     style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.black,
+                      color: widget.isDark ? Colors.white : AppColors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -285,15 +308,15 @@ class TextSizeSliderTile extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: isDark
+                  color: widget.isDark
                       ? const Color(0xFF333333)
                       : const Color(0xFFE5E7EB),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${((fontSize / 18.0) * 100).round()}%',
+                  '${((_currentValue / 18.0) * 100).round()}%',
                   style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
+                    color: widget.isDark ? Colors.white : AppColors.black,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -309,7 +332,7 @@ class TextSizeSliderTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: isDark
+                  color: widget.isDark
                       ? const Color(0xFFAAAAAA)
                       : const Color(0xFF666666),
                 ),
@@ -317,13 +340,16 @@ class TextSizeSliderTile extends StatelessWidget {
               Expanded(
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: isDark ? Colors.white : AppColors.black,
-                    inactiveTrackColor: isDark
+                    activeTrackColor: widget.isDark
+                        ? Colors.white
+                        : AppColors.black,
+                    inactiveTrackColor: widget.isDark
                         ? const Color(0xFF444444)
                         : const Color(0xFFE5E7EB),
-                    thumbColor: isDark ? Colors.white : AppColors.black,
-                    overlayColor: (isDark ? Colors.white : AppColors.black)
-                        .withValues(alpha: 0.12),
+                    thumbColor: widget.isDark ? Colors.white : AppColors.black,
+                    overlayColor:
+                        (widget.isDark ? Colors.white : AppColors.black)
+                            .withValues(alpha: 0.12),
                     trackHeight: 6,
                     thumbShape: const RoundSliderThumbShape(
                       enabledThumbRadius: 14,
@@ -333,10 +359,18 @@ class TextSizeSliderTile extends StatelessWidget {
                     ),
                   ),
                   child: Slider(
-                    value: fontSize.clamp(18.0, 54.0),
+                    value: _currentValue.clamp(18.0, 54.0),
                     min: 18.0,
                     max: 54.0,
-                    onChanged: onFontSizeChanged,
+                    onChanged: (val) {
+                      setState(() {
+                        _currentValue = val;
+                      });
+                      widget.onFontSizeChanged(val);
+                    },
+                    onChangeEnd: (val) {
+                      widget.onFontSizeChangeEnd?.call(val);
+                    },
                   ),
                 ),
               ),
@@ -345,7 +379,7 @@ class TextSizeSliderTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppColors.black,
+                  color: widget.isDark ? Colors.white : AppColors.black,
                 ),
               ),
             ],

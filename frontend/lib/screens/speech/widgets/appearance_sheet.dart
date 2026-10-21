@@ -12,6 +12,7 @@ class AppearanceBottomSheet {
     required AppStrings strings,
     required double fontSize,
     required ValueChanged<double> onFontSizeChanged,
+    ValueChanged<double>? onFontSizeChangeEnd,
   }) {
     showModalBottomSheet(
       context: context,
@@ -115,7 +116,12 @@ class AppearanceBottomSheet {
                       onFontSizeChanged: (newSize) {
                         currentFontSize = newSize;
                         onFontSizeChanged(newSize);
-                        setSheetState(() {});
+                      },
+                      onFontSizeChangeEnd: (finalSize) {
+                        currentFontSize = finalSize;
+                        if (onFontSizeChangeEnd != null) {
+                          onFontSizeChangeEnd(finalSize);
+                        }
                       },
                     ),
 

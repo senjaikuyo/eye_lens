@@ -40,6 +40,7 @@ class SpeechScreen extends StatefulWidget {
 class _SpeechScreenState extends State<SpeechScreen> {
   late bool _isTextView;
   double _fontSize = 32.0;
+  final ValueNotifier<double> _fontSizeNotifier = ValueNotifier<double>(32.0);
   final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
@@ -84,6 +85,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void initState() {
     super.initState();
     _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
+    _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
     _ttsService.onProgress = (progress, word) {
@@ -127,6 +129,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _ttsService.onError = null;
     _progressNotifier.dispose();
     _isPlayingNotifier.dispose();
+    _fontSizeNotifier.dispose();
     super.dispose();
   }
 
@@ -201,18 +204,23 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 ),
                 child: SingleChildScrollView(
                   child: ValueListenableBuilder<double>(
-                    valueListenable: _progressNotifier,
-                    builder: (context, progress, _) {
-                      return HighlightedTextView(
-                        text: _activeText,
-                        fontSize: _fontSize,
-                        cursorColorEnabled: themeProvider.cursorColor,
-                        highlightColor: themeProvider.highlightColor,
-                        isDark: isDark,
-                        isHighContrast: themeProvider.isHighContrast,
-                        progress: progress,
-                        onProgressChanged: (val) {
-                          _progressNotifier.value = val;
+                    valueListenable: _fontSizeNotifier,
+                    builder: (context, currentFontSize, _) {
+                      return ValueListenableBuilder<double>(
+                        valueListenable: _progressNotifier,
+                        builder: (context, progress, _) {
+                          return HighlightedTextView(
+                            text: _activeText,
+                            fontSize: currentFontSize,
+                            cursorColorEnabled: themeProvider.cursorColor,
+                            highlightColor: themeProvider.highlightColor,
+                            isDark: isDark,
+                            isHighContrast: themeProvider.isHighContrast,
+                            progress: progress,
+                            onProgressChanged: (val) {
+                              _progressNotifier.value = val;
+                            },
+                          );
                         },
                       );
                     },
@@ -238,10 +246,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   strings: strings,
                   fontSize: _fontSize,
                   onFontSizeChanged: (newSize) {
-                    setState(() {
-                      _fontSize = newSize;
-                    });
-                    themeProvider.setFontSize(newSize);
+                    _fontSize = newSize;
+                    _fontSizeNotifier.value = newSize;
+                  },
+                  onFontSizeChangeEnd: (finalSize) {
+                    _fontSize = finalSize;
+                    _fontSizeNotifier.value = finalSize;
+                    themeProvider.setFontSize(finalSize);
                   },
                 );
               },

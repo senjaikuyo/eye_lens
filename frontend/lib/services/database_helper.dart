@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/pengaturan_model.dart';
+import '../models/riwayat_model.dart';
+
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
@@ -210,6 +213,32 @@ class DatabaseHelper {
       'UPDATE tbl_riwayat SET status_sinkron = 1 WHERE id_riwayat IN ($placeholders)',
       ids,
     );
+  }
+
+  // --- Typed Model Helpers ---
+
+  Future<PengaturanModel> getPengaturanModel() async {
+    final map = await getPengaturan();
+    return PengaturanModel.fromMap(map);
+  }
+
+  Future<int> updatePengaturanModel(PengaturanModel model) async {
+    return await updatePengaturan(model.toMap());
+  }
+
+  Future<int> insertRiwayatModel(RiwayatModel model) async {
+    final db = await database;
+    return await db.insert('tbl_riwayat', model.toMap());
+  }
+
+  Future<List<RiwayatModel>> getRiwayatModelList({int limit = 50}) async {
+    final list = await getRiwayatList(limit: limit);
+    return list.map((map) => RiwayatModel.fromMap(map)).toList();
+  }
+
+  Future<RiwayatModel?> getRiwayatModelById(int id) async {
+    final map = await getRiwayatById(id);
+    return map != null ? RiwayatModel.fromMap(map) : null;
   }
 
   Future<void> close() async {

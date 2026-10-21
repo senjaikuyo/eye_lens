@@ -12,6 +12,7 @@ import '../../core/app_strings.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/camera_service.dart';
+import '../../services/hardware_key_service.dart';
 import '../../services/ocr_service.dart';
 import '../../widgets/scanner_corner_painter.dart';
 import '../../widgets/zoom_ruler.dart';
@@ -31,6 +32,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
   final CameraService _cameraService = CameraService();
   final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
+  final HardwareKeyService _hardwareKeyService = HardwareKeyService();
 
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
@@ -46,6 +48,11 @@ class _ScanningScreenState extends State<ScanningScreen> {
   void initState() {
     super.initState();
     _initCamera();
+    _hardwareKeyService.startListening(() {
+      if (mounted && !_isProcessingOcr) {
+        _onCapturePressed();
+      }
+    });
   }
 
   Future<void> _initCamera() async {
@@ -59,6 +66,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
 
   @override
   void dispose() {
+    _hardwareKeyService.stopListening();
     _blurTimer?.cancel();
     _cameraService.dispose();
     _ocrService.dispose();

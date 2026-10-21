@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import '../models/ocr_element.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
 /// - Menggunakan model Latin Script berkecepatan tinggi (< 500 ms).
-/// - Menerima citra foto dari memori RAM (Uint8List).
+/// - Mendukung ekstraksi teks penuh maupun koordinat bounding box setiap elemen/baris.
 /// - Menjaga privasi: memproses citra via ephemeral temp file yang langsung
 ///   dimusnahkan di blok `finally` (0 byte penulisan permanen di gawai).
-/// - Mengembalikan teks hasil ekstraksi bersih.
 class OcrService {
   final TextRecognizer _textRecognizer;
   bool _isDisposed = false;
@@ -15,13 +16,17 @@ class OcrService {
   OcrService({TextRecognitionScript script = TextRecognitionScript.latin})
       : _textRecognizer = TextRecognizer(script: script);
 
-  /// Mengekstrak karakter teks dari citra foto yang berada di RAM (Uint8List).
-  Future<String> processImageFromRAM(Uint8List bytes) async {
-    if (_isDisposed) return '';
+  /// Mengekstrak teks lengkap beserta koordinat bounding box setiap elemen dari RAM (Uint8List).
+  Future<OcrResult> processImageWithCoordinates(Uint8List bytes) async {
+    if (_isDisposed) return OcrResult.empty;
 
     File? tempFile;
     try {
-      // Tulis sementara ke direktori cache sementara OS untuk mempertahankan EXIF rotation
+      final decodedImage = await decodeImageFromList(bytes);
+      final imageSize =
+          Size(decodedImage.width.toDouble(), decodedImage.height.toDouble());
+      decodedImage.dispose();
+
       final tempDir = Directory.systemTemp;
       final tempPath =
           '${tempDir.path}/ocr_ephemeral_${DateTime.now().microsecondsSinceEpoch}.jpg';
@@ -32,37 +37,95 @@ class OcrService {
       final RecognizedText recognizedText =
           await _textRecognizer.processImage(inputImage);
 
-      return recognizedText.text.trim();
+      final List<OcrElement> elements = [];
+      int elementIndex = 0;
+
+      for (final block in recognizedText.blocks) {
+        for (final line in block.lines) {
+          if (line.text.trim().isNotEmpty) {
+            elements.add(
+              OcrElement(
+                id: 'elem_${elementIndex++}',
+                text: line.text,
+                boundingBox: line.boundingBox,
+              ),
+            );
+          }
+        }
+      }
+
+      return OcrResult(
+        fullText: recognizedText.text.trim(),
+        elements: elements,
+        imageSize: imageSize,
+      );
     } catch (e) {
-      debugPrint('[OcrService] Ekstraksi OCR gagal: $e');
-      return '';
+      debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
+      return OcrResult.empty;
     } finally {
-      // Ephemeral Memory: Pastikan file sementara selalu terhapus dari disk
       if (tempFile != null) {
         try {
           if (await tempFile.exists()) {
             await tempFile.delete();
           }
-        } catch (_) {
-          // Abaikan jika sudah terhapus
-        }
+        } catch (_) {}
       }
     }
   }
 
-  /// Mengekstrak teks langsung dari berkas file yang ada (misal: pilihan dari galeri).
-  Future<String> processImageFromFile(String filePath) async {
-    if (_isDisposed) return '';
+  /// Mengekstrak teks lengkap beserta koordinat bounding box dari file.
+  Future<OcrResult> processFileWithCoordinates(String filePath) async {
+    if (_isDisposed) return OcrResult.empty;
 
     try {
+      final bytes = await File(filePath).readAsBytes();
+      final decodedImage = await decodeImageFromList(bytes);
+      final imageSize =
+          Size(decodedImage.width.toDouble(), decodedImage.height.toDouble());
+      decodedImage.dispose();
+
       final inputImage = InputImage.fromFilePath(filePath);
       final RecognizedText recognizedText =
           await _textRecognizer.processImage(inputImage);
-      return recognizedText.text.trim();
+
+      final List<OcrElement> elements = [];
+      int elementIndex = 0;
+
+      for (final block in recognizedText.blocks) {
+        for (final line in block.lines) {
+          if (line.text.trim().isNotEmpty) {
+            elements.add(
+              OcrElement(
+                id: 'elem_${elementIndex++}',
+                text: line.text,
+                boundingBox: line.boundingBox,
+              ),
+            );
+          }
+        }
+      }
+
+      return OcrResult(
+        fullText: recognizedText.text.trim(),
+        elements: elements,
+        imageSize: imageSize,
+      );
     } catch (e) {
-      debugPrint('[OcrService] Ekstraksi OCR file gagal: $e');
-      return '';
+      debugPrint('[OcrService] Ekstraksi OCR file berkoordinat gagal: $e');
+      return OcrResult.empty;
     }
+  }
+
+  /// Mengekstrak karakter teks dari citra foto yang berada di RAM (Uint8List).
+  Future<String> processImageFromRAM(Uint8List bytes) async {
+    final result = await processImageWithCoordinates(bytes);
+    return result.fullText;
+  }
+
+  /// Mengekstrak teks langsung dari berkas file yang ada (misal: pilihan dari galeri).
+  Future<String> processImageFromFile(String filePath) async {
+    final result = await processFileWithCoordinates(filePath);
+    return result.fullText;
   }
 
   /// Membebaskan memori native C++ Google ML Kit.

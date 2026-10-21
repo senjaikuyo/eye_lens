@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -14,12 +13,14 @@ import '../../providers/theme_provider.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
 import '../../services/ocr_service.dart';
-import '../../widgets/scanner_corner_painter.dart';
 import '../../widgets/zoom_ruler.dart';
 import '../speech/speech_screen.dart';
 import 'widgets/blur_warning_banner.dart';
+import 'widgets/camera_viewfinder.dart';
+import 'widgets/ocr_processing_overlay.dart';
 import 'widgets/scan_bottom_bar.dart';
 import 'widgets/scan_top_bar.dart';
+import 'widgets/zoom_pill_indicator.dart';
 
 class ScanningScreen extends StatefulWidget {
   const ScanningScreen({super.key});
@@ -36,7 +37,6 @@ class _ScanningScreenState extends State<ScanningScreen> {
 
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
-  double _baseScaleZoom = 1.0;
   bool _isBlurry = false;
   bool _isProcessingOcr = false;
   Timer? _blurTimer;
@@ -260,102 +260,16 @@ class _ScanningScreenState extends State<ScanningScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Gesture Area untuk Seluruh Viewfinder Kamera
-          // Mendukung:
-          // - Zoom Cubit (Pinch to Zoom 2 jari hingga 10x)
-          // - Swipe 1 Jari Vertikal (Swipe Atas = Zoom In, Swipe Bawah = Zoom Out)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onScaleStart: (details) {
-              _baseScaleZoom = _currentZoom;
-            },
-            onScaleUpdate: (details) {
-              if (details.pointerCount > 1) {
-                // Zoom Cubit (Pinch 2 jari)
-                _updateZoom(_baseScaleZoom * details.scale);
-              } else {
-                // Swipe 1 Jari Vertikal: Ke atas = zoom in, ke bawah = zoom out
-                final dy = details.focalPointDelta.dy;
-                final sensitivity = 0.015;
-                _updateZoom(_currentZoom - (dy * sensitivity));
-              }
-            },
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Live Camera Preview atau fallback
-                if (_cameraService.isInitialized &&
-                    _cameraService.controller != null)
-                  SizedBox.expand(
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      child: SizedBox(
-                        width:
-                            _cameraService
-                                .controller!
-                                .value
-                                .previewSize
-                                ?.height ??
-                            size.width,
-                        height:
-                            _cameraService
-                                .controller!
-                                .value
-                                .previewSize
-                                ?.width ??
-                            size.height,
-                        child: CameraPreview(_cameraService.controller!),
-                      ),
-                    ),
-                  )
-                else
-                  Image.asset(
-                    'assets/images/UI Scanning Teks.png',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
-
-                // Subtle Vignette Gradient
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.45),
-                          Colors.transparent,
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.6),
-                        ],
-                        stops: const [0.0, 0.2, 0.7, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Central Viewfinder Frame - 4 Busur Melengkung Halus di Sudut (Persis Referensi)
-                Center(
-                  child: SizedBox(
-                    width: size.width * 0.78,
-                    height: size.width * 0.78,
-                    child: CustomPaint(
-                      painter: ScannerCornerPainter(
-                        color: _isBlurry
-                            ? const Color(0xFFF59E0B)
-                            : Colors.white.withValues(alpha: 0.85),
-                        strokeWidth: 2.0,
-                        arcRadius: 40.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // 1. Viewfinder Kamera dengan gesture pinch & swipe zoom
+          CameraViewfinder(
+            cameraService: _cameraService,
+            currentZoom: _currentZoom,
+            onZoomChanged: _updateZoom,
+            isBlurry: _isBlurry,
+            size: size,
           ),
 
-          // 2. Top Action Bar: Flash, History, and PopupMenu
+          // 2. Top Action Bar: Flash, History, dan Popup Menu
           ScanTopBar(
             topPadding: topPadding,
             isFlashOn: _isFlashOn,
@@ -369,7 +283,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
             strings: strings,
           ),
 
-          // 3. Slider Zoom Vertikal di Kanan Pas di Tengah (Sejajar dengan Kotak Siku-siku)
+          // 3. Slider Zoom Vertikal di Kanan Tengah
           Positioned(
             right: 0,
             top: (size.height - 190) / 2,
@@ -381,45 +295,14 @@ class _ScanningScreenState extends State<ScanningScreen> {
             ),
           ),
 
-          // 4. Indikator Nilai Zoom (Opsi A: Kapsul Pill di Tengah Bawah Tepat di Atas Shutter)
+          // 4. Indikator Nilai Zoom di Tengah Bawah
           Positioned(
             left: 0,
             right: 0,
             bottom: bottomPadding + 130,
-            child: Center(
-              child: GestureDetector(
-                onTap: () => _updateZoom(1.0), // Tap untuk reset cepat ke 1.0x
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    '${_currentZoom.toStringAsFixed(1)}x',
-                    style: const TextStyle(
-                      color: Color(0xFFFACC15),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
-              ),
+            child: ZoomPillIndicator(
+              currentZoom: _currentZoom,
+              onTap: () => _updateZoom(1.0),
             ),
           ),
 
@@ -430,7 +313,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
             message: strings.imageBlurryAlert,
           ),
 
-          // 6. Bottom Controls: Gallery & Shutter Button
+          // 6. Bottom Controls: Galeri & Shutter
           ScanBottomBar(
             bottomPadding: bottomPadding,
             galleryText: strings.gallery,
@@ -440,32 +323,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
           ),
 
           // 7. OCR Processing Overlay
-          if (_isProcessingOcr)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(
-                      color: Color(0xFFFACC15),
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      strings.isIndonesian
-                          ? 'Mengekstrak teks...'
-                          : 'Extracting text...',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          if (_isProcessingOcr) OcrProcessingOverlay(strings: strings),
         ],
       ),
     );

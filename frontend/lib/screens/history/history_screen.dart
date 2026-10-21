@@ -1,26 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../models/riwayat_model.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../speech/speech_screen.dart';
 import 'widgets/history_delete_dialog.dart';
 import 'widgets/history_empty_state.dart';
 import 'widgets/history_tile.dart';
-
-class HistoryItemModel {
-  final String id;
-  final String title;
-  final String date;
-  final String fullText;
-
-  const HistoryItemModel({
-    required this.id,
-    required this.title,
-    required this.date,
-    required this.fullText,
-  });
-}
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -30,39 +19,28 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final List<HistoryItemModel> _historyList = [
-    const HistoryItemModel(
-      id: '1',
-      title: 'yesterday...',
-      date: '25/09/2026',
-      fullText: 'yesterday\ntoday\ntomorrow',
-    ),
-    const HistoryItemModel(
-      id: '2',
-      title: 'Pharmacy medicine...',
-      date: '24/09/2026',
-      fullText:
-          'Take 1 tablet twice daily after meals.\nStore in a cool and dry place away from direct sunlight.',
-    ),
-    const HistoryItemModel(
-      id: '3',
-      title: 'Coffee recipe notes...',
-      date: '22/09/2026',
-      fullText:
-          '18g fine espresso grind, 36g extraction in 28 seconds. Temp: 93°C.',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<HistoryProvider>().loadRiwayat();
+      }
+    });
+  }
 
-  Future<void> _handleDeleteSingle(int index, AppStrings strings, bool isDark) async {
+  Future<void> _handleDeleteSingle(
+    RiwayatModel item,
+    AppStrings strings,
+    bool isDark,
+  ) async {
     final confirmed = await HistoryDeleteDialog.showDeleteSingle(
       context,
       strings: strings,
       isDark: isDark,
     );
-    if (confirmed == true && mounted) {
-      setState(() {
-        _historyList.removeAt(index);
-      });
+    if (confirmed == true && mounted && item.idRiwayat != null) {
+      await context.read<HistoryProvider>().deleteRiwayat(item.idRiwayat!);
     }
   }
 
@@ -73,18 +51,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
       isDark: isDark,
     );
     if (confirmed == true && mounted) {
-      setState(() {
-        _historyList.clear();
-      });
+      await context.read<HistoryProvider>().clearAll();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final historyProvider = context.watch<HistoryProvider>();
     final isDark = themeProvider.isDark(context);
     final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);
+    final historyList = historyProvider.items;
 
     final dividerColor = isHighContrast
         ? (isDark ? Colors.white : Colors.black)
@@ -135,7 +113,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                   ),
-                  if (_historyList.isNotEmpty)
+                  if (historyList.isNotEmpty)
                     TextButton(
                       onPressed: () => _handleClearAll(strings, isDark),
                       child: Text(
@@ -152,22 +130,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
 
             const SizedBox(height: 20),
-            Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+            Divider(
+              color: dividerColor,
+              thickness: dividerThickness,
+              height: 1,
+            ),
 
             // History Flat List or Empty State
             Expanded(
-              child: _historyList.isEmpty
+              child: historyProvider.isLoading && historyList.isEmpty
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    )
+                  : historyList.isEmpty
                   ? HistoryEmptyState(strings: strings, isDark: isDark)
                   : ListView.separated(
                       padding: EdgeInsets.zero,
-                      itemCount: _historyList.length,
+                      itemCount: historyList.length,
                       separatorBuilder: (context, index) => Divider(
                         color: dividerColor,
                         thickness: dividerThickness,
                         height: 1,
                       ),
                       itemBuilder: (context, index) {
-                        final item = _historyList[index];
+                        final item = historyList[index];
                         return HistoryTile(
                           item: item,
                           isDark: isDark,
@@ -176,13 +164,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) => SpeechScreen(
-                                  text: item.fullText,
+                                  text: item.isiTeks,
                                   hasImage: false,
                                 ),
                               ),
                             );
                           },
-                          onDelete: () => _handleDeleteSingle(index, strings, isDark),
+                          onDelete: () =>
+                              _handleDeleteSingle(item, strings, isDark),
                         );
                       },
                     ),

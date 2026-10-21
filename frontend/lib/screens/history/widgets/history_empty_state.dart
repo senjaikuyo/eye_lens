@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 
@@ -31,7 +32,9 @@ class HistoryEmptyState extends StatelessWidget {
               ),
               child: Icon(
                 Icons.history_rounded,
-                color: isDark ? const Color(0xFF666666) : const Color(0xFFA0AEC0),
+                color: isDark
+                    ? const Color(0xFF666666)
+                    : const Color(0xFFA0AEC0),
                 size: 46,
               ),
             ),
@@ -49,7 +52,9 @@ class HistoryEmptyState extends StatelessWidget {
               strings.noHistorySubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isDark ? const Color(0xFF888888) : const Color(0xFF718096),
+                color: isDark
+                    ? const Color(0xFF888888)
+                    : const Color(0xFF718096),
                 fontSize: 13.5,
                 height: 1.4,
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_theme.dart';
+import 'providers/history_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/splash/splash_screen.dart';
@@ -20,6 +21,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()),
       ],
       child: const EyeLensApp(),
     ),

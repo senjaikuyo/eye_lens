@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
-import '../history_screen.dart';
+import '../../../models/riwayat_model.dart';
 
 class HistoryTile extends StatelessWidget {
-  final HistoryItemModel item;
+  final RiwayatModel item;
   final bool isDark;
   final bool isHighContrast;
   final VoidCallback onTap;
@@ -22,7 +22,7 @@ class HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dismissible(
-      key: ValueKey(item.id),
+      key: ValueKey(item.idRiwayat ?? item.waktu),
       direction: DismissDirection.endToStart,
       confirmDismiss: (direction) async {
         onDelete();
@@ -51,7 +51,7 @@ class HistoryTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.title,
+                        item.judul,
                         style: TextStyle(
                           color: isDark ? Colors.white : AppColors.black,
                           fontSize: 17,
@@ -62,7 +62,7 @@ class HistoryTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        item.date,
+                        item.formattedDate,
                         style: TextStyle(
                           color: isDark
                               ? const Color(0xFF999999)

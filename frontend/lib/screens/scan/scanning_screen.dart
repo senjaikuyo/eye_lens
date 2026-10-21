@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../providers/history_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/camera_service.dart';
 import '../../services/ocr_service.dart';
@@ -114,6 +115,12 @@ class _ScanningScreenState extends State<ScanningScreen> {
               : 'yesterday\ntoday\ntomorrow';
 
           if (mounted) {
+            // Simpan hasil pemindaian langsung ke SQLite
+            context.read<HistoryProvider>().addRiwayat(
+              text: finalText,
+              sumber: 'kamera',
+            );
+
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => SpeechScreen(
@@ -186,6 +193,12 @@ class _ScanningScreenState extends State<ScanningScreen> {
           ),
         );
       } else {
+        // Simpan hasil pemindaian galeri langsung ke SQLite
+        context.read<HistoryProvider>().addRiwayat(
+          text: extractedText,
+          sumber: 'galeri',
+        );
+
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => SpeechScreen(

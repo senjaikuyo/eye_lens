@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 
@@ -33,7 +34,9 @@ class HistoryDeleteDialog {
             child: Text(
               strings.cancel,
               style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
+                color: isDark
+                    ? const Color(0xFFAAAAAA)
+                    : const Color(0xFF777777),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -87,7 +90,9 @@ class HistoryDeleteDialog {
             child: Text(
               strings.cancel,
               style: TextStyle(
-                color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
+                color: isDark
+                    ? const Color(0xFFAAAAAA)
+                    : const Color(0xFF777777),
                 fontWeight: FontWeight.w600,
               ),
             ),

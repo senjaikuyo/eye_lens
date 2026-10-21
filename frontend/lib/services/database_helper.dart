@@ -10,6 +10,7 @@ class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
 
+  static DatabaseHelper get instance => _instance;
   factory DatabaseHelper() => _instance;
 
   DatabaseHelper._internal();
@@ -181,6 +182,8 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
+
+  Future<int> deleteRiwayat(int id) => deleteRiwayatById(id);
 
   Future<int> clearAllRiwayat() async {
     final db = await database;

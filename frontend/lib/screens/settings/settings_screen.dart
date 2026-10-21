@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
@@ -104,7 +105,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(
                         color: isDark ? Colors.white : AppColors.black,
                         fontSize: 15,
-                        fontWeight: isHighContrast ? FontWeight.w800 : FontWeight.w600,
+                        fontWeight: isHighContrast
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                       ),
                     ),
                   ],
@@ -112,7 +115,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               const SizedBox(height: 14),
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 2. Change Password
               SettingsListTile(
@@ -138,12 +145,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 3. Auto-Play Audio
               SettingsListTile(
@@ -166,12 +179,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // Theme Selector
               ThemeSelectorTile(
@@ -184,7 +203,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 4. Language App Selector
               LanguageSelectorTile(
@@ -197,7 +220,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 5. FAQ
               SettingsListTile(
@@ -213,9 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const FaqScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const FaqScreen()),
                   );
                 },
                 child: Text(
@@ -223,12 +248,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 6. About
               SettingsListTile(
@@ -255,22 +286,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                   ),
                 ),
               ),
 
-              Divider(color: dividerColor, thickness: dividerThickness, height: 1),
-
-              const SizedBox(height: 18),
+              Divider(
+                color: dividerColor,
+                thickness: dividerThickness,
+                height: 1,
+              ),
 
               // 7. Logout Row
               Material(
-                color: isDark ? const Color(0xFF2A1517) : const Color(0xFFFFF1F2),
+                color: isDark
+                    ? const Color(0xFF2A1517)
+                    : const Color(0xFFFFF1F2),
                 child: InkWell(
-                  onTap: () => LogoutDialog.show(context, strings: strings, isDark: isDark),
+                  onTap: () => LogoutDialog.show(
+                    context,
+                    strings: strings,
+                    isDark: isDark,
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     child: Row(
                       children: [
                         const Icon(

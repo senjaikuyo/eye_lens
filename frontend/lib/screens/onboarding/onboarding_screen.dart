@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../auth/login_screen.dart';
@@ -11,26 +12,22 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
   int _currentPage = 0;
 
   void _onNextPressed(int totalPages) {
     if (_currentPage < totalPages - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
+      setState(() {
+        _currentPage++;
+      });
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      _skipToLogin();
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  void _skipToLogin() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
   }
 
   @override
@@ -60,86 +57,129 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.white,
-      body: Stack(
-        children: [
-          // White background base
-          Container(color: AppColors.white),
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity != null) {
+            if (details.primaryVelocity! < -150) {
+              // Swipe left -> Next
+              if (_currentPage < items.length - 1) {
+                setState(() => _currentPage++);
+              }
+            } else if (details.primaryVelocity! > 150) {
+              // Swipe right -> Prev
+              if (_currentPage > 0) {
+                setState(() => _currentPage--);
+              }
+            }
+          }
+        },
+        child: Stack(
+          children: [
+            // White background base
+            Container(color: AppColors.white),
 
-          // Diagonal black split (shared across pages for smooth visual continuity)
-          Positioned.fill(
-            child: ClipPath(
-              clipper: const DiagonalSplitClipper(),
-              child: Container(color: AppColors.black),
+            // Diagonal black split (shared across pages for smooth visual continuity)
+            Positioned.fill(
+              child: ClipPath(
+                clipper: const DiagonalSplitClipper(),
+                child: Container(color: AppColors.black),
+              ),
             ),
-          ),
 
-          // PageView for page-specific content
-          PageView.builder(
-            controller: _pageController,
-            itemCount: items.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              return _buildPageContent(index, size, topPadding, items);
-            },
-          ),
+            // AnimatedSwitcher for pure fade transition between onboarding pages
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_currentPage),
+                child: _buildPageContent(_currentPage, size, topPadding, items),
+              ),
+            ),
 
-          // Bottom-right controls (Button + Indicator centered underneath)
-          Positioned(
-            right: 22,
-            bottom: bottomPadding + 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Next / Start Button
-                Material(
-                  color: AppColors.buttonGrey,
-                  borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    onTap: () => _onNextPressed(items.length),
+            // Skip button on top-right (only on slide 1 and 2)
+            if (_currentPage < items.length - 1)
+              Positioned(
+                top: topPadding + 10,
+                right: 18,
+                child: TextButton(
+                  onPressed: _skipToLogin,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    strings.skip,
+                    style: const TextStyle(
+                      color: AppColors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Bottom-right controls (Button + Indicator centered underneath)
+            Positioned(
+              right: 22,
+              bottom: bottomPadding + 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Next / Start Button
+                  Material(
+                    color: AppColors.buttonGrey,
                     borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: 100,
-                      height: 42,
-                      alignment: Alignment.center,
-                      child: Text(
-                        items[_currentPage].buttonText,
-                        style: const TextStyle(
-                          color: AppColors.black,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                    child: InkWell(
+                      onTap: () => _onNextPressed(items.length),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 100,
+                        height: 42,
+                        alignment: Alignment.center,
+                        child: Text(
+                          items[_currentPage].buttonText,
+                          style: const TextStyle(
+                            color: AppColors.black,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-                // Indicator dots centered under button
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    items.length,
-                    (dotIndex) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                      width: _currentPage == dotIndex ? 18 : 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(2.5),
+                  // Indicator dots centered under button
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      items.length,
+                      (dotIndex) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                        width: _currentPage == dotIndex ? 18 : 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(2.5),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

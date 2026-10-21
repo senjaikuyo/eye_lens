@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/language_provider.dart';
 
 class AppStrings {
@@ -14,8 +15,10 @@ class AppStrings {
           : Provider.of<LanguageProvider>(context, listen: false);
       return AppStrings(isIndonesian: languageProvider.isIndonesian);
     } catch (_) {
-      final languageProvider =
-          Provider.of<LanguageProvider>(context, listen: false);
+      final languageProvider = Provider.of<LanguageProvider>(
+        context,
+        listen: false,
+      );
       return AppStrings(isIndonesian: languageProvider.isIndonesian);
     }
   }
@@ -27,6 +30,7 @@ class AppStrings {
   String get save => isIndonesian ? 'Simpan' : 'Save';
   String get next => isIndonesian ? 'Lanjut' : 'Next';
   String get start => isIndonesian ? 'Mulai' : 'Start';
+  String get skip => isIndonesian ? 'Lewati' : 'Skip';
 
   // --- Onboarding ---
   String get onbTitle1 =>
@@ -113,9 +117,8 @@ class AppStrings {
   String get passwordTooShort => isIndonesian
       ? 'Kata sandi minimal 6 karakter'
       : 'Password must be at least 6 characters';
-  String get passwordRequired => isIndonesian
-      ? 'Kata sandi tidak boleh kosong'
-      : 'Password is required';
+  String get passwordRequired =>
+      isIndonesian ? 'Kata sandi tidak boleh kosong' : 'Password is required';
   String get currentPasswordRequired => isIndonesian
       ? 'Kata sandi saat ini harus diisi'
       : 'Current password is required';
@@ -137,8 +140,7 @@ class AppStrings {
   String get faq => isIndonesian ? 'Tanya Jawab (FAQ)' : 'FAQ';
   String get about => isIndonesian ? 'Tentang' : 'About';
   String get logOut => isIndonesian ? 'Keluar' : 'Log Out';
-  String get logOutConfirmTitle =>
-      isIndonesian ? 'Keluar Akun' : 'Log Out';
+  String get logOutConfirmTitle => isIndonesian ? 'Keluar Akun' : 'Log Out';
   String get logOutConfirmMessage => isIndonesian
       ? 'Apakah Anda yakin ingin keluar dari EyeLens?'
       : 'Are you sure you want to log out of EyeLens?';
@@ -148,15 +150,13 @@ class AppStrings {
   String get themeLight => isIndonesian ? 'Terang' : 'Light';
   String get themeDark => isIndonesian ? 'Gelap' : 'Dark';
   String get themeSystem => isIndonesian ? 'Sistem' : 'System';
-  String get highContrast =>
-      isIndonesian ? 'Kontras Tinggi' : 'High Contrast';
+  String get highContrast => isIndonesian ? 'Kontras Tinggi' : 'High Contrast';
   String get cursorColor => isIndonesian ? 'Warna Kursor' : 'Cursor Color';
 
   // --- Change Password ---
   String get currentPassword =>
       isIndonesian ? 'Kata Sandi Saat Ini' : 'Current Password';
-  String get newPassword =>
-      isIndonesian ? 'Kata Sandi Baru' : 'New Password';
+  String get newPassword => isIndonesian ? 'Kata Sandi Baru' : 'New Password';
   String get fillAllFields => isIndonesian
       ? 'Harap isi semua kolom kata sandi'
       : 'Please fill all password fields';
@@ -172,55 +172,45 @@ class AppStrings {
       ? [
           {
             'q': 'Bagaimana cara memindai teks?',
-            'a':
-                'Arahkan kamera ke teks cetak atau tulisan tangan apa pun, lalu tekan tombol kamera bulat di tengah untuk memindai.',
+            'a': 'Arahkan kamera ke teks cetak atau tulisan tangan apa pun, lalu tekan tombol kamera bulat di tengah untuk memindai.',
           },
           {
             'q': 'Bisakah memindai gambar dari galeri?',
-            'a':
-                'Ya, tekan tombol "Galeri" di kiri bawah layar pemindai untuk memilih gambar dari perangkat Anda.',
+            'a': 'Ya, tekan tombol "Galeri" di kiri bawah layar pemindai untuk memilih gambar dari perangkat Anda.',
           },
           {
             'q': 'Bagaimana cara memperbesar teks hasil pemindaian?',
-            'a':
-                'Pada Tampilan Teks, gunakan tombol "+" dan "-" di bar atas untuk menyesuaikan ukuran font sesuai kenyamanan Anda.',
+            'a': 'Pada Tampilan Teks, gunakan tombol "+" dan "-" di bar atas untuk menyesuaikan ukuran font sesuai kenyamanan Anda.',
           },
           {
             'q': 'Bahasa apa saja yang didukung untuk Text-to-Speech?',
-            'a':
-                'EyeLens mendukung Bahasa Indonesia dan Bahasa Inggris. Anda dapat beralih bahasa dengan mengetuk ikon bendera pada pemutar suara.',
+            'a': 'EyeLens mendukung Bahasa Indonesia dan Bahasa Inggris. Anda dapat beralih bahasa dengan mengetuk ikon bendera pada pemutar suara.',
           },
           {
             'q': 'Bagaimana cara agar aplikasi membaca teks dengan suara?',
-            'a':
-                'Setelah memindai atau memilih dari riwayat, cukup tekan tombol Putar (Play) besar di bagian bawah layar.',
+            'a': 'Setelah memindai atau memilih dari riwayat, cukup tekan tombol Putar (Play) besar di bagian bawah layar.',
           },
         ]
       : [
           {
             'q': 'How do I scan text?',
-            'a':
-                'Point your camera at any printed or handwritten text and press the center camera button to capture and scan.',
+            'a': 'Point your camera at any printed or handwritten text and press the center camera button to capture and scan.',
           },
           {
             'q': 'Can I scan an image from my gallery?',
-            'a':
-                'Yes, tap the "Gallery" button on the bottom left of the scanner screen to select an image from your device.',
+            'a': 'Yes, tap the "Gallery" button on the bottom left of the scanner screen to select an image from your device.',
           },
           {
             'q': 'How can I make the scanned text bigger?',
-            'a':
-                'In Text View, use the "+" and "-" buttons on the top bar to adjust the font size to your comfort.',
+            'a': 'In Text View, use the "+" and "-" buttons on the top bar to adjust the font size to your comfort.',
           },
           {
             'q': 'Which languages are supported for Text-to-Speech?',
-            'a':
-                'EyeLens currently supports Indonesian and English. You can switch languages by tapping the flag icon on the player.',
+            'a': 'EyeLens currently supports Indonesian and English. You can switch languages by tapping the flag icon on the player.',
           },
           {
             'q': 'How can I make the app read the text aloud?',
-            'a':
-                'After scanning or selecting from history, simply press the big Play button at the bottom of the screen.',
+            'a': 'After scanning or selecting from history, simply press the big Play button at the bottom of the screen.',
           },
         ];
 }

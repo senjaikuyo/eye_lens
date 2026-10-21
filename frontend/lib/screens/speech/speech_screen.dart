@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../models/ocr_element.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/feedback_dialog.dart';
@@ -14,17 +15,20 @@ import 'widgets/appearance_sheet.dart';
 import 'widgets/audio_player_bar.dart';
 import 'widgets/highlighted_text_view.dart';
 import 'widgets/language_sheet.dart';
+import 'widgets/ocr_image_overlay.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
   final bool hasImage;
   final Uint8List? imageBytes;
+  final OcrResult? ocrResult;
 
   const SpeechScreen({
     super.key,
     this.text = 'yesterday\ntoday\ntomorrow',
     this.hasImage = false,
     this.imageBytes,
+    this.ocrResult,
   });
 
   @override
@@ -39,6 +43,40 @@ class _SpeechScreenState extends State<SpeechScreen> {
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
+
+  List<OcrElement> _selectedElements = [];
+  Set<String> _selectedIds = {};
+
+  String get _activeText {
+    if (_selectedElements.isNotEmpty) {
+      return _selectedElements.map((e) => e.text).join('\n');
+    }
+    return widget.text;
+  }
+
+  void _onSelectionChanged(List<OcrElement> selected) {
+    setState(() {
+      _selectedElements = selected;
+      _selectedIds = selected.map((e) => e.id).toSet();
+      _progress = 0.0;
+    });
+
+    if (_isPlaying) {
+      _ttsService.speak(_activeText);
+    }
+  }
+
+  void _onClearSelection() {
+    setState(() {
+      _selectedElements.clear();
+      _selectedIds.clear();
+      _progress = 0.0;
+    });
+
+    if (_isPlaying) {
+      _ttsService.speak(_activeText);
+    }
+  }
 
   @override
   void initState() {
@@ -85,7 +123,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       await _ttsService.setLanguage(langCode);
       await _ttsService.setSpeed(_speed);
       if (mounted) {
-        await _ttsService.speak(widget.text);
+        await _ttsService.speak(_activeText);
       }
     });
   }
@@ -105,7 +143,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     if (_isPlaying) {
       _ttsService.pause();
     } else {
-      _ttsService.speak(widget.text);
+      _ttsService.speak(_activeText);
     }
   }
 
@@ -131,7 +169,6 @@ class _SpeechScreenState extends State<SpeechScreen> {
     final strings = AppStrings.of(context);
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final size = MediaQuery.of(context).size;
     final hasValidImage = widget.imageBytes != null || widget.hasImage;
 
     return Scaffold(
@@ -143,46 +180,25 @@ class _SpeechScreenState extends State<SpeechScreen> {
         children: [
           // MAIN BODY
           if (!_isTextView) ...[
-            // Photo View Background: Menampilkan foto asli hasil jepretan kamera (jika ada)
+            // Photo View with Google Lens Text Selection Overlay
             if (widget.imageBytes != null)
-              Image.memory(
-                widget.imageBytes!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
+              Positioned.fill(
+                top: topPadding + 64,
+                bottom: bottomPadding + 140,
+                child: OcrImageOverlay(
+                  imageBytes: widget.imageBytes!,
+                  imageSize: widget.ocrResult?.imageSize ?? Size.zero,
+                  elements: widget.ocrResult?.elements ?? const [],
+                  selectedIds: _selectedIds,
+                  highlightColor: themeProvider.highlightColor,
+                  isDark: isDark,
+                  isHighContrast: themeProvider.isHighContrast,
+                  onSelectionChanged: _onSelectionChanged,
+                  onClearSelection: _onClearSelection,
+                ),
               )
             else
               Container(color: Colors.black),
-
-            // Subtle gradient
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.4),
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.5),
-                    ],
-                    stops: const [0.0, 0.4, 1.0],
-                  ),
-                ),
-              ),
-            ),
-
-            // Captured frame preview border
-            Center(
-              child: Container(
-                width: size.width * 0.82,
-                height: size.width * 0.72,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 2.5),
-                ),
-              ),
-            ),
           ] else ...[
             // Pure Text View with Dark Mode support (latar hitam elegan / tema aktif)
             Positioned.fill(
@@ -196,7 +212,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                 ),
                 child: SingleChildScrollView(
                   child: HighlightedTextView(
-                    text: widget.text,
+                    text: _activeText,
                     fontSize: _fontSize,
                     cursorColorEnabled: themeProvider.cursorColor,
                     highlightColor: themeProvider.highlightColor,
@@ -497,7 +513,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     final langCode = lang == 'Indonesia' ? 'id-ID' : 'en-US';
                     await _ttsService.setLanguage(langCode);
                     if (_isPlaying) {
-                      await _ttsService.speak(widget.text);
+                      await _ttsService.speak(_activeText);
                     }
                   },
                 );

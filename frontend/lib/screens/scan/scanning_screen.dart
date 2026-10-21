@@ -117,17 +117,17 @@ class _ScanningScreenState extends State<ScanningScreen> {
       try {
         final bytes = await _cameraService.captureFrameToRAM();
         if (bytes != null && mounted) {
-          final extractedText = await _ocrService.processImageFromRAM(bytes);
-          final finalText = extractedText.isNotEmpty
-              ? extractedText
+          final ocrResult = await _ocrService.processImageWithCoordinates(bytes);
+          final finalText = ocrResult.fullText.isNotEmpty
+              ? ocrResult.fullText
               : 'yesterday\ntoday\ntomorrow';
 
           if (mounted) {
             // Simpan hasil pemindaian langsung ke SQLite
             context.read<HistoryProvider>().addRiwayat(
-              text: finalText,
-              sumber: 'kamera',
-            );
+                  text: finalText,
+                  sumber: 'kamera',
+                );
 
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -135,6 +135,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
                   text: finalText,
                   hasImage: true,
                   imageBytes: bytes, // Mengirim citra foto asli
+                  ocrResult: ocrResult,
                 ),
               ),
             );
@@ -181,9 +182,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
       });
 
       final bytes = await pickedFile.readAsBytes();
-      final extractedText = await _ocrService.processImageFromFile(
+      final ocrResult = await _ocrService.processFileWithCoordinates(
         pickedFile.path,
       );
+      final extractedText = ocrResult.fullText;
 
       if (!mounted) return;
 
@@ -203,9 +205,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
       } else {
         // Simpan hasil pemindaian galeri langsung ke SQLite
         context.read<HistoryProvider>().addRiwayat(
-          text: extractedText,
-          sumber: 'galeri',
-        );
+              text: extractedText,
+              sumber: 'galeri',
+            );
 
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -213,6 +215,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
               text: extractedText,
               hasImage: true,
               imageBytes: bytes,
+              ocrResult: ocrResult,
             ),
           ),
         );

@@ -9,7 +9,9 @@ import 'change_password_screen.dart';
 import 'faq_screen.dart';
 import 'widgets/language_selector_tile.dart';
 import 'widgets/logout_dialog.dart';
+import 'widgets/settings_email_tile.dart';
 import 'widgets/settings_list_tile.dart';
+import 'widgets/settings_logout_tile.dart';
 import 'widgets/theme_selector_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -86,32 +88,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 24),
 
               // 1. Email Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.email,
-                      style: const TextStyle(
-                        color: Color(0xFF888888),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'afifhamzah21@gmail.com',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.black,
-                        fontSize: 17,
-                        fontWeight: isHighContrast
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+              SettingsEmailTile(
+                emailLabel: strings.email,
+                email: 'afifhamzah21@gmail.com',
+                isDark: isDark,
+                isHighContrast: isHighContrast,
               ),
 
               const SizedBox(height: 14),
@@ -192,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // Theme Selector
+              // 4. Theme Selector
               ThemeSelectorTile(
                 isDark: isDark,
                 isHighContrast: isHighContrast,
@@ -209,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // 4. Language App Selector
+              // 5. Language App Selector
               LanguageSelectorTile(
                 isDark: isDark,
                 isHighContrast: isHighContrast,
@@ -226,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // 5. FAQ
+              // 6. FAQ
               SettingsListTile(
                 icon: Icon(
                   Icons.help_outline_rounded,
@@ -261,7 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // 6. About
+              // 7. About
               SettingsListTile(
                 icon: Icon(
                   Icons.info_outline_rounded,
@@ -299,41 +280,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // 7. Logout Row
-              Material(
-                color: isDark
-                    ? const Color(0xFF2A1517)
-                    : const Color(0xFFFFF1F2),
-                child: InkWell(
-                  onTap: () => LogoutDialog.show(
-                    context,
-                    strings: strings,
-                    isDark: isDark,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.logout_rounded,
-                          color: Color(0xFFEF4444),
-                          size: 24,
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          strings.logOut,
-                          style: const TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              // 8. Logout Row
+              SettingsLogoutTile(
+                isDark: isDark,
+                label: strings.logOut,
+                onTap: () => LogoutDialog.show(
+                  context,
+                  strings: strings,
+                  isDark: isDark,
                 ),
               ),
 

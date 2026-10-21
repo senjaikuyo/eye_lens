@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/app_colors.dart';
 import '../core/app_strings.dart';
 
@@ -54,6 +55,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         strings.feedbackTitle,
         style: TextStyle(
           color: isDark ? Colors.white : AppColors.black,
+          fontSize: 20,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -63,13 +65,13 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         cursorColor: isDark ? Colors.white : Colors.black,
         style: TextStyle(
           color: isDark ? Colors.white : AppColors.black,
-          fontSize: 14,
+          fontSize: 16,
         ),
         decoration: InputDecoration(
           hintText: strings.feedbackHint,
           hintStyle: TextStyle(
             color: isDark ? const Color(0xFF777777) : const Color(0xFFAAAAAA),
-            fontSize: 13,
+            fontSize: 16,
           ),
           filled: true,
           fillColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF2F4F7),
@@ -86,6 +88,8 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
             strings.cancel,
             style: TextStyle(
               color: isDark ? const Color(0xFFAAAAAA) : const Color(0xFF777777),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -93,19 +97,28 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: isDark ? Colors.white : AppColors.black,
             foregroundColor: isDark ? Colors.black : Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           ),
           onPressed: () {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(strings.feedbackSent),
+                content: Text(
+                  strings.feedbackSent,
+                  style: const TextStyle(fontSize: 15),
+                ),
                 backgroundColor: AppColors.black,
                 duration: const Duration(seconds: 2),
               ),
             );
           },
-          child: Text(strings.send, style: const TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(
+            strings.send,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     );

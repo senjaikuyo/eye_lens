@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../widgets/custom_auth_field.dart';
@@ -75,9 +76,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _onRegisterTap() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
   }
 
   @override
@@ -157,13 +157,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   onTap: _onRegisterTap,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Text(
                       strings.haventRegistered,
                       style: const TextStyle(
                         color: AppColors.linkBlue,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -181,17 +181,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () => _onLoginPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 110),
+                      constraints: const BoxConstraints(
+                        minWidth: 130,
+                        minHeight: 52,
+                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 10,
+                        horizontal: 36,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
+                        color: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : AppColors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isDark ? Colors.white : AppColors.black,
-                          width: 1.0,
+                          width: 1.2,
                         ),
                       ),
                       alignment: Alignment.center,
@@ -199,8 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         strings.login,
                         style: TextStyle(
                           color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 
@@ -39,8 +40,10 @@ class LanguageSelectorTile extends StatelessWidget {
                   strings.languageApp,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 17,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w800
+                        : FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -79,7 +82,7 @@ class LanguageSelectorTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
               borderRadius: BorderRadius.circular(10),
@@ -97,7 +100,7 @@ class LanguageSelectorTile extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black,
-                    fontSize: 12.5,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

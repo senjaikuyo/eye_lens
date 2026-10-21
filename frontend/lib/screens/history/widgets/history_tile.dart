@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../history_screen.dart';
 
@@ -53,21 +54,21 @@ class HistoryTile extends StatelessWidget {
                         item.title,
                         style: TextStyle(
                           color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 15,
+                          fontSize: 17,
                           fontWeight: isHighContrast
                               ? FontWeight.w800
                               : FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         item.date,
                         style: TextStyle(
                           color: isDark
                               ? const Color(0xFF999999)
                               : const Color(0xFF718096),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w400,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],

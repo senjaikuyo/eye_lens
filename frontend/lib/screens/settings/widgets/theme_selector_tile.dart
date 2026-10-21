@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
 
@@ -39,8 +40,10 @@ class ThemeSelectorTile extends StatelessWidget {
                   strings.theme,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
-                    fontWeight: isHighContrast ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 17,
+                    fontWeight: isHighContrast
+                        ? FontWeight.w800
+                        : FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -85,7 +88,7 @@ class ThemeSelectorTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
               borderRadius: BorderRadius.circular(10),
@@ -106,14 +109,14 @@ class ThemeSelectorTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isDark ? Colors.white : Colors.black,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 Container(
-                  width: 14,
-                  height: 14,
+                  width: 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -124,8 +127,8 @@ class ThemeSelectorTile extends StatelessWidget {
                   child: isSelected
                       ? Center(
                           child: Container(
-                            width: 6,
-                            height: 6,
+                            width: 8,
+                            height: 8,
                             decoration: BoxDecoration(
                               color: isDark ? Colors.white : Colors.black,
                               shape: BoxShape.circle,

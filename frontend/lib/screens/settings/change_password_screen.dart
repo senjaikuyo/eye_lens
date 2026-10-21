@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../widgets/custom_auth_field.dart';
@@ -103,9 +104,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -129,7 +128,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: isDark ? Colors.white : AppColors.black,
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -141,7 +140,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
               ),
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
@@ -294,17 +296,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     onTap: () => _onUpdatePressed(strings, isDark),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 110),
+                      constraints: const BoxConstraints(
+                        minWidth: 130,
+                        minHeight: 52,
+                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 10,
+                        horizontal: 36,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
+                        color: isDark
+                            ? const Color(0xFF1E1E1E)
+                            : AppColors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isDark ? Colors.white : AppColors.black,
-                          width: 1.0,
+                          width: 1.2,
                         ),
                       ),
                       alignment: Alignment.center,
@@ -312,8 +319,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         strings.update,
                         style: TextStyle(
                           color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

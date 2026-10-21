@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import 'core/app_theme.dart';
 import 'providers/language_provider.dart';
 import 'providers/theme_provider.dart';
@@ -40,6 +41,20 @@ class EyeLensApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        // Mendukung pembesar sistem ponsel (Big Font) hingga 2.5x (250%)
+        // dengan batas minimum 1.0x agar layout tetap proporsional dan tidak overflow
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: mediaQuery.textScaler.clamp(
+              minScaleFactor: 1.0,
+              maxScaleFactor: 2.5,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const SplashScreen(),
     );
   }

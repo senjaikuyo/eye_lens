@@ -95,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       strings.email,
                       style: const TextStyle(
                         color: Color(0xFF888888),
-                        fontSize: 13,
+                        fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -104,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'afifhamzah21@gmail.com',
                       style: TextStyle(
                         color: isDark ? Colors.white : AppColors.black,
-                        fontSize: 15,
+                        fontSize: 17,
                         fontWeight: isHighContrast
                             ? FontWeight.w800
                             : FontWeight.w600,
@@ -144,10 +144,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   strings.changePassword,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: isHighContrast
                         ? FontWeight.w700
-                        : FontWeight.w500,
+                        : FontWeight.w600,
                   ),
                 ),
               ),
@@ -178,10 +178,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   strings.autoPlayAudio,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: isHighContrast
                         ? FontWeight.w700
-                        : FontWeight.w500,
+                        : FontWeight.w600,
                   ),
                 ),
               ),
@@ -247,10 +247,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   strings.faq,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: isHighContrast
                         ? FontWeight.w700
-                        : FontWeight.w500,
+                        : FontWeight.w600,
                   ),
                 ),
               ),
@@ -285,10 +285,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   strings.about,
                   style: TextStyle(
                     color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: isHighContrast
                         ? FontWeight.w700
-                        : FontWeight.w500,
+                        : FontWeight.w600,
                   ),
                 ),
               ),
@@ -327,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           strings.logOut,
                           style: const TextStyle(
                             color: Color(0xFFEF4444),
-                            fontSize: 15,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

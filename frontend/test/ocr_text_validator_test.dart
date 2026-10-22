@@ -163,5 +163,44 @@ void main() {
       expect(validCheck.reason, equals(NoTextReason.none));
       expect(validCheck.text, equals('Selamat Datang'));
     });
+
+    test('6. Verifikasi judul dan petunjuk terpisah untuk alert merah', () {
+      final emptyResult = OcrTextValidator.evaluate(
+        rawOcrText: '',
+        rawLinesCount: 0,
+        filteredText: '',
+        acceptedLinesCount: 0,
+      );
+
+      expect(emptyResult.getAlertTitle(indoStrings), equals('Teks tidak ditemukan'));
+      expect(emptyResult.getAlertTitle(engStrings), equals('No text found'));
+      expect(
+        emptyResult.getAlertInstruction(indoStrings),
+        equals('Arahkan kamera ke teks dan coba lagi.'),
+      );
+      expect(
+        emptyResult.getAlertInstruction(engStrings),
+        equals('Point the camera at text and try again.'),
+      );
+
+      final filteredResult = OcrTextValidator.evaluate(
+        rawOcrText: '123',
+        rawLinesCount: 1,
+        filteredText: '',
+        acceptedLinesCount: 0,
+        allLinesFiltered: true,
+      );
+
+      expect(filteredResult.getAlertTitle(indoStrings), equals('Gambar kurang jelas'));
+      expect(filteredResult.getAlertTitle(engStrings), equals('Image is unclear'));
+      expect(
+        filteredResult.getAlertInstruction(indoStrings),
+        equals('Arahkan kamera ke teks dan coba lagi.'),
+      );
+      expect(
+        filteredResult.getAlertInstruction(engStrings),
+        equals('Point the camera at text and try again.'),
+      );
+    });
   });
 }

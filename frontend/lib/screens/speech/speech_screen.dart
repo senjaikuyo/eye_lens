@@ -59,6 +59,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   late String _currentFramedText;
   FormattedTextResult? _currentFramedFormattedResult;
   bool _hasTextInFrame = true;
+  String _noTextAlertTitle = '';
   String _noTextAlertMessage = '';
   bool _showNoTextAlert = false;
   Timer? _noTextAlertDismissTimer;
@@ -75,7 +76,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void _onSelectionComputed(LensSelectionResult result) {
     if (!mounted) return;
     final strings = AppStrings.of(context);
-    final alertMessage = result.validation.getAlertMessage(strings);
+    final alertTitle = result.validation.getAlertTitle(strings);
+    final alertMessage = result.validation.getAlertInstruction(strings);
 
     setState(() {
       _hasTextInFrame = result.hasText;
@@ -86,35 +88,42 @@ class _SpeechScreenState extends State<SpeechScreen> {
       } else {
         _currentFramedText = '';
         _currentFramedFormattedResult = null;
+        _noTextAlertTitle = alertTitle;
         _noTextAlertMessage = alertMessage;
       }
     });
 
     if (!result.hasText) {
-      _triggerNoTextAlert(alertMessage);
+      _triggerNoTextAlert(title: alertTitle, message: alertMessage);
     }
   }
 
-  void _triggerNoTextAlert(String message) {
+  void _triggerNoTextAlert({
+    required String title,
+    required String message,
+  }) {
     _dismissNoTextAlert();
     _ttsService.stop();
     _isPlayingNotifier.value = false;
 
     setState(() {
       _showNoTextAlert = true;
+      _noTextAlertTitle = title;
       _noTextAlertMessage = message;
     });
+
+    final fullSpokenText = '$title. $message';
 
     HapticFeedback.mediumImpact();
     SemanticsService.sendAnnouncement(
       View.of(context),
-      message,
+      fullSpokenText,
       TextDirection.ltr,
     );
 
     final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
     _ttsService.setLanguage(langCode);
-    _ttsService.speak(message);
+    _ttsService.speak(fullSpokenText);
 
     _noTextAlertDismissTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
@@ -137,10 +146,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
   Future<void> _startSpeech() async {
     if (!_hasTextInFrame || _activeText.trim().isEmpty) {
       final strings = AppStrings.of(context);
+      final title = _noTextAlertTitle.isNotEmpty
+          ? _noTextAlertTitle
+          : strings.noTextFoundTitle;
       final msg = _noTextAlertMessage.isNotEmpty
           ? _noTextAlertMessage
-          : strings.noTextFoundAlert;
-      _triggerNoTextAlert(msg);
+          : strings.noTextFoundInstruction;
+      _triggerNoTextAlert(title: title, message: msg);
       return;
     }
 
@@ -228,10 +240,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
       // Ingin beralih dari gambar ke teks
       if (!_hasTextInFrame || _activeText.trim().isEmpty) {
         final strings = AppStrings.of(context);
+        final title = _noTextAlertTitle.isNotEmpty
+            ? _noTextAlertTitle
+            : strings.noTextFoundTitle;
         final msg = _noTextAlertMessage.isNotEmpty
             ? _noTextAlertMessage
-            : strings.noTextFoundAlert;
-        _triggerNoTextAlert(msg);
+            : strings.noTextFoundInstruction;
+        _triggerNoTextAlert(title: title, message: msg);
         return;
       }
       setState(() {
@@ -417,6 +432,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
           // ALERT BANNER JIKA TANPA TEKS DI DALAM BINGKAI
           NoTextAlertBanner(
             isVisible: _showNoTextAlert,
+            title: _noTextAlertTitle,
             message: _noTextAlertMessage,
             bottomPadding: bottomPadding + 140,
             onClose: _dismissNoTextAlert,

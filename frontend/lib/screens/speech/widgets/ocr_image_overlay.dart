@@ -12,6 +12,7 @@ import '../../../models/text_formatter_models.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../services/ocr_noise_filter.dart';
 import '../../../services/text_cluster_helper.dart';
+import '../../../widgets/scanner_corner_painter.dart';
 
 /// Menentukan apakah overlay visual debug OCR (kotak hijau/merah) diaktifkan.
 /// Default bernilai false: citra tampil bersih ala Google Lens tanpa kotak pada teks.
@@ -77,6 +78,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   LensHandlePosition _activeHandle = LensHandlePosition.none;
   Offset _dragStartGlobal = Offset.zero;
   Rect _dragStartImageRect = Rect.zero;
+  bool _isInteractivePanEnabled = true;
 
   @override
   void initState() {
@@ -413,9 +415,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
         return Stack(
           fit: StackFit.expand,
           children: [
-            // 1. InteractiveViewer: zoom cubit & seret satu jari di dalam/luar bingkai
+            // 1. InteractiveViewer: zoom cubit & seret di luar bingkai
             InteractiveViewer(
               transformationController: _transformationController,
+              panEnabled: _isInteractivePanEnabled,
               minScale: 1.0,
               maxScale: 6.0,
               boundaryMargin: EdgeInsets.zero,
@@ -479,16 +482,57 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                       ),
                     ),
 
-                    // Semantics label untuk bingkai utama
+                    // Lapisan gestur seret satu jari di dalam bingkai
                     Positioned(
                       left: screenFrameRect.left,
                       top: screenFrameRect.top,
                       width: screenFrameRect.width,
                       height: screenFrameRect.height,
                       child: Semantics(
-                        label: strings.googleLensFrame,
+                        label: strings.isIndonesian
+                            ? '${strings.googleLensFrame}. Geser dengan satu jari untuk memindahkan bingkai.'
+                            : '${strings.googleLensFrame}. Drag with one finger to move frame.',
                         container: true,
-                        child: const SizedBox.expand(),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onPanStart: (details) {
+                            setState(() {
+                              _isInteractivePanEnabled = false;
+                            });
+                            _dragStartGlobal = details.globalPosition;
+                            _dragStartImageRect = _imageCropRectNotifier.value;
+                            HapticFeedback.selectionClick();
+                            widget.onFrameChanging?.call();
+                          },
+                          onPanUpdate: (details) {
+                            final totalDelta =
+                                details.globalPosition - _dragStartGlobal;
+                            final newRect = LensSelectionHelper.dragImageFrame(
+                              currentImageRect: _dragStartImageRect,
+                              deltaScreen: totalDelta,
+                              transformMatrix: _transformationController.value,
+                              viewportSize: _viewportSize,
+                              originalImageSize: widget.imageSize,
+                            );
+                            _imageCropRectNotifier.value = newRect;
+                            widget.controller
+                                ?.setCropRect(newRect, isManual: true);
+                            _scheduleSelectionCompute();
+                          },
+                          onPanEnd: (details) {
+                            setState(() {
+                              _isInteractivePanEnabled = true;
+                            });
+                            HapticFeedback.lightImpact();
+                            _computeAndNotifySelection();
+                          },
+                          onPanCancel: () {
+                            setState(() {
+                              _isInteractivePanEnabled = true;
+                            });
+                          },
+                          child: const SizedBox.expand(),
+                        ),
                       ),
                     ),
 
@@ -552,60 +596,76 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                           : 'Right edge handle',
                     ),
 
-                    // Tombol "Seluruh gambar" (Full image)
-                    Positioned(
-                      top: max(8.0, screenFrameRect.top - 54),
-                      left: max(8.0, screenFrameRect.left),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _resetZoomAndFitImage,
-                          borderRadius: BorderRadius.circular(24),
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minHeight: 48,
-                              minWidth: 48,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.75),
+                    // Tombol "Seluruh gambar" (Full image) di posisi aman yang tidak menutupi bingkai atau teks
+                    Builder(
+                      builder: (context) {
+                        final bool hasSpaceBelow = (screenFrameRect.bottom +
+                                60) <
+                            (_viewportSize.height - 110);
+                        final double buttonTop = hasSpaceBelow
+                            ? screenFrameRect.bottom + 12
+                            : max(16.0, screenFrameRect.top - 54);
+                        final double buttonLeft =
+                            (screenFrameRect.center.dx - 70).clamp(
+                          16.0,
+                          max(16.0, _viewportSize.width - 156),
+                        );
+
+                        return Positioned(
+                          top: buttonTop,
+                          left: buttonLeft,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _resetZoomAndFitImage,
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: Colors.white70,
-                                width: 1.2,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black45,
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: 48,
+                                  minWidth: 48,
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.fullscreen_rounded,
-                                  color: Colors.white,
-                                  size: 20,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  strings.fullImage,
-                                  style: textTheme.labelMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.75),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: Colors.white70,
+                                    width: 1.2,
                                   ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black45,
+                                      blurRadius: 6,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.fullscreen_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      strings.fullImage,
+                                      style: textTheme.labelMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ],
                 );
@@ -655,7 +715,7 @@ class _GoogleLensFramePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (frameRect.width <= 0 || frameRect.height <= 0) return;
 
-    // 1. Scrim gelap tipis di luar bingkai (cutout tengah 100% transparan)
+    // 1. Scrim gelap tipis di luar bingkai (cutout tengah 100% transparan dengan radius sudut Google Lens)
     final scrimPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.38)
       ..style = PaintingStyle.fill;
@@ -663,7 +723,10 @@ class _GoogleLensFramePainter extends CustomPainter {
     final fullPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final framePath = Path()
-      ..addRRect(RRect.fromRectAndRadius(frameRect, const Radius.circular(16)));
+      ..addRRect(RRect.fromRectAndRadius(
+        frameRect,
+        const Radius.circular(LensSelectionHelper.lensCornerRadius),
+      ));
 
     final cutOutPath = Path.combine(
       PathOperation.difference,
@@ -672,65 +735,30 @@ class _GoogleLensFramePainter extends CustomPainter {
     );
     canvas.drawPath(cutOutPath, scrimPaint);
 
-    // 2. Empat sudut berbentuk huruf L melengkung putih tipis, tajam, kontras tinggi
+    // 2. Empat sudut berbentuk huruf L melengkung putih tipis ala Google Lens
+    // Diberi inset setengah stroke agar tidak pernah terpotong di tepi layar maupun tepi citra
+    final halfStroke = LensSelectionHelper.lensStrokeWidth / 2.0;
+    final insetRect = Rect.fromLTRB(
+      max(halfStroke, frameRect.left + halfStroke),
+      max(halfStroke, frameRect.top + halfStroke),
+      min(size.width - halfStroke, frameRect.right - halfStroke),
+      min(size.height - halfStroke, frameRect.bottom - halfStroke),
+    );
+
     final cornerPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.8
+      ..strokeWidth = LensSelectionHelper.lensStrokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final double cornerLength =
-        min(28.0, min(frameRect.width, frameRect.height) * 0.35);
-    final double radius = min(16.0, cornerLength * 0.65);
-
-    // Sudut Kiri Atas
-    final tlPath = Path()
-      ..moveTo(frameRect.left, frameRect.top + cornerLength)
-      ..lineTo(frameRect.left, frameRect.top + radius)
-      ..arcToPoint(
-        Offset(frameRect.left + radius, frameRect.top),
-        radius: Radius.circular(radius),
-        clockwise: true,
-      )
-      ..lineTo(frameRect.left + cornerLength, frameRect.top);
-    canvas.drawPath(tlPath, cornerPaint);
-
-    // Sudut Kanan Atas
-    final trPath = Path()
-      ..moveTo(frameRect.right - cornerLength, frameRect.top)
-      ..lineTo(frameRect.right - radius, frameRect.top)
-      ..arcToPoint(
-        Offset(frameRect.right, frameRect.top + radius),
-        radius: Radius.circular(radius),
-        clockwise: true,
-      )
-      ..lineTo(frameRect.right, frameRect.top + cornerLength);
-    canvas.drawPath(trPath, cornerPaint);
-
-    // Sudut Kanan Bawah
-    final brPath = Path()
-      ..moveTo(frameRect.right, frameRect.bottom - cornerLength)
-      ..lineTo(frameRect.right - radius, frameRect.bottom)
-      ..arcToPoint(
-        Offset(frameRect.right - radius, frameRect.bottom),
-        radius: Radius.circular(radius),
-        clockwise: true,
-      )
-      ..lineTo(frameRect.right - cornerLength, frameRect.bottom);
-    canvas.drawPath(brPath, cornerPaint);
-
-    // Sudut Kiri Bawah
-    final blPath = Path()
-      ..moveTo(frameRect.left + cornerLength, frameRect.bottom)
-      ..lineTo(frameRect.left + radius, frameRect.bottom)
-      ..arcToPoint(
-        Offset(frameRect.left + radius, frameRect.bottom),
-        radius: Radius.circular(radius),
-        clockwise: true,
-      )
-      ..lineTo(frameRect.left, frameRect.bottom - cornerLength);
-    canvas.drawPath(blPath, cornerPaint);
+    ScannerCornerPainter.drawGoogleLensCorners(
+      canvas: canvas,
+      rect: insetRect,
+      paint: cornerPaint,
+      cornerLength: LensSelectionHelper.lensCornerLength,
+      cornerRadius: LensSelectionHelper.lensCornerRadius,
+    );
   }
 
   @override

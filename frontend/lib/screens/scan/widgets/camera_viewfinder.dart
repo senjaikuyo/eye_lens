@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../../services/camera_service.dart';
+import '../../../services/lens_selection_helper.dart';
 import '../../../widgets/scanner_corner_painter.dart';
 
 class CameraViewfinder extends StatefulWidget {
@@ -36,13 +39,21 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
       },
       onScaleUpdate: (details) {
         if (details.pointerCount > 1) {
-          // Zoom Cubit (Pinch 2 jari)
-          widget.onZoomChanged(_baseScaleZoom * details.scale);
+          // Zoom Cubit (Pinch 2 jari): kurva responsif halus tanpa lompatan
+          final scaleRatio = details.scale;
+          final double effectiveScale = scaleRatio >= 1.0
+              ? 1.0 + ((scaleRatio - 1.0) * 1.8)
+              : math.max(0.1, 1.0 - ((1.0 - scaleRatio) * 1.8));
+          widget.onZoomChanged(_baseScaleZoom * effectiveScale);
         } else {
           // Swipe 1 Jari Vertikal: Ke atas = zoom in, ke bawah = zoom out
           final dy = details.focalPointDelta.dy;
-          const sensitivity = 0.015;
-          widget.onZoomChanged(widget.currentZoom - (dy * sensitivity));
+          final absDy = dy.abs();
+          final double speedMultiplier = (1.0 + (absDy * 0.08)).clamp(1.0, 2.5);
+          const double baseSensitivity = 0.035;
+          widget.onZoomChanged(
+            widget.currentZoom - (dy * baseSensitivity * speedMultiplier),
+          );
         }
       },
       child: Stack(
@@ -102,7 +113,7 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
             ),
           ),
 
-          // Central Viewfinder Frame - 4 Busur Melengkung Halus di Sudut
+          // Central Viewfinder Frame - 4 Sudut L Google Lens identik dengan SpeechScreen
           Center(
             child: SizedBox(
               width: widget.size.width * 0.78,
@@ -111,9 +122,10 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
                 painter: ScannerCornerPainter(
                   color: widget.isBlurry
                       ? const Color(0xFFF59E0B)
-                      : Colors.white.withValues(alpha: 0.85),
-                  strokeWidth: 2.0,
-                  arcRadius: 40.0,
+                      : Colors.white.withValues(alpha: 0.9),
+                  strokeWidth: LensSelectionHelper.lensStrokeWidth,
+                  cornerLength: LensSelectionHelper.lensCornerLength,
+                  cornerRadius: LensSelectionHelper.lensCornerRadius,
                 ),
               ),
             ),

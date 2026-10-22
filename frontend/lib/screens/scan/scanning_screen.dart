@@ -47,6 +47,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
   Timer? _blurTimer;
 
   bool _isNoTextAlertVisible = false;
+  String _noTextTitle = '';
   String _noTextMessage = '';
   Timer? _noTextAlertTimer;
 
@@ -83,11 +84,15 @@ class _ScanningScreenState extends State<ScanningScreen> {
     super.dispose();
   }
 
-  Future<void> _showNoTextAlert(String message) async {
+  Future<void> _showNoTextAlert({
+    required String title,
+    required String message,
+  }) async {
     _noTextAlertTimer?.cancel();
     if (!mounted) return;
 
     setState(() {
+      _noTextTitle = title;
       _noTextMessage = message;
       _isNoTextAlertVisible = true;
     });
@@ -95,17 +100,18 @@ class _ScanningScreenState extends State<ScanningScreen> {
     HapticFeedback.mediumImpact();
 
     final isIndo = AppStrings.of(context, listen: false).isIndonesian;
+    final fullSpokenText = '$title. $message';
 
     SemanticsService.sendAnnouncement(
       View.of(context),
-      message,
+      fullSpokenText,
       TextDirection.ltr,
     );
 
     try {
       await _ttsService.stop();
       await _ttsService.setLanguage(isIndo ? 'id-ID' : 'en-US');
-      await _ttsService.speak(message);
+      await _ttsService.speak(fullSpokenText);
     } catch (e) {
       debugPrint('[ScanningScreen] TTS no-text alert failed: $e');
     }
@@ -186,7 +192,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
                 _isProcessingOcr = false;
               });
               final strings = AppStrings.of(context, listen: false);
-              await _showNoTextAlert(check.getAlertMessage(strings));
+              await _showNoTextAlert(
+                title: check.getAlertTitle(strings),
+                message: check.getAlertInstruction(strings),
+              );
             }
             return;
           }
@@ -270,7 +279,10 @@ class _ScanningScreenState extends State<ScanningScreen> {
           _isProcessingOcr = false;
         });
         final strings = AppStrings.of(context, listen: false);
-        await _showNoTextAlert(check.getAlertMessage(strings));
+        await _showNoTextAlert(
+          title: check.getAlertTitle(strings),
+          message: check.getAlertInstruction(strings),
+        );
       } else {
         final extractedText = check.text;
         _checkAndShowLowQualityWarning(ocrResult);
@@ -404,6 +416,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
           NoTextAlertBanner(
             isVisible: _isNoTextAlertVisible,
             bottomPadding: bottomPadding,
+            title: _noTextTitle,
             message: _noTextMessage,
             onClose: _dismissNoTextAlert,
             closeLabel: strings.close,

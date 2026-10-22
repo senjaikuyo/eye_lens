@@ -50,6 +50,21 @@ class OcrTextValidationResult {
     }
     return strings.noTextFoundAlert;
   }
+
+  /// Mengembalikan judul singkat untuk banner alert merah.
+  String getAlertTitle(AppStrings strings) {
+    if (hasText) return '';
+    if (reason == NoTextReason.allLinesFiltered) {
+      return strings.unclearImageNoTextTitle;
+    }
+    return strings.noTextFoundTitle;
+  }
+
+  /// Mengembalikan petunjuk aksi untuk pengguna.
+  String getAlertInstruction(AppStrings strings) {
+    if (hasText) return '';
+    return strings.noTextFoundInstruction;
+  }
 }
 
 /// Pemeriksa kondisi tanpa teks murni (pure function) untuk alur pemindaian kamera & galeri EyeLens.

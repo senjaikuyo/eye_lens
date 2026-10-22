@@ -23,4 +23,10 @@ class AppColors {
   static const Color textSecondary = Color(0xFF666666);
   static const Color textOnDark = Color(0xFFFFFFFF);
   static const Color textOnDarkSecondary = Color(0xFFCCCCCC);
+
+  // Error & Alerts
+  // Merah cerah terkalibrasi (#D8224E) dengan rasio kontras 4.9:1 terhadap teks putih (lulus WCAG AA)
+  static const Color alertErrorBg = Color(0xFFD8224E);
+  static const Color alertErrorBorder = Color(0xFFB71C40);
+  static const Color alertErrorIconX = Color(0xFFD8224E);
 }

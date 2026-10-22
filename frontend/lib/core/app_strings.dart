@@ -77,9 +77,16 @@ class AppStrings {
   String get noTextFoundAlert => isIndonesian
       ? 'Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'
       : 'No text found. Point the camera at text and try again.';
+  String get noTextFoundTitle =>
+      isIndonesian ? 'Teks tidak ditemukan' : 'No text found';
+  String get noTextFoundInstruction => isIndonesian
+      ? 'Arahkan kamera ke teks dan coba lagi.'
+      : 'Point the camera at text and try again.';
   String get unclearImageNoTextAlert => isIndonesian
       ? 'Gambar kurang jelas. Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'
       : 'Image is unclear. No text found. Point the camera at text and try again.';
+  String get unclearImageNoTextTitle =>
+      isIndonesian ? 'Gambar kurang jelas' : 'Image is unclear';
   String get close => isIndonesian ? 'Tutup' : 'Close';
   String get feedback => isIndonesian ? 'Masukan' : 'Feedback';
   String get feedbackTitle => isIndonesian ? 'Kirim Masukan' : 'Send Feedback';
@@ -100,8 +107,8 @@ class AppStrings {
       isIndonesian ? 'Bahasa Suara' : 'Speech Language';
   String get fullImage => isIndonesian ? 'Seluruh gambar' : 'Full image';
   String get googleLensFrame => isIndonesian
-      ? 'Bingkai seleksi teks Google Lens'
-      : 'Google Lens text selection frame';
+      ? 'Bingkai seleksi teks Google Lens. Seret satu jari di dalam bingkai untuk memindahkan posisi, atau seret titik pegangan untuk mengubah ukuran.'
+      : 'Google Lens text selection frame. Drag with one finger inside frame to move position, or drag handles to resize.';
 
   // --- History ---
   String get history => isIndonesian ? 'Riwayat' : 'History';

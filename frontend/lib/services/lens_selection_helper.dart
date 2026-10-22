@@ -62,6 +62,58 @@ class LensSelectionHelper {
   /// Area sentuh minimum untuk aksesibilitas titik pegangan (48dp).
   static const double minTouchTarget = 48.0;
 
+  /// Konstanta geometri bingkai Google Lens resmi
+  static const double lensCornerLength = 28.0;
+  static const double lensCornerRadius = 24.0;
+  static const double lensStrokeWidth = 3.0;
+
+  /// Menggeser posisi bingkai citra mengikuti gerakan jari di layar tanpa mengubah ukuran.
+  /// Menjamin bingkai tidak pernah keluar dari batas ukuran citra asli [0, width] x [0, height].
+  static Rect dragImageFrame({
+    required Rect currentImageRect,
+    required Offset deltaScreen,
+    required Matrix4 transformMatrix,
+    required Size viewportSize,
+    required Size originalImageSize,
+  }) {
+    if (viewportSize.width <= 0 ||
+        viewportSize.height <= 0 ||
+        originalImageSize.width <= 0 ||
+        originalImageSize.height <= 0 ||
+        currentImageRect.width <= 0 ||
+        currentImageRect.height <= 0) {
+      return currentImageRect;
+    }
+
+    // Hitung skala BoxFit.contain
+    final double containScale = min(
+      viewportSize.width / originalImageSize.width,
+      viewportSize.height / originalImageSize.height,
+    );
+    if (containScale <= 0) return currentImageRect;
+
+    // Hitung zoom dari matriks transformasi
+    final double zoomScale = transformMatrix.getMaxScaleOnAxis();
+    final double totalScale = containScale * (zoomScale > 0 ? zoomScale : 1.0);
+    if (totalScale <= 0) return currentImageRect;
+
+    final double deltaImageX = deltaScreen.dx / totalScale;
+    final double deltaImageY = deltaScreen.dy / totalScale;
+
+    final double frameWidth = currentImageRect.width;
+    final double frameHeight = currentImageRect.height;
+
+    final double maxLeft = max(0.0, originalImageSize.width - frameWidth);
+    final double maxTop = max(0.0, originalImageSize.height - frameHeight);
+
+    final double newLeft =
+        (currentImageRect.left + deltaImageX).clamp(0.0, maxLeft);
+    final double newTop =
+        (currentImageRect.top + deltaImageY).clamp(0.0, maxTop);
+
+    return Rect.fromLTWH(newLeft, newTop, frameWidth, frameHeight);
+  }
+
   /// Mengonversi persegi bingkai dari koordinat piksel citra asli ke koordinat layar.
   /// Langkah:
   /// 1. Piksel gambar ke scene melalui skala dan offset BoxFit.contain.

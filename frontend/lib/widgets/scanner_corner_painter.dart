@@ -2,19 +2,90 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Painter untuk 4 busur sudut melengkung halus (quarter-circle arcs)
-/// Persis seperti tampilan viewfinder focus frame / scanner reticle pada referensi:
-/// Tidak ada garis lurus berlebih, murni 4 busur 90 derajat di keempat sudut.
+import '../services/lens_selection_helper.dart';
+
+/// Painter bersama untuk menggambar 4 sudut berbentuk huruf L melengkung putih khas Google Lens.
+/// Digunakan secara identik pada viewfinder kamera pemindai (ScanningScreen) dan overlay citra (SpeechScreen).
 class ScannerCornerPainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
-  final double arcRadius;
+  final double cornerLength;
+  final double cornerRadius;
 
   const ScannerCornerPainter({
     this.color = Colors.white,
-    this.strokeWidth = 2.0,
-    this.arcRadius = 38.0,
+    this.strokeWidth = LensSelectionHelper.lensStrokeWidth,
+    this.cornerLength = LensSelectionHelper.lensCornerLength,
+    this.cornerRadius = LensSelectionHelper.lensCornerRadius,
   });
+
+  /// Menggambar 4 sudut L melengkung Google Lens pada sembarang [rect].
+  static void drawGoogleLensCorners({
+    required Canvas canvas,
+    required Rect rect,
+    required Paint paint,
+    double cornerLength = LensSelectionHelper.lensCornerLength,
+    double cornerRadius = LensSelectionHelper.lensCornerRadius,
+  }) {
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    final effectiveCornerLength = math.min(
+      cornerLength,
+      math.min(rect.width, rect.height) * 0.45,
+    );
+    final effectiveRadius = math.min(
+      cornerRadius,
+      effectiveCornerLength * 0.8,
+    );
+
+    // 1. Sudut Kiri Atas (Top-Left)
+    final tlPath = Path()
+      ..moveTo(rect.left, rect.top + effectiveCornerLength)
+      ..lineTo(rect.left, rect.top + effectiveRadius)
+      ..arcToPoint(
+        Offset(rect.left + effectiveRadius, rect.top),
+        radius: Radius.circular(effectiveRadius),
+        clockwise: true,
+      )
+      ..lineTo(rect.left + effectiveCornerLength, rect.top);
+    canvas.drawPath(tlPath, paint);
+
+    // 2. Sudut Kanan Atas (Top-Right)
+    final trPath = Path()
+      ..moveTo(rect.right - effectiveCornerLength, rect.top)
+      ..lineTo(rect.right - effectiveRadius, rect.top)
+      ..arcToPoint(
+        Offset(rect.right, rect.top + effectiveRadius),
+        radius: Radius.circular(effectiveRadius),
+        clockwise: true,
+      )
+      ..lineTo(rect.right, rect.top + effectiveCornerLength);
+    canvas.drawPath(trPath, paint);
+
+    // 3. Sudut Kanan Bawah (Bottom-Right)
+    final brPath = Path()
+      ..moveTo(rect.right, rect.bottom - effectiveCornerLength)
+      ..lineTo(rect.right, rect.bottom - effectiveRadius)
+      ..arcToPoint(
+        Offset(rect.right - effectiveRadius, rect.bottom),
+        radius: Radius.circular(effectiveRadius),
+        clockwise: true,
+      )
+      ..lineTo(rect.right - effectiveCornerLength, rect.bottom);
+    canvas.drawPath(brPath, paint);
+
+    // 4. Sudut Kiri Bawah (Bottom-Left)
+    final blPath = Path()
+      ..moveTo(rect.left + effectiveCornerLength, rect.bottom)
+      ..lineTo(rect.left + effectiveRadius, rect.bottom)
+      ..arcToPoint(
+        Offset(rect.left, rect.bottom - effectiveRadius),
+        radius: Radius.circular(effectiveRadius),
+        clockwise: true,
+      )
+      ..lineTo(rect.left, rect.bottom - effectiveCornerLength);
+    canvas.drawPath(blPath, paint);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -22,46 +93,23 @@ class ScannerCornerPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    final w = size.width;
-    final h = size.height;
-    final d = arcRadius * 2;
-
-    // 1. Top-Left Arc (90 derajat busur sudut kiri atas)
-    canvas.drawArc(
-      Rect.fromLTWH(0, 0, d, d),
-      math.pi,
-      math.pi / 2,
-      false,
-      paint,
+    final halfStroke = strokeWidth / 2.0;
+    final rect = Rect.fromLTRB(
+      halfStroke,
+      halfStroke,
+      size.width - halfStroke,
+      size.height - halfStroke,
     );
 
-    // 2. Top-Right Arc (90 derajat busur sudut kanan atas)
-    canvas.drawArc(
-      Rect.fromLTWH(w - d, 0, d, d),
-      -math.pi / 2,
-      math.pi / 2,
-      false,
-      paint,
-    );
-
-    // 3. Bottom-Right Arc (90 derajat busur sudut kanan bawah)
-    canvas.drawArc(
-      Rect.fromLTWH(w - d, h - d, d, d),
-      0,
-      math.pi / 2,
-      false,
-      paint,
-    );
-
-    // 4. Bottom-Left Arc (90 derajat busur sudut kiri bawah)
-    canvas.drawArc(
-      Rect.fromLTWH(0, h - d, d, d),
-      math.pi / 2,
-      math.pi / 2,
-      false,
-      paint,
+    drawGoogleLensCorners(
+      canvas: canvas,
+      rect: rect,
+      paint: paint,
+      cornerLength: cornerLength,
+      cornerRadius: cornerRadius,
     );
   }
 
@@ -69,5 +117,6 @@ class ScannerCornerPainter extends CustomPainter {
   bool shouldRepaint(covariant ScannerCornerPainter oldDelegate) =>
       color != oldDelegate.color ||
       strokeWidth != oldDelegate.strokeWidth ||
-      arcRadius != oldDelegate.arcRadius;
+      cornerLength != oldDelegate.cornerLength ||
+      cornerRadius != oldDelegate.cornerRadius;
 }

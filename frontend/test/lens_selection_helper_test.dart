@@ -281,5 +281,51 @@ void main() {
       expect(brRect.width, equals(48.0));
       expect(brRect.height, equals(48.0));
     });
+
+    test('9. dragImageFrame menggeser bingkai mengikuti delta layar dan menjaga batas citra', () {
+      final initialRect = const Rect.fromLTWH(100, 200, 300, 400);
+      final imgSize = const Size(1000, 2000);
+      final vpSize = const Size(500, 1000); // Skala BoxFit.contain = 0.5
+
+      // Pergeseran layar +50 dx, +50 dy -> setara +100 dx, +100 dy pada piksel gambar asli
+      final movedRect = LensSelectionHelper.dragImageFrame(
+        currentImageRect: initialRect,
+        deltaScreen: const Offset(50, 50),
+        transformMatrix: Matrix4.identity(),
+        viewportSize: vpSize,
+        originalImageSize: imgSize,
+      );
+
+      expect(movedRect.left, closeTo(200.0, 0.01));
+      expect(movedRect.top, closeTo(300.0, 0.01));
+      expect(movedRect.width, equals(300.0)); // Ukuran bingkai tidak berubah
+      expect(movedRect.height, equals(400.0));
+
+      // Pergeseran melewati batas kiri atas (menabrak tepi)
+      final clampTopLeft = LensSelectionHelper.dragImageFrame(
+        currentImageRect: initialRect,
+        deltaScreen: const Offset(-500, -500),
+        transformMatrix: Matrix4.identity(),
+        viewportSize: vpSize,
+        originalImageSize: imgSize,
+      );
+      expect(clampTopLeft.left, equals(0.0));
+      expect(clampTopLeft.top, equals(0.0));
+      expect(clampTopLeft.width, equals(300.0));
+      expect(clampTopLeft.height, equals(400.0));
+
+      // Pergeseran melewati batas kanan bawah (menabrak tepi)
+      final clampBottomRight = LensSelectionHelper.dragImageFrame(
+        currentImageRect: initialRect,
+        deltaScreen: const Offset(5000, 5000),
+        transformMatrix: Matrix4.identity(),
+        viewportSize: vpSize,
+        originalImageSize: imgSize,
+      );
+      expect(clampBottomRight.right, equals(1000.0));
+      expect(clampBottomRight.bottom, equals(2000.0));
+      expect(clampBottomRight.width, equals(300.0));
+      expect(clampBottomRight.height, equals(400.0));
+    });
   });
 }

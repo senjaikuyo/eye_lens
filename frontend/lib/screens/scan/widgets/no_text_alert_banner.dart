@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../core/app_strings.dart';
 
-/// Floating alert banner di atas tombol rana atau player bar untuk menginformasikan kondisi tanpa teks.
+/// Floating alert banner bertema merah untuk menginformasikan kondisi kesalahan / teks tidak ditemukan.
 ///
 /// Karakteristik desain:
-/// - Mengikuti tema EyeLens (permukaan gelap konsisten, border halus, bayangan lembut).
-/// - Menyediakan tombol tutup dengan target sentuh aksesibilitas minimal 48dp.
-/// - Menghilang otomatis dan mendukung animasi transisi halus.
-/// - Menggunakan token tipografi bodyMedium (minimal 16 sp) agar teks terbaca jelas.
+/// - Latar belakang merah cerah terkalibrasi (#D8224E) dengan rasio kontras > 4.9:1 terhadap teks putih (WCAG AA).
+/// - Ikon status: lingkaran putih pejal berisi tanda silang (X) merah di sisi kiri (30dp).
+/// - Judul tebal (minimal 18 sp, titleMedium) dan baris pesan petunjuk (minimal 16 sp, bodyMedium).
+/// - Tombol tutup di pojok kanan atas dengan target sentuh aksesibilitas minimal 48dp.
+/// - Sudut membulat 12dp dengan bayangan halus, margin horizontal, dan animasi fade yang selaras.
 class NoTextAlertBanner extends StatelessWidget {
   final bool isVisible;
   final double bottomPadding;
+  final String? title;
   final String message;
   final VoidCallback onClose;
   final String closeLabel;
@@ -20,6 +23,7 @@ class NoTextAlertBanner extends StatelessWidget {
     super.key,
     required this.isVisible,
     required this.bottomPadding,
+    this.title,
     required this.message,
     required this.onClose,
     this.closeLabel = 'Tutup',
@@ -29,49 +33,91 @@ class NoTextAlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isVisible) return const SizedBox.shrink();
 
+    final strings = AppStrings.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final displayTitle = title ?? strings.noTextFoundTitle;
 
     return Positioned(
-      left: 20,
-      right: 20,
+      left: 16,
+      right: 16,
       bottom: bottomPadding + 130,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         opacity: isVisible ? 1.0 : 0.0,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E).withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.greyDarkBorder, width: 1.2),
-            boxShadow: const [
+            color: AppColors.alertErrorBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.alertErrorBorder,
+              width: 1.0,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Colors.black45,
-                blurRadius: 10,
-                offset: Offset(0, 3),
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
+          padding: const EdgeInsets.only(
+            left: 14,
+            top: 12,
+            right: 6,
+            bottom: 12,
+          ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: textTheme.bodyMedium?.copyWith(
+              // Ikon Status Kiri: Lingkaran putih pejal dengan tanda X merah
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.alertErrorIconX,
+                    size: 20,
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 12),
+
+              // Konten Teks: Judul tebal (>= 18 sp) dan Pesan (>= 16 sp)
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayTitle,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      message,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tombol Tutup Pojok Kanan Atas (Area sentuh minimal 48dp)
               Semantics(
                 button: true,
                 label: closeLabel,
@@ -82,9 +128,9 @@ class NoTextAlertBanner extends StatelessWidget {
                     width: 48,
                     height: 48,
                     alignment: Alignment.center,
-                    child: const Icon(
+                    child: Icon(
                       Icons.close_rounded,
-                      color: Colors.white70,
+                      color: Colors.white.withValues(alpha: 0.85),
                       size: 20,
                     ),
                   ),

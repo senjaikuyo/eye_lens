@@ -3,16 +3,20 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 
+import 'camera_lifecycle_manager.dart';
+
 /// Service untuk mengelola siklus hidup kamera gawai:
 /// - Inisialisasi kamera belakang dengan resolusi optimal (1080p).
-/// - Pengaturan pembesaran digital (magnifier) proporsional 1.0x - 2.0x (200%).
-/// - Pengaturan senter / torch untuk kondisi pencahayaan rendah.
+/// - Pengaturan pembesaran digital (magnifier) proporsional 1.0x - 10.0x.
+/// - Pengaturan senter / torch untuk kondisi pencahayaan rendah (otomatis dimatikan saat kamera nonaktif).
+/// - Penghentian aman (stop) saat berpindah ke halaman gambar/teks untuk menghemat baterai & memori.
+/// - Pemulihan status kamera (start) saat kembali ke halaman pemindaian tanpa balapan (race condition).
 /// - Pengambilan citra sementara ke RAM (Uint8List) dan penghapusan otomatis file cache (Ephemeral Memory).
-/// - Penanganan kegagalan (fallback) aman untuk emulator/desktop tanpa kamera.
 class CameraService {
+  late final CameraLifecycleManager _lifecycle;
+
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
-  bool _isInitialized = false;
   bool _isDisposed = false;
 
   double _minZoom = 1.0;
@@ -20,19 +24,42 @@ class CameraService {
   double _currentZoom = 1.0;
   bool _isFlashOn = false;
 
+  CameraService() {
+    _lifecycle = CameraLifecycleManager(
+      onStart: _internalStart,
+      onStop: _internalStop,
+    );
+  }
+
+  CameraLifecycleManager get lifecycle => _lifecycle;
+  CameraStatus get status => _lifecycle.status;
+
   CameraController? get controller => _controller;
   bool get isInitialized =>
-      _isInitialized && _controller != null && _controller!.value.isInitialized;
+      _lifecycle.isReady &&
+      _controller != null &&
+      _controller!.value.isInitialized;
   bool get isAvailable => _cameras.isNotEmpty;
   double get minZoom => _minZoom;
   double get maxZoom => _maxZoom;
   double get currentZoom => _currentZoom;
   bool get isFlashOn => _isFlashOn;
 
-  /// Inisialisasi daftar kamera dan Controller untuk kamera belakang pertama.
-  Future<bool> initialize() async {
-    if (_isDisposed) return false;
+  /// Memulai inisialisasi kamera (kompatibel dengan API lama).
+  Future<bool> initialize() => start();
 
+  /// Menyalakan kembali sensor kamera secara aman.
+  Future<bool> start() async {
+    if (_isDisposed) return false;
+    return await _lifecycle.start();
+  }
+
+  /// Mematikan dan membebaskan sensor kamera sementara (misal saat di halaman gambar/teks).
+  Future<void> stop() async {
+    await _lifecycle.stop();
+  }
+
+  Future<bool> _internalStart() async {
     try {
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
@@ -46,7 +73,7 @@ class CameraService {
         orElse: () => _cameras.first,
       );
 
-      _controller = CameraController(
+      final newController = CameraController(
         backCamera,
         ResolutionPreset.high,
         enableAudio: false,
@@ -55,7 +82,8 @@ class CameraService {
             : ImageFormatGroup.bgra8888,
       );
 
-      await _controller!.initialize();
+      await newController.initialize();
+      _controller = newController;
 
       // Dapatkan batasan zoom hardware sebenarnya (hingga 10x)
       try {
@@ -67,18 +95,49 @@ class CameraService {
         _maxZoom = 10.0;
       }
 
-      _currentZoom = _minZoom;
-      _isInitialized = true;
+      // Pulihkan tingkat zoom sebelumnya jika masih dalam rentang hardware
+      if (_currentZoom > _minZoom) {
+        final targetZoom = _currentZoom.clamp(_minZoom, _maxZoom);
+        try {
+          await _controller!.setZoomLevel(targetZoom);
+          _currentZoom = targetZoom;
+        } catch (e) {
+          debugPrint('[CameraService] Gagal memulihkan zoom sebelumnya: $e');
+        }
+      } else {
+        _currentZoom = _minZoom;
+      }
+
       return true;
     } catch (e) {
       debugPrint('[CameraService] Inisialisasi kamera gagal: $e');
-      _isInitialized = false;
+      _controller = null;
       return false;
     }
   }
 
+  Future<void> _internalStop() async {
+    // 1. Matikan lampu senter terlebih dahulu jika masih aktif
+    if (_isFlashOn && _controller != null && _controller!.value.isInitialized) {
+      try {
+        await _controller!.setFlashMode(FlashMode.off);
+      } catch (e) {
+        debugPrint('[CameraService] Gagal mematikan senter saat stop: $e');
+      }
+      _isFlashOn = false;
+    }
+
+    // 2. Dispose controller dan lepaskan hardware kamera
+    try {
+      await _controller?.dispose();
+    } catch (e) {
+      debugPrint('[CameraService] Gagal dispose controller: $e');
+    } finally {
+      _controller = null;
+    }
+  }
+
   /// Mengatur tingkat perbesaran digital (zoom level).
-  /// Menjamin nilai zoom berada dalam jangkauan hardware aman (clamped).
   Future<void> setZoom(double zoom) async {
     if (!isInitialized || _isDisposed) return;
 
@@ -107,8 +166,6 @@ class CameraService {
   }
 
   /// Menangkap citra foto langsung ke RAM (Uint8List).
-  /// File cache fisik yang dibuat oleh plugin di disk langsung dihapus permanen (purge)
-  /// untuk menjamin privasi resep obat/dokumen lansia (0 byte jejak foto di penyimpanan).
   Future<Uint8List?> captureFrameToRAM() async {
     if (!isInitialized || _isDisposed) return null;
 
@@ -135,16 +192,10 @@ class CameraService {
     }
   }
 
-  /// Membebaskan resource kamera saat layar ditutup.
+  /// Membebaskan resource kamera secara permanen saat layar dihancurkan.
   Future<void> dispose() async {
     _isDisposed = true;
-    _isInitialized = false;
-    try {
-      await _controller?.dispose();
-    } catch (e) {
-      debugPrint('[CameraService] Gagal dispose controller: $e');
-    } finally {
-      _controller = null;
-    }
+    await stop();
+    _lifecycle.dispose();
   }
 }

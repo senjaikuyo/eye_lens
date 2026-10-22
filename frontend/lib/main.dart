@@ -9,6 +9,9 @@ import 'providers/settings_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/splash/splash_screen.dart';
 
+/// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
@@ -45,6 +48,7 @@ class EyeLensApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
+      navigatorObservers: [routeObserver],
       builder: (context, child) {
         // Mendukung pembesar sistem ponsel (Big Font) hingga 2.5x (250%)
         // dengan batas minimum 1.0x agar layout tetap proporsional dan tidak overflow

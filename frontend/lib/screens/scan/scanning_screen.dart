@@ -8,9 +8,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../main.dart';
 import '../../models/ocr_element.dart';
 import '../../providers/history_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/camera_lifecycle_manager.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
 import '../../services/ocr_service.dart';
@@ -33,13 +35,15 @@ class ScanningScreen extends StatefulWidget {
   State<ScanningScreen> createState() => _ScanningScreenState();
 }
 
-class _ScanningScreenState extends State<ScanningScreen> {
+class _ScanningScreenState extends State<ScanningScreen>
+    with RouteAware, WidgetsBindingObserver {
   final CameraService _cameraService = CameraService();
   final OcrService _ocrService = OcrService();
   final ImagePicker _imagePicker = ImagePicker();
   final HardwareKeyService _hardwareKeyService = HardwareKeyService();
   final TtsService _ttsService = TtsService();
 
+  bool _isSubscribedToRouteObserver = false;
   bool _isFlashOn = false;
   double _currentZoom = 1.0;
   bool _isBlurry = false;
@@ -57,11 +61,61 @@ class _ScanningScreenState extends State<ScanningScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _cameraService.lifecycle.addListener(_onCameraLifecycleChanged);
+
     _initCamera();
     _hardwareKeyService.startListening(() {
-      if (mounted && !_isProcessingOcr) {
+      if (mounted && !_isProcessingOcr && _cameraService.isInitialized) {
         _onCapturePressed();
       }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isSubscribedToRouteObserver) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _isSubscribedToRouteObserver = true;
+      }
+    }
+  }
+
+  @override
+  void didPushNext() {
+    // Saat berpindah rute ke halaman lain (misal SpeechScreen), matikan kamera sepenuhnya
+    _cameraService.stop();
+  }
+
+  @override
+  void didPopNext() {
+    // Saat kembali ke ScanningScreen dari halaman lain, nyalakan kamera kembali
+    _cameraService.start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      // Saat aplikasi berada di background / lockscreen, lepaskan hardware kamera
+      _cameraService.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      // Hanya nyalakan kamera jika ScanningScreen adalah rute teratas yang sedang aktif
+      final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? false;
+      if (isCurrentRoute) {
+        _cameraService.start();
+      }
+    }
+  }
+
+  void _onCameraLifecycleChanged() {
+    if (!mounted) return;
+    setState(() {
+      _currentZoom = _cameraService.currentZoom;
+      _isFlashOn = _cameraService.isFlashOn;
     });
   }
 
@@ -76,6 +130,12 @@ class _ScanningScreenState extends State<ScanningScreen> {
 
   @override
   void dispose() {
+    if (_isSubscribedToRouteObserver) {
+      routeObserver.unsubscribe(this);
+    }
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraService.lifecycle.removeListener(_onCameraLifecycleChanged);
+
     _hardwareKeyService.stopListening();
     _blurTimer?.cancel();
     _noTextAlertTimer?.cancel();
@@ -134,7 +194,18 @@ class _ScanningScreenState extends State<ScanningScreen> {
     }
   }
 
+  void _updateZoom(double newZoom) {
+    final clamped = newZoom.clamp(_minZoom, _maxZoom);
+    if ((clamped - _currentZoom).abs() > 0.01) {
+      setState(() {
+        _currentZoom = clamped;
+      });
+      _cameraService.setZoom(clamped);
+    }
+  }
+
   void _triggerBlurAlert(AppStrings strings) {
+    _blurTimer?.cancel();
     setState(() {
       _isBlurry = true;
     });
@@ -147,7 +218,6 @@ class _ScanningScreenState extends State<ScanningScreen> {
       TextDirection.ltr,
     );
 
-    _blurTimer?.cancel();
     _blurTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) {
         setState(() {
@@ -157,18 +227,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
     });
   }
 
-  void _updateZoom(double newZoom) {
-    final clamped = newZoom.clamp(_minZoom, _maxZoom);
-    if ((clamped - _currentZoom).abs() > 0.01) {
-      setState(() {
-        _currentZoom = clamped;
-      });
-      _cameraService.setZoom(clamped);
-    }
-  }
-
   Future<void> _onCapturePressed() async {
-    if (_isProcessingOcr) return;
+    if (_isProcessingOcr || !_cameraService.isInitialized) return;
 
     _dismissNoTextAlert();
     HapticFeedback.mediumImpact();
@@ -180,26 +240,34 @@ class _ScanningScreenState extends State<ScanningScreen> {
 
       try {
         final bytes = await _cameraService.captureFrameToRAM();
-        if (bytes != null && mounted) {
-          final ocrResult = await _ocrService.processImageWithCoordinates(
-            bytes,
+        if (bytes == null || !mounted) {
+          setState(() {
+            _isProcessingOcr = false;
+          });
+          return;
+        }
+
+        // Matikan sensor kamera secepatnya setelah citra aman di RAM
+        // agar lampu indikator kamera padam dan baterai terlindungi
+        await _cameraService.stop();
+
+        final ocrResult = await _ocrService.processImageWithCoordinates(bytes);
+        final check = OcrTextValidator.validateResult(ocrResult);
+
+        if (!mounted) return;
+
+        if (!check.hasText) {
+          setState(() {
+            _isProcessingOcr = false;
+          });
+          // Hidupkan kamera kembali karena masih berada di ScanningScreen
+          _cameraService.start();
+          final strings = AppStrings.of(context, listen: false);
+          await _showNoTextAlert(
+            title: check.getAlertTitle(strings),
+            message: check.getAlertInstruction(strings),
           );
-          final check = OcrTextValidator.validateResult(ocrResult);
-
-          if (!check.hasText) {
-            if (mounted) {
-              setState(() {
-                _isProcessingOcr = false;
-              });
-              final strings = AppStrings.of(context, listen: false);
-              await _showNoTextAlert(
-                title: check.getAlertTitle(strings),
-                message: check.getAlertInstruction(strings),
-              );
-            }
-            return;
-          }
-
+        } else {
           final finalText = check.text;
 
           if (mounted) {
@@ -225,6 +293,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
         }
       } catch (e) {
         debugPrint('[ScanningScreen] Tangkap & OCR gagal: $e');
+        if (mounted) {
+          _cameraService.start();
+        }
       } finally {
         if (mounted) {
           setState(() {
@@ -252,6 +323,9 @@ class _ScanningScreenState extends State<ScanningScreen> {
     _dismissNoTextAlert();
     HapticFeedback.selectionClick();
 
+    // Hentikan kamera saat pengguna membuka pemilih gambar galeri
+    await _cameraService.stop();
+
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -260,7 +334,11 @@ class _ScanningScreenState extends State<ScanningScreen> {
         imageQuality: 90,
       );
 
-      if (pickedFile == null || !mounted) return;
+      if (pickedFile == null || !mounted) {
+        // Jika pengguna batal memilih dari galeri, nyalakan kembali kamera
+        _cameraService.start();
+        return;
+      }
 
       setState(() {
         _isProcessingOcr = true;
@@ -278,6 +356,8 @@ class _ScanningScreenState extends State<ScanningScreen> {
         setState(() {
           _isProcessingOcr = false;
         });
+        // Nyalakan kembali kamera karena pemindaian galeri tidak menghasilkan teks
+        _cameraService.start();
         final strings = AppStrings.of(context, listen: false);
         await _showNoTextAlert(
           title: check.getAlertTitle(strings),
@@ -307,6 +387,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
     } catch (e) {
       debugPrint('[ScanningScreen] Ambil gambar galeri gagal: $e');
       if (mounted) {
+        _cameraService.start();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -354,18 +435,27 @@ class _ScanningScreenState extends State<ScanningScreen> {
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDark(context);
 
+    final isCameraStarting =
+        _cameraService.status == CameraStatus.starting;
+    final isCameraError = _cameraService.status == CameraStatus.error;
+
     return Scaffold(
       backgroundColor: AppColors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Viewfinder Kamera dengan gesture pinch & swipe zoom
+          // 1. Viewfinder Kamera dengan gesture pinch & swipe zoom, loading, dan error banner
           CameraViewfinder(
             cameraService: _cameraService,
             currentZoom: _currentZoom,
             onZoomChanged: _updateZoom,
             isBlurry: _isBlurry,
             size: size,
+            isInitializing: isCameraStarting,
+            errorMessage: isCameraError ? strings.cameraInitError : null,
+            initializingText: strings.cameraInitializing,
+            retryText: strings.retry,
+            onRetry: () => _cameraService.start(),
           ),
 
           // 2. Top Action Bar: Flash, History, dan Popup Menu
@@ -430,6 +520,7 @@ class _ScanningScreenState extends State<ScanningScreen> {
             onCapturePressed: _onCapturePressed,
             onCaptureLongPressed: () => _triggerBlurAlert(strings),
             isProcessing: _isProcessingOcr,
+            isReady: _cameraService.isInitialized,
           ),
 
           // 7. OCR Processing Overlay

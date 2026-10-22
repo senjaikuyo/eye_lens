@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/app_colors.dart';
 import '../../../services/camera_service.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../widgets/scanner_corner_painter.dart';
@@ -13,6 +14,11 @@ class CameraViewfinder extends StatefulWidget {
   final ValueChanged<double> onZoomChanged;
   final bool isBlurry;
   final Size size;
+  final bool isInitializing;
+  final String? errorMessage;
+  final String? initializingText;
+  final String? retryText;
+  final VoidCallback? onRetry;
 
   const CameraViewfinder({
     super.key,
@@ -21,6 +27,11 @@ class CameraViewfinder extends StatefulWidget {
     required this.onZoomChanged,
     required this.isBlurry,
     required this.size,
+    this.isInitializing = false,
+    this.errorMessage,
+    this.initializingText,
+    this.retryText,
+    this.onRetry,
   });
 
   @override
@@ -59,7 +70,7 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Live Camera Preview atau fallback
+          // 1. Live Camera Preview atau fallback latar belakang
           if (widget.cameraService.isInitialized &&
               widget.cameraService.controller != null)
             SizedBox.expand(
@@ -94,7 +105,7 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
               height: double.infinity,
             ),
 
-          // Subtle Vignette Gradient
+          // 2. Subtle Vignette Gradient
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -113,23 +124,120 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
             ),
           ),
 
-          // Central Viewfinder Frame - 4 Sudut L Google Lens identik dengan SpeechScreen
-          Center(
-            child: SizedBox(
-              width: widget.size.width * 0.78,
-              height: widget.size.width * 0.78,
-              child: CustomPaint(
-                painter: ScannerCornerPainter(
-                  color: widget.isBlurry
-                      ? const Color(0xFFF59E0B)
-                      : Colors.white.withValues(alpha: 0.9),
-                  strokeWidth: LensSelectionHelper.lensStrokeWidth,
-                  cornerLength: LensSelectionHelper.lensCornerLength,
-                  cornerRadius: LensSelectionHelper.lensCornerRadius,
+          // 3. Central Viewfinder Frame - 4 Sudut L Google Lens identik dengan SpeechScreen
+          if (widget.errorMessage == null)
+            Center(
+              child: SizedBox(
+                width: widget.size.width * 0.78,
+                height: widget.size.width * 0.78,
+                child: CustomPaint(
+                  painter: ScannerCornerPainter(
+                    color: widget.isBlurry
+                        ? const Color(0xFFF59E0B)
+                        : Colors.white.withValues(alpha: 0.9),
+                    strokeWidth: LensSelectionHelper.lensStrokeWidth,
+                    cornerLength: LensSelectionHelper.lensCornerLength,
+                    cornerRadius: LensSelectionHelper.lensCornerRadius,
+                  ),
                 ),
               ),
             ),
-          ),
+
+          // 4. Indikator loading singkat saat inisialisasi / re-start kamera
+          if (widget.isInitializing)
+            Container(
+              color: Colors.black.withValues(alpha: 0.4),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Text(
+                        widget.initializingText ?? 'Menyiapkan kamera...',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. Pesan Error dan Tombol Coba Lagi jika inisialisasi gagal
+          if (widget.errorMessage != null && !widget.isInitializing)
+            Container(
+              color: Colors.black.withValues(alpha: 0.75),
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: AppColors.alertErrorBg,
+                      size: 56,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    if (widget.onRetry != null)
+                      ElevatedButton.icon(
+                        onPressed: widget.onRetry,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: Text(
+                          widget.retryText ?? 'Coba Lagi',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.linkBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

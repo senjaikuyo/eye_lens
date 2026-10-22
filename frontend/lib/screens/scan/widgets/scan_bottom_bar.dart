@@ -7,6 +7,7 @@ class ScanBottomBar extends StatelessWidget {
   final VoidCallback onCapturePressed;
   final VoidCallback onCaptureLongPressed;
   final bool isProcessing;
+  final bool isReady;
 
   const ScanBottomBar({
     super.key,
@@ -16,10 +17,13 @@ class ScanBottomBar extends StatelessWidget {
     required this.onCapturePressed,
     required this.onCaptureLongPressed,
     this.isProcessing = false,
+    this.isReady = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool canInteract = isReady && !isProcessing;
+
     return Positioned(
       left: 0,
       right: 0,
@@ -74,10 +78,10 @@ class ScanBottomBar extends StatelessWidget {
 
           // Shutter Camera Button (Center)
           GestureDetector(
-            onTap: isProcessing ? null : onCapturePressed,
-            onLongPress: isProcessing ? null : onCaptureLongPressed,
+            onTap: canInteract ? onCapturePressed : null,
+            onLongPress: canInteract ? onCaptureLongPressed : null,
             child: Opacity(
-              opacity: isProcessing ? 0.6 : 1.0,
+              opacity: canInteract ? 1.0 : 0.5,
               child: Container(
                 width: 76,
                 height: 76,

@@ -68,6 +68,12 @@ class AppStrings {
       : 'Registration successful! Please login.';
 
   // --- Camera & Scanner ---
+  String get cameraInitializing =>
+      isIndonesian ? 'Menyiapkan kamera...' : 'Initializing camera...';
+  String get cameraInitError => isIndonesian
+      ? 'Kamera gagal diinisialisasi. Pastikan izin kamera aktif.'
+      : 'Camera failed to initialize. Please check permissions.';
+  String get retry => isIndonesian ? 'Coba Lagi' : 'Retry';
   String get gallery => isIndonesian ? 'Galeri' : 'Gallery';
   String get galleryPickMsg =>
       isIndonesian ? 'Pilih gambar dari Galeri' : 'Pick image from Gallery';

@@ -225,6 +225,7 @@ class TextClusterHelper {
   /// Menemukan kelompok teks yang terkena titik ketuk (imagePoint dalam piksel citra).
   /// Jika titik ketuk berada di dalam beberapa kelompok berpadding yang saling bertumpuk,
   /// pilih kelompok yang pusatnya paling dekat dengan titik ketuk.
+  /// Jika ada kelompok kecil yang berada di dalam kelompok lain, pilih yang luasnya terkecil.
   static TextCluster? findClusterAtPoint({
     required Offset imagePoint,
     required List<TextCluster> clusters,
@@ -238,13 +239,101 @@ class TextClusterHelper {
     if (matchingClusters.isEmpty) return null;
     if (matchingClusters.length == 1) return matchingClusters.first;
 
-    // Jika tumpang tindih, pilih yang pusat boundingBox-nya paling dekat ke titik ketuk
+    // Jika tumpang tindih:
+    // 1. Cek apakah ada kelompok yang berada di dalam kelompok lain (nested), prioritaskan yang terkecil
+    // 2. Jika tidak nested, pilih yang pusat boundingBox-nya paling dekat ke titik ketuk
     matchingClusters.sort((a, b) {
+      final areaA = a.boundingBox.width * a.boundingBox.height;
+      final areaB = b.boundingBox.width * b.boundingBox.height;
+
+      final aInsideB = b.boundingBox.contains(a.boundingBox.topLeft) &&
+          b.boundingBox.contains(a.boundingBox.bottomRight);
+      final bInsideA = a.boundingBox.contains(b.boundingBox.topLeft) &&
+          a.boundingBox.contains(b.boundingBox.bottomRight);
+
+      if (aInsideB && !bInsideA) return -1;
+      if (bInsideA && !aInsideB) return 1;
+
       final distA = (a.boundingBox.center - imagePoint).distance;
       final distB = (b.boundingBox.center - imagePoint).distance;
+      final distDiff = (distA - distB).abs();
+
+      if (distDiff < 2.0) {
+        return areaA.compareTo(areaB);
+      }
       return distA.compareTo(distB);
     });
 
     return matchingClusters.first;
   }
+
+  /// Evaluasi keputusan ketukan pada citra:
+  /// 1. Temukan kelompok teks pada titik ketuk (imagePoint).
+  /// 2. Jika tidak ada kelompok yang terkena (area kosong), kembalikan [TapDecisionAction.ignoreEmptySpace].
+  /// 3. Jika kelompok yang terkena sudah sama dengan bingkai aktif (selisih di bawah [tolerancePx]),
+  ///    kembalikan [TapDecisionAction.ignoreAlreadyActive].
+  /// 4. Jika berbeda (termasuk saat bingkai aktif adalah Full image),
+  ///    kembalikan [TapDecisionAction.animateToCluster].
+  static TapDecision evaluateTapDecision({
+    required Offset imagePoint,
+    required List<TextCluster> clusters,
+    required Rect activeFrameRect,
+    double tolerancePx = 4.0,
+  }) {
+    final cluster = findClusterAtPoint(
+      imagePoint: imagePoint,
+      clusters: clusters,
+    );
+
+    if (cluster == null) {
+      return const TapDecision(action: TapDecisionAction.ignoreEmptySpace);
+    }
+
+    // Cek apakah kotak kelompok sudah sama dengan bingkai aktif dalam batas toleransi
+    final isSameRect = (cluster.boundingBox.left - activeFrameRect.left).abs() <= tolerancePx &&
+        (cluster.boundingBox.top - activeFrameRect.top).abs() <= tolerancePx &&
+        (cluster.boundingBox.right - activeFrameRect.right).abs() <= tolerancePx &&
+        (cluster.boundingBox.bottom - activeFrameRect.bottom).abs() <= tolerancePx;
+
+    if (isSameRect) {
+      return TapDecision(
+        action: TapDecisionAction.ignoreAlreadyActive,
+        targetCluster: cluster,
+        targetRect: cluster.boundingBox,
+      );
+    }
+
+    return TapDecision(
+      action: TapDecisionAction.animateToCluster,
+      targetCluster: cluster,
+      targetRect: cluster.boundingBox,
+    );
+  }
+}
+
+/// Aksi hasil evaluasi ketukan pada citra
+enum TapDecisionAction {
+  /// Pindahkan atau kecilkan bingkai ke kelompok teks target
+  animateToCluster,
+
+  /// Ketukan diabaikan karena kelompok sudah sama dengan bingkai aktif
+  ignoreAlreadyActive,
+
+  /// Ketukan diabaikan karena jatuh di area kosong di luar semua kelompok
+  ignoreEmptySpace,
+}
+
+/// Hasil keputusan evaluasi ketukan pada citra
+class TapDecision {
+  final TapDecisionAction action;
+  final TextCluster? targetCluster;
+  final Rect? targetRect;
+
+  const TapDecision({
+    required this.action,
+    this.targetCluster,
+    this.targetRect,
+  });
+
+  bool get shouldAnimate => action == TapDecisionAction.animateToCluster;
 }

@@ -124,5 +124,92 @@ void main() {
       );
       expect(clusters, isEmpty);
     });
+
+    test('6. Kelompok kecil di dalam kelompok besar (nested): pilih yang terkecil', () {
+      // Cluster Besar (misal sebuah kontainer pesan utuh): 100, 100 -> 500, 500 (luas = 160.000)
+      final outerCluster = TextCluster(
+        id: 0,
+        lines: const [],
+        boundingBox: const Rect.fromLTRB(100, 100, 500, 500),
+        score: 1.0,
+      );
+
+      // Cluster Kecil di dalam Cluster Besar: 200, 200 -> 300, 300 (luas = 10.000)
+      final innerCluster = TextCluster(
+        id: 1,
+        lines: const [],
+        boundingBox: const Rect.fromLTRB(200, 200, 300, 300),
+        score: 1.0,
+      );
+
+      // Titik ketuk di dalam cluster kecil (250, 250)
+      final hit = TextClusterHelper.findClusterAtPoint(
+        imagePoint: const Offset(250, 250),
+        clusters: [outerCluster, innerCluster],
+      );
+
+      expect(hit?.id, equals(1)); // innerCluster yang luasnya terkecil harus dipilih
+    });
+
+    test('7. evaluateTapDecision memindahkan bingkai saat mode Full image aktif', () {
+      final fullImageRect = const Rect.fromLTWH(0, 0, 1080, 1920);
+      final targetCluster = TextCluster(
+        id: 1,
+        lines: const [],
+        boundingBox: const Rect.fromLTWH(100, 300, 400, 150),
+        score: 1.0,
+      );
+
+      // Ketukan jatuh di dalam targetCluster (misal 200, 350)
+      final decision = TextClusterHelper.evaluateTapDecision(
+        imagePoint: const Offset(200, 350),
+        clusters: [targetCluster],
+        activeFrameRect: fullImageRect,
+      );
+
+      expect(decision.action, equals(TapDecisionAction.animateToCluster));
+      expect(decision.shouldAnimate, isTrue);
+      expect(decision.targetRect, equals(targetCluster.boundingBox));
+    });
+
+    test('8. evaluateTapDecision mengabaikan ketukan jika kelompok sudah sama dengan bingkai aktif', () {
+      final activeRect = const Rect.fromLTWH(100, 300, 400, 150);
+      final targetCluster = TextCluster(
+        id: 1,
+        lines: const [],
+        boundingBox: const Rect.fromLTWH(100, 300, 400, 150),
+        score: 1.0,
+      );
+
+      final decision = TextClusterHelper.evaluateTapDecision(
+        imagePoint: const Offset(200, 350),
+        clusters: [targetCluster],
+        activeFrameRect: activeRect,
+      );
+
+      expect(decision.action, equals(TapDecisionAction.ignoreAlreadyActive));
+      expect(decision.shouldAnimate, isFalse);
+    });
+
+    test('9. evaluateTapDecision mengabaikan ketukan pada area kosong di luar semua kelompok', () {
+      final fullImageRect = const Rect.fromLTWH(0, 0, 1080, 1920);
+      final targetCluster = TextCluster(
+        id: 1,
+        lines: const [],
+        boundingBox: const Rect.fromLTWH(100, 300, 400, 150),
+        score: 1.0,
+      );
+
+      // Ketuk di titik kosong (50, 50)
+      final decision = TextClusterHelper.evaluateTapDecision(
+        imagePoint: const Offset(50, 50),
+        clusters: [targetCluster],
+        activeFrameRect: fullImageRect,
+      );
+
+      expect(decision.action, equals(TapDecisionAction.ignoreEmptySpace));
+      expect(decision.shouldAnimate, isFalse);
+      expect(decision.targetCluster, isNull);
+    });
   });
 }

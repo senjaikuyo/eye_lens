@@ -11,7 +11,9 @@ import '../../controllers/lens_selection_controller.dart';
 import '../../models/ocr_element.dart';
 import '../../models/text_formatter_models.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/auto_play_helper.dart';
 import '../../services/lens_selection_helper.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/feedback_dialog.dart';
@@ -74,11 +76,21 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _currentCharIndexNotifier.value = 0;
   }
 
-  void _onSelectionComputed(LensSelectionResult result) {
+  void _onSelectionComputed(
+    LensSelectionResult result,
+    FrameChangeTrigger trigger,
+  ) {
     if (!mounted) return;
     final strings = AppStrings.of(context);
     final alertTitle = result.validation.getAlertTitle(strings);
     final alertMessage = result.validation.getAlertInstruction(strings);
+
+    final autoPlayEnabled = context.read<SettingsProvider>().autoPlayAudio;
+    final decision = AutoPlayHelper.shouldAutoPlay(
+      trigger: trigger,
+      autoPlayEnabled: autoPlayEnabled,
+      selectionResult: result,
+    );
 
     setState(() {
       _hasTextInFrame = result.hasText;
@@ -94,8 +106,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
       }
     });
 
-    if (!result.hasText) {
+    if (decision == AutoPlayDecision.alertNoText) {
       _triggerNoTextAlert(title: alertTitle, message: alertMessage);
+    } else if (decision == AutoPlayDecision.speak) {
+      _startSpeech();
     }
   }
 
@@ -208,7 +222,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
       final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
       await _ttsService.setLanguage(langCode);
       await _ttsService.setSpeed(_speed);
-      if (mounted && _hasTextInFrame) {
+      if (mounted && _hasTextInFrame && _isTextView) {
         await _startSpeech();
       }
     });

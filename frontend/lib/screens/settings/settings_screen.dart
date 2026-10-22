@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/theme_provider.dart';
 import 'change_password_screen.dart';
 import 'faq_screen.dart';
@@ -22,8 +23,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _autoPlayAudio = false;
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
@@ -32,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final strings = AppStrings.of(context);
     final languageProvider = context.watch<LanguageProvider>();
     final selectedLanguage = languageProvider.language;
+    final settingsProvider = context.watch<SettingsProvider>();
+    final autoPlayAudio = settingsProvider.autoPlayAudio;
 
     final dividerColor = isHighContrast
         ? (isDark ? Colors.white : Colors.black)
@@ -140,29 +141,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 3. Auto-Play Audio
-              SettingsListTile(
-                icon: Icon(
-                  Icons.graphic_eq_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                trailing: Switch(
-                  value: _autoPlayAudio,
-                  activeThumbColor: isDark ? Colors.white : Colors.black,
-                  onChanged: (val) {
-                    setState(() {
-                      _autoPlayAudio = val;
-                    });
-                  },
-                ),
-                child: Text(
-                  strings.autoPlayAudio,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 17,
-                    fontWeight: isHighContrast
-                        ? FontWeight.w700
-                        : FontWeight.w600,
+              Semantics(
+                toggled: autoPlayAudio,
+                label: strings.autoPlayAudioSemantics(autoPlayAudio),
+                child: SettingsListTile(
+                  icon: Icon(
+                    Icons.graphic_eq_rounded,
+                    color: isDark ? Colors.white : Colors.black,
+                    size: 24,
+                  ),
+                  trailing: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: Switch(
+                        value: autoPlayAudio,
+                        activeThumbColor: isDark ? Colors.white : Colors.black,
+                        onChanged: (val) {
+                          context.read<SettingsProvider>().setAutoPlayAudio(val);
+                        },
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        strings.autoPlayAudio,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : AppColors.black,
+                          fontSize: 17,
+                          fontWeight: isHighContrast
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        strings.autoPlayAudioSubtitle,
+                        style: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF9E9E9E)
+                              : const Color(0xFF6E6E6E),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

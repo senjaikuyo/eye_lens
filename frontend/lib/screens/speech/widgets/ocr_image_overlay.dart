@@ -9,6 +9,7 @@ import '../../../controllers/lens_selection_controller.dart';
 import '../../../core/app_strings.dart';
 import '../../../models/ocr_element.dart';
 import '../../../models/text_formatter_models.dart';
+import '../../../services/auto_play_helper.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../services/ocr_noise_filter.dart';
 import '../../../services/text_cluster_helper.dart';
@@ -31,6 +32,12 @@ const bool kDebugOcrOverlay = false;
 ///   dengan area sentuh 48dp yang tetap bisa disentuh saat menempel di tepi layar.
 /// - State bingkai dan zoom disimpan di LensSelectionController sehingga bertahan saat
 ///   berpindah ke mode teks dan kembali.
+/// Callback saat hasil seleksi teks dan pemicu perubahan bingkai selesai dihitung.
+typedef OnSelectionComputedCallback = void Function(
+  LensSelectionResult result,
+  FrameChangeTrigger trigger,
+);
+
 class OcrImageOverlay extends StatefulWidget {
   final Uint8List imageBytes;
   final Size imageSize;
@@ -38,7 +45,7 @@ class OcrImageOverlay extends StatefulWidget {
   final List<OcrElement> elements;
   final List<RejectedLineInfo> rejectedLines;
   final VoidCallback? onFrameChanging;
-  final ValueChanged<LensSelectionResult>? onSelectionComputed;
+  final OnSelectionComputedCallback? onSelectionComputed;
   final bool isDark;
   final bool isHighContrast;
   final LensSelectionController? controller;
@@ -79,6 +86,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   Offset _dragStartGlobal = Offset.zero;
   Rect _dragStartImageRect = Rect.zero;
   bool _isInteractivePanEnabled = true;
+  FrameChangeTrigger _latestTrigger = FrameChangeTrigger.initialLoad;
 
   @override
   void initState() {
@@ -180,6 +188,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   }
 
   void _onTransformationChanged() {
+    _latestTrigger = FrameChangeTrigger.zoomPan;
     widget.controller?.setTransformMatrix(_transformationController.value);
     widget.onFrameChanging?.call();
     _scheduleSelectionCompute();
@@ -203,14 +212,20 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     if (imageCropRect == Rect.zero ||
         imageCropRect.width <= 0 ||
         imageCropRect.height <= 0) {
-      widget.onSelectionComputed?.call(LensSelectionResult.empty);
+      widget.onSelectionComputed?.call(
+        LensSelectionResult.empty,
+        _latestTrigger,
+      );
       return;
     }
 
     final ctrl = widget.controller;
     if (ctrl != null && !ctrl.shouldRecompute(imageCropRect) && ctrl.cachedResult != null) {
       // Lewati komputasi ulang jika bingkai tidak berubah sejak teks terakhir disiapkan
-      widget.onSelectionComputed?.call(ctrl.cachedResult!);
+      widget.onSelectionComputed?.call(
+        ctrl.cachedResult!,
+        _latestTrigger,
+      );
       return;
     }
 
@@ -231,11 +246,12 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     );
 
     ctrl?.cacheResult(result, imageCropRect);
-    widget.onSelectionComputed?.call(result);
+    widget.onSelectionComputed?.call(result, _latestTrigger);
   }
 
   /// Mereset zoom ke 1x dan membentangkan bingkai ke seluruh citra.
   void _resetZoomAndFitImage() {
+    _latestTrigger = FrameChangeTrigger.fullImage;
     HapticFeedback.mediumImpact();
     widget.onFrameChanging?.call();
 
@@ -282,6 +298,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   }
 
   void _animateToCluster(Rect targetBoundingBox) {
+    _latestTrigger = FrameChangeTrigger.tapCluster;
     widget.onFrameChanging?.call();
     HapticFeedback.selectionClick();
 
@@ -309,6 +326,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     LensHandlePosition handle,
     DragStartDetails details,
   ) {
+    _latestTrigger = FrameChangeTrigger.dragHandle;
     _activeHandle = handle;
     _dragStartGlobal = details.globalPosition;
     _dragStartImageRect = _imageCropRectNotifier.value;
@@ -494,6 +512,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                             _handleTapAtScreenPoint(screenPoint);
                           },
                           onPanStart: (details) {
+                            _latestTrigger = FrameChangeTrigger.moveFrame;
                             setState(() {
                               _isInteractivePanEnabled = false;
                             });

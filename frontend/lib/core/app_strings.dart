@@ -151,7 +151,13 @@ class AppStrings {
       isIndonesian ? 'Ubah Kata Sandi' : 'Change Password';
   String get appearance => isIndonesian ? 'Tampilan' : 'Appearance';
   String get autoPlayAudio =>
-      isIndonesian ? 'Putar Audio Otomatis' : 'Auto-Play Audio';
+      isIndonesian ? 'Putar otomatis suara' : 'Auto-play audio';
+  String get autoPlayAudioSubtitle => isIndonesian
+      ? 'Baca teks otomatis saat berpindah ke teks lain'
+      : 'Automatically read text when switching to another text block';
+  String autoPlayAudioSemantics(bool isEnabled) => isIndonesian
+      ? 'Putar otomatis suara, status ${isEnabled ? "aktif" : "mati"}'
+      : 'Auto-play audio, status ${isEnabled ? "enabled" : "disabled"}';
   String get languageApp => isIndonesian ? 'Bahasa Aplikasi' : 'Language App';
   String get indonesian => 'Indonesian';
   String get english => 'English';

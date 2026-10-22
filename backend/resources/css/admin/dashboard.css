@@ -1,0 +1,595 @@
+/* ================================================== */
+/* RESET                                              */
+/* ================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+
+    background-color: #f7f7f7;
+    color: #171717;
+
+    font-family: 'Poppins', sans-serif;
+}
+
+
+/* ================================================== */
+/* MAIN CONTENT                                       */
+/* ================================================== */
+
+.main-content {
+    min-height: 100vh;
+
+    margin-left: 250px;
+
+    padding: 34px 48px 50px;
+
+    transition:
+        margin-left 0.3s ease,
+        padding 0.3s ease;
+}
+
+.main-content.expanded {
+    margin-left: 70px;
+}
+
+
+/* ================================================== */
+/* DASHBOARD HEADER                                   */
+/* ================================================== */
+
+.dashboard-header {
+    margin-bottom: 26px;
+
+    opacity: 0;
+
+    animation: headerEnter 0.45s ease-out forwards;
+}
+
+.dashboard-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+
+    letter-spacing: -0.7px;
+    line-height: 1.2;
+}
+
+.dashboard-header p {
+    margin-top: 5px;
+
+    color: #777777;
+
+    font-size: 12px;
+    font-weight: 400;
+}
+
+
+/* ================================================== */
+/* STATISTICS                                         */
+/* ================================================== */
+
+.statistics {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 22px;
+
+    margin-bottom: 26px;
+}
+
+
+/* ================================================== */
+/* STAT CARD                                          */
+/* ================================================== */
+
+.stat-card {
+    position: relative;
+
+    min-height: 132px;
+
+    padding: 18px 20px;
+
+    overflow: hidden;
+
+    background-color: #ffffff;
+
+    border: 1px solid #e7e7e7;
+    border-radius: 16px;
+
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.03),
+        0 6px 20px rgba(0, 0, 0, 0.025);
+
+    opacity: 0;
+
+    animation: cardEnter 0.5s ease-out forwards;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+
+/* Stagger */
+
+.stat-card:nth-child(1) {
+    animation-delay: 0.08s;
+}
+
+.stat-card:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.stat-card:nth-child(3) {
+    animation-delay: 0.22s;
+}
+
+
+/* Hover */
+
+.stat-card:hover {
+    transform: translateY(-3px);
+
+    border-color: #d4d4d4;
+
+    box-shadow:
+        0 3px 6px rgba(0, 0, 0, 0.04),
+        0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ================================================== */
+/* STAT TITLE                                         */
+/* ================================================== */
+
+.stat-title {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    color: #666666;
+
+    font-size: 11px;
+    font-weight: 500;
+}
+
+
+/* ================================================== */
+/* STAT ICON                                          */
+/* ================================================== */
+
+.stat-icon {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: #f5f5f5;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 9px;
+}
+
+.stat-icon svg {
+    width: 15px;
+    height: 15px;
+
+    color: #222222;
+
+    stroke-width: 1.7;
+}
+
+
+/* ================================================== */
+/* STAT NUMBER                                        */
+/* ================================================== */
+
+.stat-card h2 {
+    margin-top: 17px;
+
+    color: #111111;
+
+    font-size: 36px;
+    font-weight: 600;
+
+    letter-spacing: -1.5px;
+    line-height: 1;
+}
+
+
+/* ================================================== */
+/* DASHBOARD CARDS                                    */
+/* ================================================== */
+
+.dashboard-card {
+    width: 100%;
+
+    padding: 22px;
+
+    margin-bottom: 22px;
+
+    background-color: #ffffff;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 16px;
+
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.02),
+        0 8px 28px rgba(0, 0, 0, 0.035);
+
+    opacity: 0;
+
+    animation: cardEnter 0.55s ease-out forwards;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+
+/* New Activity */
+
+.dashboard-card:nth-of-type(2) {
+    animation-delay: 0.30s;
+}
+
+
+/* New Feedback */
+
+.dashboard-card:nth-of-type(3) {
+    animation-delay: 0.38s;
+}
+
+
+.dashboard-card:hover {
+    border-color: #dddddd;
+
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.025),
+        0 12px 32px rgba(0, 0, 0, 0.045);
+}
+
+
+/* ================================================== */
+/* CARD HEADER                                        */
+/* ================================================== */
+
+.card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    padding-bottom: 17px;
+
+    border-bottom: 1px solid #eeeeee;
+}
+
+.card-header h3 {
+    color: #171717;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    letter-spacing: -0.2px;
+}
+
+.card-header p {
+    margin-top: 4px;
+
+    color: #999999;
+
+    font-size: 9px;
+    font-weight: 400;
+}
+
+
+/* ================================================== */
+/* VIEW ALL BUTTON                                    */
+/* ================================================== */
+
+.view-all-button {
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: transparent;
+
+    border: 1px solid transparent;
+    border-radius: 9px;
+
+    color: #555555;
+
+    text-decoration: none;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.view-all-button svg {
+    width: 17px;
+    height: 17px;
+
+    stroke-width: 1.6;
+}
+
+.view-all-button:hover {
+    background-color: #f5f5f5;
+
+    border-color: #e5e5e5;
+
+    color: #111111;
+
+    transform: translate(1px, -1px);
+}
+
+
+/* ================================================== */
+/* CARD LIST                                          */
+/* ================================================== */
+
+.card-list {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ================================================== */
+/* LIST ITEM                                          */
+/* ================================================== */
+
+.list-item {
+    min-height: 66px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 11px 8px;
+
+    border-bottom: 1px solid #f0f0f0;
+
+    transition:
+        background-color 0.2s ease,
+        padding-left 0.2s ease;
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item:hover {
+    padding-left: 12px;
+
+    background-color: #fafafa;
+}
+
+
+/* ================================================== */
+/* LIST ICON                                          */
+/* ================================================== */
+
+.list-icon {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-right: 12px;
+
+    background-color: #f5f5f5;
+
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.list-item:hover .list-icon {
+    background-color: #eeeeee;
+
+    transform: scale(1.03);
+}
+
+.list-icon svg {
+    width: 16px;
+    height: 16px;
+
+    color: #333333;
+
+    stroke-width: 1.6;
+}
+
+
+/* ================================================== */
+/* LIST CONTENT                                       */
+/* ================================================== */
+
+.list-content {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.list-title {
+    color: #222222;
+
+    font-size: 10px;
+    font-weight: 500;
+
+    line-height: 1.4;
+}
+
+.list-description {
+    margin-top: 3px;
+
+    color: #999999;
+
+    font-size: 8px;
+    font-weight: 400;
+
+    line-height: 1.3;
+}
+
+
+/* ================================================== */
+/* TIME BADGE                                         */
+/* ================================================== */
+
+.time-badge {
+    flex-shrink: 0;
+
+    margin-left: 20px;
+
+    padding: 6px 10px;
+
+    background-color: #f5f5f5;
+
+    border: 1px solid #e8e8e8;
+    border-radius: 20px;
+
+    color: #777777;
+
+    font-size: 8px;
+    font-weight: 400;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.list-item:hover .time-badge {
+    background-color: #ffffff;
+
+    border-color: #dddddd;
+}
+
+
+/* ================================================== */
+/* ENTRANCE ANIMATION                                 */
+/* ================================================== */
+
+@keyframes headerEnter {
+
+    from {
+        opacity: 0;
+
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes cardEnter {
+
+    from {
+        opacity: 0;
+
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform: translateY(0);
+    }
+
+}
+
+
+/* ================================================== */
+/* RESPONSIVE                                         */
+/* ================================================== */
+
+@media (max-width: 1100px) {
+
+    .statistics {
+        gap: 15px;
+    }
+
+}
+
+
+@media (max-width: 800px) {
+
+    .main-content {
+        padding-left: 28px;
+        padding-right: 28px;
+    }
+
+
+    .statistics {
+        grid-template-columns: 1fr;
+
+        gap: 12px;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .main-content {
+        padding: 25px 18px;
+    }
+
+
+    .dashboard-card {
+        padding: 17px;
+    }
+
+
+    .time-badge {
+        display: none;
+    }
+
+}
+
+
+/* ================================================== */
+/* REDUCED MOTION                                     */
+/* ================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .dashboard-header,
+    .stat-card,
+    .dashboard-card {
+        opacity: 1;
+
+        animation: none;
+
+        transform: none;
+    }
+
+}

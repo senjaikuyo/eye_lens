@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../controllers/lens_selection_controller.dart';
 import '../../models/ocr_element.dart';
 import '../../models/text_formatter_models.dart';
 import '../../providers/theme_provider.dart';
@@ -52,6 +53,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
   String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
+  late final LensSelectionController _lensSelectionController;
+  bool _isAppearanceSheetOpen = false;
 
   late String _currentFramedText;
   FormattedTextResult? _currentFramedFormattedResult;
@@ -151,6 +154,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   @override
   void initState() {
     super.initState();
+    _lensSelectionController = LensSelectionController();
     _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
     _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
@@ -207,6 +211,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _progressNotifier.dispose();
     _isPlayingNotifier.dispose();
     _fontSizeNotifier.dispose();
+    _lensSelectionController.dispose();
     super.dispose();
   }
 
@@ -233,10 +238,18 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _isTextView = true;
       });
     } else {
-      // Kembali dari teks ke gambar
+      // Kembali dari teks ke gambar: tutup sheet appearance jika terbuka
+      _closeAppearanceSheetIfOpen();
       setState(() {
         _isTextView = false;
       });
+    }
+  }
+
+  void _closeAppearanceSheetIfOpen() {
+    if (_isAppearanceSheetOpen && mounted) {
+      Navigator.of(context).maybePop();
+      _isAppearanceSheetOpen = false;
     }
   }
 
@@ -285,6 +298,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   rejectedLines: widget.ocrResult?.rejectedLines ?? const [],
                   isDark: isDark,
                   isHighContrast: themeProvider.isHighContrast,
+                  controller: _lensSelectionController,
                   onFrameChanging: _onFrameChanging,
                   onSelectionComputed: _onSelectionComputed,
                 ),
@@ -349,8 +363,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
             child: SpeechTopActionBar(
               isDark: isDark,
               strings: strings,
+              showAppearanceButton: _isTextView,
               onBackPressed: () => Navigator.of(context).pop(),
               onAppearancePressed: () {
+                _isAppearanceSheetOpen = true;
                 AppearanceBottomSheet.show(
                   context,
                   themeProvider: themeProvider,
@@ -365,7 +381,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
                     _fontSizeNotifier.value = finalSize;
                     themeProvider.setFontSize(finalSize);
                   },
-                );
+                ).whenComplete(() {
+                  _isAppearanceSheetOpen = false;
+                });
               },
               onSettingsTap: () {
                 Navigator.of(context).push(

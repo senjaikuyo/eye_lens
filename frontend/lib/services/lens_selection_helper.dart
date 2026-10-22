@@ -239,6 +239,92 @@ class LensSelectionHelper {
     return Rect.fromLTRB(left, top, right, bottom);
   }
 
+  /// Menghitung target sentuh pegangan (minimal 48dp) dengan penyesuaian agar
+  /// saat bingkai menempel di tepi layar, area sentuh menjorok ke dalam bingkai
+  /// sehingga tetap dapat disentuh dengan mudah tanpa terpotong tepi layar/bezel.
+  static Rect computeHandleTouchRect({
+    required LensHandlePosition position,
+    required Rect screenFrameRect,
+    required Size viewportSize,
+    double touchSize = minTouchTarget,
+  }) {
+    double left = 0;
+    double top = 0;
+    double width = touchSize;
+    double height = touchSize;
+
+    switch (position) {
+      case LensHandlePosition.topLeft:
+        left = screenFrameRect.left < touchSize / 2
+            ? screenFrameRect.left
+            : screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.top < touchSize / 2
+            ? screenFrameRect.top
+            : screenFrameRect.top - touchSize / 2;
+        break;
+      case LensHandlePosition.topRight:
+        left = screenFrameRect.right > viewportSize.width - touchSize / 2
+            ? screenFrameRect.right - touchSize
+            : screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.top < touchSize / 2
+            ? screenFrameRect.top
+            : screenFrameRect.top - touchSize / 2;
+        break;
+      case LensHandlePosition.bottomLeft:
+        left = screenFrameRect.left < touchSize / 2
+            ? screenFrameRect.left
+            : screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.bottom > viewportSize.height - touchSize / 2
+            ? screenFrameRect.bottom - touchSize
+            : screenFrameRect.bottom - touchSize / 2;
+        break;
+      case LensHandlePosition.bottomRight:
+        left = screenFrameRect.right > viewportSize.width - touchSize / 2
+            ? screenFrameRect.right - touchSize
+            : screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.bottom > viewportSize.height - touchSize / 2
+            ? screenFrameRect.bottom - touchSize
+            : screenFrameRect.bottom - touchSize / 2;
+        break;
+      case LensHandlePosition.top:
+        left = screenFrameRect.left + touchSize / 2;
+        top = screenFrameRect.top < touchSize / 2
+            ? screenFrameRect.top
+            : screenFrameRect.top - touchSize / 2;
+        width = max(0.0, screenFrameRect.width - touchSize);
+        height = touchSize;
+        break;
+      case LensHandlePosition.bottom:
+        left = screenFrameRect.left + touchSize / 2;
+        top = screenFrameRect.bottom > viewportSize.height - touchSize / 2
+            ? screenFrameRect.bottom - touchSize
+            : screenFrameRect.bottom - touchSize / 2;
+        width = max(0.0, screenFrameRect.width - touchSize);
+        height = touchSize;
+        break;
+      case LensHandlePosition.left:
+        left = screenFrameRect.left < touchSize / 2
+            ? screenFrameRect.left
+            : screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.top + touchSize / 2;
+        width = touchSize;
+        height = max(0.0, screenFrameRect.height - touchSize);
+        break;
+      case LensHandlePosition.right:
+        left = screenFrameRect.right > viewportSize.width - touchSize / 2
+            ? screenFrameRect.right - touchSize
+            : screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.top + touchSize / 2;
+        width = touchSize;
+        height = max(0.0, screenFrameRect.height - touchSize);
+        break;
+      case LensHandlePosition.none:
+        return Rect.zero;
+    }
+
+    return Rect.fromLTWH(left, top, width, height);
+  }
+
   /// Mengonversi persegi bingkai dari koordinat layar ke koordinat piksel citra asli.
   /// Langkah:
   /// 1. Layar ke scene melalui kebalikan (invers) matriks transformasi.

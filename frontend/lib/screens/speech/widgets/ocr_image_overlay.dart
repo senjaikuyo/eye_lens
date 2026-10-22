@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../controllers/lens_selection_controller.dart';
 import '../../../core/app_strings.dart';
 import '../../../models/ocr_element.dart';
 import '../../../models/text_formatter_models.dart';
@@ -21,13 +22,14 @@ const bool kDebugOcrOverlay = false;
 ///
 /// Fitur utama:
 /// - Satu bingkai membungkus kelompok teks utama (terbesar dan terdekat ke tengah).
-/// - Bingkai disimpan dalam koordinat piksel citra asli dan menempel pada citra
-///   saat di-zoom (pinch) atau digeser (pan satu jari di dalam/luar bingkai).
-/// - Mengetuk kelompok teks lain memindahkan bingkai dengan animasi 200 ms.
-/// - Menyeret salah satu dari 8 titik pegangan mengubah ukuran bingkai (resize manual).
-/// - Ukuran minimum 64 dp ditegakkan sesuai skala transformasi aktif.
-/// - Tombol "Seluruh gambar" mengembalikan zoom ke 1x dan membentangkan bingkai ke seluruh citra.
-/// - Jika tidak ada kelompok teks terdeteksi, bingkai disembunyikan dan memicu alert tanpa teks.
+/// - 4 sudut putih tipis berbentuk huruf L melengkung tanpa garis penuh, tanpa glow,
+///   dan area di luar bingkai digelapkan tipis lewat scrim transparan.
+/// - Menempel pada citra saat di-zoom (pinch) atau digeser (pan satu jari di dalam/luar bingkai).
+/// - Mengetuk kelompok teks lain memindahkan bingkai dengan animasi 200 ms (bahkan saat Full image).
+/// - Menyeret salah satu dari 8 titik pegangan mengubah ukuran bingkai (resize manual),
+///   dengan area sentuh 48dp yang tetap bisa disentuh saat menempel di tepi layar.
+/// - State bingkai dan zoom disimpan di LensSelectionController sehingga bertahan saat
+///   berpindah ke mode teks dan kembali.
 class OcrImageOverlay extends StatefulWidget {
   final Uint8List imageBytes;
   final Size imageSize;
@@ -38,6 +40,7 @@ class OcrImageOverlay extends StatefulWidget {
   final ValueChanged<LensSelectionResult>? onSelectionComputed;
   final bool isDark;
   final bool isHighContrast;
+  final LensSelectionController? controller;
 
   const OcrImageOverlay({
     super.key,
@@ -50,6 +53,7 @@ class OcrImageOverlay extends StatefulWidget {
     this.onSelectionComputed,
     this.isDark = true,
     this.isHighContrast = false,
+    this.controller,
   });
 
   @override
@@ -77,7 +81,12 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   @override
   void initState() {
     super.initState();
-    _transformationController = TransformationController();
+    final ctrl = widget.controller;
+    _transformationController = TransformationController(
+      ctrl != null && ctrl.isInitialized
+          ? ctrl.transformMatrix
+          : Matrix4.identity(),
+    );
     _transformationController.addListener(_onTransformationChanged);
 
     _switchAnimationController = AnimationController(
@@ -87,6 +96,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     _switchAnimationController.addListener(() {
       if (_switchAnimation?.value != null) {
         _imageCropRectNotifier.value = _switchAnimation!.value!;
+        widget.controller?.setCropRect(
+          _switchAnimation!.value!,
+          isManual: false,
+        );
       }
     });
     _switchAnimationController.addStatusListener((status) {
@@ -95,32 +108,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       }
     });
 
-    _detectInitialClusters();
+    _initOrRestoreClusters();
   }
 
-  @override
-  void didUpdateWidget(covariant OcrImageOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.rawLines != oldWidget.rawLines ||
-        widget.elements != oldWidget.elements ||
-        widget.imageSize != oldWidget.imageSize) {
-      _detectInitialClusters();
-      _scheduleSelectionCompute();
-    }
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _switchAnimationController.dispose();
-    _transformationController.removeListener(_onTransformationChanged);
-    _transformationController.dispose();
-    _imageCropRectNotifier.dispose();
-    super.dispose();
-  }
-
-  /// Menjalankan deteksi awal kelompok teks dengan OcrNoiseFilter dan TextClusterHelper.
-  void _detectInitialClusters() {
+  void _initOrRestoreClusters() {
     List<OcrLineData> linesToUse = widget.rawLines;
     if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
       linesToUse = widget.elements.map((e) {
@@ -149,14 +140,45 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       imageSize: widget.imageSize,
     );
 
-    if (_clusters.isNotEmpty) {
-      _imageCropRectNotifier.value = _clusters.first.boundingBox;
+    final ctrl = widget.controller;
+    if (ctrl != null && ctrl.isInitialized && ctrl.imageCropRect != Rect.zero) {
+      // Pulihkan state yang tersimpan tanpa mengulang deteksi awal
+      _imageCropRectNotifier.value = ctrl.imageCropRect;
     } else {
-      _imageCropRectNotifier.value = Rect.zero;
+      // Deteksi awal pertama kali
+      if (_clusters.isNotEmpty) {
+        final initialRect = _clusters.first.boundingBox;
+        _imageCropRectNotifier.value = initialRect;
+        ctrl?.markInitialized(initialRect);
+      } else {
+        _imageCropRectNotifier.value = Rect.zero;
+      }
     }
   }
 
+  @override
+  void didUpdateWidget(covariant OcrImageOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.rawLines != oldWidget.rawLines ||
+        widget.elements != oldWidget.elements ||
+        widget.imageSize != oldWidget.imageSize) {
+      _initOrRestoreClusters();
+      _scheduleSelectionCompute();
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _switchAnimationController.dispose();
+    _transformationController.removeListener(_onTransformationChanged);
+    _transformationController.dispose();
+    _imageCropRectNotifier.dispose();
+    super.dispose();
+  }
+
   void _onTransformationChanged() {
+    widget.controller?.setTransformMatrix(_transformationController.value);
     widget.onFrameChanging?.call();
     _scheduleSelectionCompute();
   }
@@ -183,6 +205,13 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       return;
     }
 
+    final ctrl = widget.controller;
+    if (ctrl != null && !ctrl.shouldRecompute(imageCropRect) && ctrl.cachedResult != null) {
+      // Lewati komputasi ulang jika bingkai tidak berubah sejak teks terakhir disiapkan
+      widget.onSelectionComputed?.call(ctrl.cachedResult!);
+      return;
+    }
+
     List<OcrLineData> linesToUse = widget.rawLines;
     if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
       linesToUse = widget.elements.map((e) {
@@ -199,6 +228,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       originalImageSize: widget.imageSize,
     );
 
+    ctrl?.cacheResult(result, imageCropRect);
     widget.onSelectionComputed?.call(result);
   }
 
@@ -209,14 +239,17 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 
     // Kembalikan zoom ke 1x
     _transformationController.value = Matrix4.identity();
+    widget.controller?.setTransformMatrix(Matrix4.identity());
 
     // Rentangkan bingkai ke seluruh citra asli
-    _imageCropRectNotifier.value = Rect.fromLTWH(
+    final fullRect = Rect.fromLTWH(
       0.0,
       0.0,
       widget.imageSize.width,
       widget.imageSize.height,
     );
+    _imageCropRectNotifier.value = fullRect;
+    widget.controller?.resetToFullImage(widget.imageSize);
 
     _scheduleSelectionCompute();
   }
@@ -235,21 +268,24 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       originalImageSize: widget.imageSize,
     );
 
-    final currentCropRect = _imageCropRectNotifier.value;
-
-    // 1. Ketukan di dalam bingkai aktif diabaikan
-    if (currentCropRect != Rect.zero && currentCropRect.contains(imagePoint)) {
-      return;
-    }
-
-    // 2. Cek apakah ketukan mengenai kelompok teks lain
+    // 1. Cek apakah ketukan mengenai salah satu kelompok teks
     final targetCluster = TextClusterHelper.findClusterAtPoint(
       imagePoint: imagePoint,
       clusters: _clusters,
     );
 
-    if (targetCluster != null) {
+    final currentCropRect = _imageCropRectNotifier.value;
+
+    // Jika mengenai kelompok teks dan posisinya berbeda dari bingkai aktif,
+    // langsung pindahkan bingkai ke kelompok tersebut (berfungsi juga saat Full image)
+    if (targetCluster != null && targetCluster.boundingBox != currentCropRect) {
       _animateToCluster(targetCluster.boundingBox);
+      return;
+    }
+
+    // 2. Ketukan di dalam bingkai aktif saat ini (di luar teks lain) diabaikan
+    if (currentCropRect != Rect.zero && currentCropRect.contains(imagePoint)) {
+      return;
     }
   }
 
@@ -273,6 +309,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       ),
     );
 
+    widget.controller?.animateToCluster(targetBoundingBox);
     _switchAnimationController.forward(from: 0.0);
   }
 
@@ -303,6 +340,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     );
 
     _imageCropRectNotifier.value = newRect;
+    widget.controller?.setCropRect(newRect, isManual: true);
     _scheduleSelectionCompute();
   }
 
@@ -317,64 +355,21 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     required Rect screenFrameRect,
     required String semanticsLabel,
   }) {
-    const touchSize = LensSelectionHelper.minTouchTarget; // 48dp
-    double left = 0;
-    double top = 0;
-    double width = touchSize;
-    double height = touchSize;
+    final touchRect = LensSelectionHelper.computeHandleTouchRect(
+      position: position,
+      screenFrameRect: screenFrameRect,
+      viewportSize: _viewportSize,
+    );
 
-    switch (position) {
-      case LensHandlePosition.topLeft:
-        left = screenFrameRect.left - touchSize / 2;
-        top = screenFrameRect.top - touchSize / 2;
-        break;
-      case LensHandlePosition.topRight:
-        left = screenFrameRect.right - touchSize / 2;
-        top = screenFrameRect.top - touchSize / 2;
-        break;
-      case LensHandlePosition.bottomLeft:
-        left = screenFrameRect.left - touchSize / 2;
-        top = screenFrameRect.bottom - touchSize / 2;
-        break;
-      case LensHandlePosition.bottomRight:
-        left = screenFrameRect.right - touchSize / 2;
-        top = screenFrameRect.bottom - touchSize / 2;
-        break;
-      case LensHandlePosition.top:
-        left = screenFrameRect.left + touchSize / 2;
-        top = screenFrameRect.top - touchSize / 2;
-        width = max(0.0, screenFrameRect.width - touchSize);
-        height = touchSize;
-        break;
-      case LensHandlePosition.bottom:
-        left = screenFrameRect.left + touchSize / 2;
-        top = screenFrameRect.bottom - touchSize / 2;
-        width = max(0.0, screenFrameRect.width - touchSize);
-        height = touchSize;
-        break;
-      case LensHandlePosition.left:
-        left = screenFrameRect.left - touchSize / 2;
-        top = screenFrameRect.top + touchSize / 2;
-        width = touchSize;
-        height = max(0.0, screenFrameRect.height - touchSize);
-        break;
-      case LensHandlePosition.right:
-        left = screenFrameRect.right - touchSize / 2;
-        top = screenFrameRect.top + touchSize / 2;
-        width = touchSize;
-        height = max(0.0, screenFrameRect.height - touchSize);
-        break;
-      case LensHandlePosition.none:
-        return const SizedBox.shrink();
+    if (touchRect.width <= 0 || touchRect.height <= 0) {
+      return const SizedBox.shrink();
     }
 
-    if (width <= 0 || height <= 0) return const SizedBox.shrink();
-
     return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
+      left: touchRect.left,
+      top: touchRect.top,
+      width: touchRect.width,
+      height: touchRect.height,
       child: Semantics(
         label: semanticsLabel,
         button: true,
@@ -393,6 +388,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -401,9 +397,14 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
           _viewportSize = containerSize;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            if (_imageCropRectNotifier.value == Rect.zero &&
+            final ctrl = widget.controller;
+            if (ctrl != null && ctrl.isInitialized && ctrl.imageCropRect != Rect.zero) {
+              _imageCropRectNotifier.value = ctrl.imageCropRect;
+            } else if (_imageCropRectNotifier.value == Rect.zero &&
                 _clusters.isNotEmpty) {
-              _imageCropRectNotifier.value = _clusters.first.boundingBox;
+              final initialRect = _clusters.first.boundingBox;
+              _imageCropRectNotifier.value = initialRect;
+              ctrl?.markInitialized(initialRect);
             }
             _computeAndNotifySelection();
           });
@@ -468,13 +469,12 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Scrim gelap & 4 sudut rounded L-bracket
+                    // Scrim gelap tipis & 4 sudut putih tipis ala Google Lens
                     IgnorePointer(
                       child: CustomPaint(
                         size: Size.infinite,
                         painter: _GoogleLensFramePainter(
                           frameRect: screenFrameRect,
-                          isHighContrast: widget.isHighContrast,
                         ),
                       ),
                     ),
@@ -486,9 +486,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                       width: screenFrameRect.width,
                       height: screenFrameRect.height,
                       child: Semantics(
-                        label: strings.isIndonesian
-                            ? 'Bingkai seleksi teks Google Lens'
-                            : 'Google Lens text selection frame',
+                        label: strings.googleLensFrame,
                         container: true,
                         child: const SizedBox.expand(),
                       ),
@@ -556,25 +554,27 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 
                     // Tombol "Seluruh gambar" (Full image)
                     Positioned(
-                      top: max(8.0, screenFrameRect.top - 46),
-                      left: screenFrameRect.left,
+                      top: max(8.0, screenFrameRect.top - 54),
+                      left: max(8.0, screenFrameRect.left),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: _resetZoomAndFitImage,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           child: Container(
+                            constraints: const BoxConstraints(
+                              minHeight: 48,
+                              minWidth: 48,
+                            ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
+                              horizontal: 16,
+                              vertical: 10,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.black.withValues(alpha: 0.75),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: widget.isHighContrast
-                                    ? const Color(0xFFFFE500)
-                                    : Colors.white70,
+                                color: Colors.white70,
                                 width: 1.2,
                               ),
                               boxShadow: const [
@@ -588,24 +588,17 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.fullscreen_rounded,
-                                  color: widget.isHighContrast
-                                      ? const Color(0xFFFFE500)
-                                      : Colors.white,
-                                  size: 16,
+                                  color: Colors.white,
+                                  size: 20,
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 8),
                                 Text(
-                                  strings.isIndonesian
-                                      ? 'Seluruh gambar'
-                                      : 'Full image',
-                                  style: TextStyle(
-                                    color: widget.isHighContrast
-                                        ? const Color(0xFFFFE500)
-                                        : Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                  strings.fullImage,
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -636,10 +629,8 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                   ),
                   child: Text(
                     'Debug OCR: ${widget.elements.length} lolos | ${widget.rejectedLines.length} dibuang',
-                    style: const TextStyle(
+                    style: textTheme.labelSmall?.copyWith(
                       color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -651,23 +642,22 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   }
 }
 
-/// Painter untuk menggambar scrim gelap di luar bingkai serta empat sudut putih
-/// bersudut melengkung halus khas Google Lens.
+/// Painter untuk menggambar scrim gelap tipis di luar bingkai serta empat sudut putih
+/// melengkung halus khas Google Lens, tanpa garis sisi penuh dan tanpa glow/bayangan tebal.
 class _GoogleLensFramePainter extends CustomPainter {
   final Rect frameRect;
-  final bool isHighContrast;
 
   const _GoogleLensFramePainter({
     required this.frameRect,
-    required this.isHighContrast,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (frameRect.width <= 0 || frameRect.height <= 0) return;
 
+    // 1. Scrim gelap tipis di luar bingkai (cutout tengah 100% transparan)
     final scrimPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.55)
+      ..color = Colors.black.withValues(alpha: 0.38)
       ..style = PaintingStyle.fill;
 
     final fullPath = Path()
@@ -682,10 +672,11 @@ class _GoogleLensFramePainter extends CustomPainter {
     );
     canvas.drawPath(cutOutPath, scrimPaint);
 
+    // 2. Empat sudut berbentuk huruf L melengkung putih tipis, tajam, kontras tinggi
     final cornerPaint = Paint()
-      ..color = isHighContrast ? const Color(0xFFFFE500) : Colors.white
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isHighContrast ? 5.5 : 4.5
+      ..strokeWidth = 2.8
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
@@ -693,6 +684,7 @@ class _GoogleLensFramePainter extends CustomPainter {
         min(28.0, min(frameRect.width, frameRect.height) * 0.35);
     final double radius = min(16.0, cornerLength * 0.65);
 
+    // Sudut Kiri Atas
     final tlPath = Path()
       ..moveTo(frameRect.left, frameRect.top + cornerLength)
       ..lineTo(frameRect.left, frameRect.top + radius)
@@ -704,6 +696,7 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.left + cornerLength, frameRect.top);
     canvas.drawPath(tlPath, cornerPaint);
 
+    // Sudut Kanan Atas
     final trPath = Path()
       ..moveTo(frameRect.right - cornerLength, frameRect.top)
       ..lineTo(frameRect.right - radius, frameRect.top)
@@ -715,6 +708,7 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.right, frameRect.top + cornerLength);
     canvas.drawPath(trPath, cornerPaint);
 
+    // Sudut Kanan Bawah
     final brPath = Path()
       ..moveTo(frameRect.right, frameRect.bottom - cornerLength)
       ..lineTo(frameRect.right - radius, frameRect.bottom)
@@ -726,6 +720,7 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.right - cornerLength, frameRect.bottom);
     canvas.drawPath(brPath, cornerPaint);
 
+    // Sudut Kiri Bawah
     final blPath = Path()
       ..moveTo(frameRect.left + cornerLength, frameRect.bottom)
       ..lineTo(frameRect.left + radius, frameRect.bottom)
@@ -736,40 +731,10 @@ class _GoogleLensFramePainter extends CustomPainter {
       )
       ..lineTo(frameRect.left, frameRect.bottom - cornerLength);
     canvas.drawPath(blPath, cornerPaint);
-
-    final edgePaint = Paint()
-      ..color = (isHighContrast ? const Color(0xFFFFE500) : Colors.white)
-          .withValues(alpha: 0.65)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    const edgeMarkerLen = 14.0;
-    canvas.drawLine(
-      Offset(frameRect.center.dx - edgeMarkerLen, frameRect.top),
-      Offset(frameRect.center.dx + edgeMarkerLen, frameRect.top),
-      edgePaint,
-    );
-    canvas.drawLine(
-      Offset(frameRect.center.dx - edgeMarkerLen, frameRect.bottom),
-      Offset(frameRect.center.dx + edgeMarkerLen, frameRect.bottom),
-      edgePaint,
-    );
-    canvas.drawLine(
-      Offset(frameRect.left, frameRect.center.dy - edgeMarkerLen),
-      Offset(frameRect.left, frameRect.center.dy + edgeMarkerLen),
-      edgePaint,
-    );
-    canvas.drawLine(
-      Offset(frameRect.right, frameRect.center.dy - edgeMarkerLen),
-      Offset(frameRect.right, frameRect.center.dy + edgeMarkerLen),
-      edgePaint,
-    );
   }
 
   @override
   bool shouldRepaint(covariant _GoogleLensFramePainter oldDelegate) {
-    return oldDelegate.frameRect != frameRect ||
-        oldDelegate.isHighContrast != isHighContrast;
+    return oldDelegate.frameRect != frameRect;
   }
 }

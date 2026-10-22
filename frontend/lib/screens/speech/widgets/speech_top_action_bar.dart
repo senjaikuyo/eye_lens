@@ -11,6 +11,7 @@ class SpeechTopActionBar extends StatelessWidget {
   final VoidCallback onSettingsTap;
   final VoidCallback onFeedbackTap;
   final VoidCallback onFaqTap;
+  final bool showAppearanceButton;
 
   const SpeechTopActionBar({
     super.key,
@@ -21,10 +22,13 @@ class SpeechTopActionBar extends StatelessWidget {
     required this.onSettingsTap,
     required this.onFeedbackTap,
     required this.onFaqTap,
+    this.showAppearanceButton = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       children: [
         // Back Button
@@ -39,20 +43,20 @@ class SpeechTopActionBar extends StatelessWidget {
 
         const Spacer(),
 
-        // "Aa" Appearance Button
-        _buildCircleButton(
-          onTap: onAppearancePressed,
-          child: const Text(
-            'Aa',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
+        // "Aa" Appearance Button (hanya tampil di mode teks)
+        if (showAppearanceButton) ...[
+          _buildCircleButton(
+            onTap: onAppearancePressed,
+            child: Text(
+              'Aa',
+              style: textTheme.labelLarge?.copyWith(
+                color: Colors.black,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-        ),
-
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
+        ],
 
         // Three Dots Overflow Menu
         _buildCircleButton(
@@ -87,9 +91,8 @@ class SpeechTopActionBar extends StatelessWidget {
                   height: 52,
                   child: Text(
                     strings.settings,
-                    style: TextStyle(
+                    style: textTheme.bodyLarge?.copyWith(
                       color: isDark ? Colors.white : AppColors.black,
-                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -99,9 +102,8 @@ class SpeechTopActionBar extends StatelessWidget {
                   height: 52,
                   child: Text(
                     strings.feedback,
-                    style: TextStyle(
+                    style: textTheme.bodyLarge?.copyWith(
                       color: isDark ? Colors.white : AppColors.black,
-                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -111,9 +113,8 @@ class SpeechTopActionBar extends StatelessWidget {
                   height: 52,
                   child: Text(
                     strings.faq,
-                    style: TextStyle(
+                    style: textTheme.bodyLarge?.copyWith(
                       color: isDark ? Colors.white : AppColors.black,
-                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -252,5 +252,34 @@ void main() {
       expect(result.hasText, isFalse);
       expect(result.validation.alphanumericCount, equals(0));
     });
+
+    test('8. computeHandleTouchRect menjamin area sentuh 48dp tetap di dalam viewport saat bingkai menempel di tepi layar', () {
+      const screenRect = Rect.fromLTRB(0, 0, 500, 1000); // Full screen
+      const vpSize = Size(500, 1000);
+
+      // Sudut kiri atas di (0, 0): tanpa inset, rect akan di (-24, -24, 24, 24)
+      final tlRect = LensSelectionHelper.computeHandleTouchRect(
+        position: LensHandlePosition.topLeft,
+        screenFrameRect: screenRect,
+        viewportSize: vpSize,
+      );
+
+      expect(tlRect.left, greaterThanOrEqualTo(0.0));
+      expect(tlRect.top, greaterThanOrEqualTo(0.0));
+      expect(tlRect.width, equals(48.0));
+      expect(tlRect.height, equals(48.0));
+
+      // Sudut kanan bawah di (500, 1000): tanpa inset, rect akan meluber keluar
+      final brRect = LensSelectionHelper.computeHandleTouchRect(
+        position: LensHandlePosition.bottomRight,
+        screenFrameRect: screenRect,
+        viewportSize: vpSize,
+      );
+
+      expect(brRect.right, lessThanOrEqualTo(500.0));
+      expect(brRect.bottom, lessThanOrEqualTo(1000.0));
+      expect(brRect.width, equals(48.0));
+      expect(brRect.height, equals(48.0));
+    });
   });
 }

@@ -6,7 +6,7 @@ import '../../../providers/theme_provider.dart';
 import 'appearance_controls.dart';
 
 class AppearanceBottomSheet {
-  static void show(
+  static Future<void> show(
     BuildContext context, {
     required ThemeProvider themeProvider,
     required AppStrings strings,
@@ -14,7 +14,7 @@ class AppearanceBottomSheet {
     required ValueChanged<double> onFontSizeChanged,
     ValueChanged<double>? onFontSizeChangeEnd,
   }) {
-    showModalBottomSheet(
+    return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,

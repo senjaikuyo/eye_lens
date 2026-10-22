@@ -5,6 +5,74 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
+  static TextTheme _buildTextTheme({required Color textColor}) {
+    return TextTheme(
+      headlineLarge: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        height: 1.4,
+        color: textColor,
+      ),
+      headlineMedium: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        height: 1.4,
+        color: textColor,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: textColor,
+      ),
+      titleMedium: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: textColor,
+      ),
+      bodyLarge: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 18,
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+        color: textColor,
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+        color: textColor,
+      ),
+      labelLarge: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        height: 1.4,
+        color: textColor,
+      ),
+      labelMedium: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: textColor,
+      ),
+      labelSmall: TextStyle(
+        fontFamily: 'sans-serif',
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        height: 1.4,
+        color: textColor,
+      ),
+    );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -17,6 +85,7 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
       ),
       fontFamily: 'sans-serif',
+      textTheme: _buildTextTheme(textColor: AppColors.textPrimary),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.white,
         foregroundColor: AppColors.black,
@@ -37,6 +106,7 @@ class AppTheme {
         onSurface: AppColors.white,
       ),
       fontFamily: 'sans-serif',
+      textTheme: _buildTextTheme(textColor: AppColors.textOnDark),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,

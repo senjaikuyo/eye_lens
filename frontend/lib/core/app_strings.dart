@@ -98,6 +98,10 @@ class AppStrings {
   // --- Speech & Text View ---
   String get speechLanguage =>
       isIndonesian ? 'Bahasa Suara' : 'Speech Language';
+  String get fullImage => isIndonesian ? 'Seluruh gambar' : 'Full image';
+  String get googleLensFrame => isIndonesian
+      ? 'Bingkai seleksi teks Google Lens'
+      : 'Google Lens text selection frame';
 
   // --- History ---
   String get history => isIndonesian ? 'Riwayat' : 'History';

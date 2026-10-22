@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Floating alert banner di atas tombol rana untuk menginformasikan kondisi tanpa teks.
+import '../../../core/app_colors.dart';
+
+/// Floating alert banner di atas tombol rana atau player bar untuk menginformasikan kondisi tanpa teks.
 ///
 /// Karakteristik desain:
-/// - Tidak menghalangi tombol rana kamera (terletak di atas tombol rana).
-/// - Tidak menutupi area tengah pratinjau kamera (viewfinder).
+/// - Mengikuti tema EyeLens (permukaan gelap konsisten, border halus, bayangan lembut).
 /// - Menyediakan tombol tutup dengan target sentuh aksesibilitas minimal 48dp.
-/// - Menghilang dengan animasi transisi yang halus.
+/// - Menghilang otomatis dan mendukung animasi transisi halus.
+/// - Menggunakan token tipografi bodyMedium (minimal 16 sp) agar teks terbaca jelas.
 class NoTextAlertBanner extends StatelessWidget {
   final bool isVisible;
   final double bottomPadding;
@@ -27,24 +29,27 @@ class NoTextAlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isVisible) return const SizedBox.shrink();
 
+    final textTheme = Theme.of(context).textTheme;
+
     return Positioned(
       left: 20,
       right: 20,
       bottom: bottomPadding + 130,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
         opacity: isVisible ? 1.0 : 0.0,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
-            boxShadow: [
+            color: const Color(0xFF1E1E1E).withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.greyDarkBorder, width: 1.2),
+            boxShadow: const [
               BoxShadow(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                color: Colors.black45,
                 blurRadius: 10,
-                offset: const Offset(0, 3),
+                offset: Offset(0, 3),
               ),
             ],
           ),
@@ -52,19 +57,17 @@ class NoTextAlertBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Icon(
-                Icons.warning_amber_rounded,
-                color: Color(0xFFF59E0B),
-                size: 26,
+                Icons.info_outline_rounded,
+                color: Colors.white,
+                size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   message,
-                  style: const TextStyle(
+                  style: textTheme.bodyMedium?.copyWith(
                     color: Colors.white,
-                    fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    height: 1.35,
                   ),
                 ),
               ),

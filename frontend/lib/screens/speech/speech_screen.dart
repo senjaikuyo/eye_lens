@@ -71,6 +71,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   void _onSelectionComputed(LensSelectionResult result) {
     if (!mounted) return;
+    final strings = AppStrings.of(context);
+    final alertMessage = result.validation.getAlertMessage(strings);
+
     setState(() {
       _hasTextInFrame = result.hasText;
       if (result.hasText) {
@@ -80,10 +83,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
       } else {
         _currentFramedText = '';
         _currentFramedFormattedResult = null;
-        final strings = AppStrings.of(context);
-        _noTextAlertMessage = result.validation.getAlertMessage(strings);
+        _noTextAlertMessage = alertMessage;
       }
     });
+
+    if (!result.hasText) {
+      _triggerNoTextAlert(alertMessage);
+    }
   }
 
   void _triggerNoTextAlert(String message) {

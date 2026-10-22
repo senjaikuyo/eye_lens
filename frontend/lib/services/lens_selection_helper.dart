@@ -62,6 +62,183 @@ class LensSelectionHelper {
   /// Area sentuh minimum untuk aksesibilitas titik pegangan (48dp).
   static const double minTouchTarget = 48.0;
 
+  /// Mengonversi persegi bingkai dari koordinat piksel citra asli ke koordinat layar.
+  /// Langkah:
+  /// 1. Piksel gambar ke scene melalui skala dan offset BoxFit.contain.
+  /// 2. Scene ke layar melalui perkalian matriks transformasi.
+  static Rect imageToScreenCoordinates({
+    required Rect imageRect,
+    required Matrix4 transformMatrix,
+    required Size viewportSize,
+    required Size originalImageSize,
+  }) {
+    if (viewportSize.width <= 0 ||
+        viewportSize.height <= 0 ||
+        originalImageSize.width <= 0 ||
+        originalImageSize.height <= 0) {
+      return Rect.zero;
+    }
+
+    final double scale = min(
+      viewportSize.width / originalImageSize.width,
+      viewportSize.height / originalImageSize.height,
+    );
+    if (scale <= 0) return Rect.zero;
+
+    final double renderedWidth = originalImageSize.width * scale;
+    final double renderedHeight = originalImageSize.height * scale;
+    final double offsetX = (viewportSize.width - renderedWidth) / 2.0;
+    final double offsetY = (viewportSize.height - renderedHeight) / 2.0;
+
+    final double sceneLeft = imageRect.left * scale + offsetX;
+    final double sceneTop = imageRect.top * scale + offsetY;
+    final double sceneRight = imageRect.right * scale + offsetX;
+    final double sceneBottom = imageRect.bottom * scale + offsetY;
+
+    final Offset screenTopLeft = MatrixUtils.transformPoint(
+      transformMatrix,
+      Offset(sceneLeft, sceneTop),
+    );
+    final Offset screenBottomRight = MatrixUtils.transformPoint(
+      transformMatrix,
+      Offset(sceneRight, sceneBottom),
+    );
+
+    final double sLeft = min(screenTopLeft.dx, screenBottomRight.dx);
+    final double sTop = min(screenTopLeft.dy, screenBottomRight.dy);
+    final double sRight = max(screenTopLeft.dx, screenBottomRight.dx);
+    final double sBottom = max(screenTopLeft.dy, screenBottomRight.dy);
+
+    return Rect.fromLTRB(sLeft, sTop, sRight, sBottom);
+  }
+
+  /// Mengonversi satu titik sentuh dari koordinat layar ke koordinat piksel citra asli.
+  static Offset screenToImagePoint({
+    required Offset screenPoint,
+    required Matrix4 transformMatrix,
+    required Size viewportSize,
+    required Size originalImageSize,
+  }) {
+    if (viewportSize.width <= 0 ||
+        viewportSize.height <= 0 ||
+        originalImageSize.width <= 0 ||
+        originalImageSize.height <= 0) {
+      return Offset.zero;
+    }
+
+    final Matrix4 inverse = Matrix4.identity();
+    final double det = inverse.copyInverse(transformMatrix);
+    if (det == 0.0) return Offset.zero;
+
+    final Offset scenePoint = MatrixUtils.transformPoint(inverse, screenPoint);
+
+    final double scale = min(
+      viewportSize.width / originalImageSize.width,
+      viewportSize.height / originalImageSize.height,
+    );
+    if (scale <= 0) return Offset.zero;
+
+    final double renderedWidth = originalImageSize.width * scale;
+    final double renderedHeight = originalImageSize.height * scale;
+    final double offsetX = (viewportSize.width - renderedWidth) / 2.0;
+    final double offsetY = (viewportSize.height - renderedHeight) / 2.0;
+
+    final double imgX = (scenePoint.dx - offsetX) / scale;
+    final double imgY = (scenePoint.dy - offsetY) / scale;
+
+    return Offset(
+      imgX.clamp(0.0, originalImageSize.width),
+      imgY.clamp(0.0, originalImageSize.height),
+    );
+  }
+
+  /// Menyesuaikan ukuran bingkai dalam koordinat citra asli saat pengguna menyeret
+  /// salah satu pegangan (handle).
+  ///
+  /// Ukuran minimum [minFrameSizeDp] (64dp) ditegakkan dalam skala layar saat ini
+  /// dengan mengonversinya ke satuan piksel citra asli sesuai tingkat zoom dan BoxFit.
+  static Rect resizeImageFrame({
+    required Rect currentImageRect,
+    required LensHandlePosition handle,
+    required Offset deltaScreen,
+    required Matrix4 transformMatrix,
+    required Size viewportSize,
+    required Size originalImageSize,
+    double minFrameSizeDp = minFrameSize,
+  }) {
+    if (viewportSize.width <= 0 ||
+        viewportSize.height <= 0 ||
+        originalImageSize.width <= 0 ||
+        originalImageSize.height <= 0) {
+      return currentImageRect;
+    }
+
+    final double fitScale = min(
+      viewportSize.width / originalImageSize.width,
+      viewportSize.height / originalImageSize.height,
+    );
+    final double transformScale = transformMatrix.getMaxScaleOnAxis();
+    final double totalScale =
+        fitScale * (transformScale > 0 ? transformScale : 1.0);
+    if (totalScale <= 0) return currentImageRect;
+
+    final double deltaImgX = deltaScreen.dx / totalScale;
+    final double deltaImgY = deltaScreen.dy / totalScale;
+
+    // Hitung ukuran minimum dalam piksel citra agar di layar tetap >= minFrameSizeDp
+    final double minImgW = minFrameSizeDp / totalScale;
+    final double minImgH = minFrameSizeDp / totalScale;
+
+    final double effectiveMinW = min(minImgW, originalImageSize.width);
+    final double effectiveMinH = min(minImgH, originalImageSize.height);
+
+    double left = currentImageRect.left;
+    double top = currentImageRect.top;
+    double right = currentImageRect.right;
+    double bottom = currentImageRect.bottom;
+
+    switch (handle) {
+      case LensHandlePosition.topLeft:
+        left = min(left + deltaImgX, right - effectiveMinW);
+        top = min(top + deltaImgY, bottom - effectiveMinH);
+        break;
+      case LensHandlePosition.topRight:
+        right = max(right + deltaImgX, left + effectiveMinW);
+        top = min(top + deltaImgY, bottom - effectiveMinH);
+        break;
+      case LensHandlePosition.bottomLeft:
+        left = min(left + deltaImgX, right - effectiveMinW);
+        bottom = max(bottom + deltaImgY, top + effectiveMinH);
+        break;
+      case LensHandlePosition.bottomRight:
+        right = max(right + deltaImgX, left + effectiveMinW);
+        bottom = max(bottom + deltaImgY, top + effectiveMinH);
+        break;
+      case LensHandlePosition.top:
+        top = min(top + deltaImgY, bottom - effectiveMinH);
+        break;
+      case LensHandlePosition.bottom:
+        bottom = max(bottom + deltaImgY, top + effectiveMinH);
+        break;
+      case LensHandlePosition.left:
+        left = min(left + deltaImgX, right - effectiveMinW);
+        break;
+      case LensHandlePosition.right:
+        right = max(right + deltaImgX, left + effectiveMinW);
+        break;
+      case LensHandlePosition.none:
+        break;
+    }
+
+    // Batasi di dalam batas gambar asli
+    left = left.clamp(0.0, originalImageSize.width - effectiveMinW);
+    top = top.clamp(0.0, originalImageSize.height - effectiveMinH);
+    right = right.clamp(left + effectiveMinW, originalImageSize.width);
+    bottom = bottom.clamp(top + effectiveMinH, originalImageSize.height);
+
+    return Rect.fromLTRB(left, top, right, bottom);
+  }
+
   /// Mengonversi persegi bingkai dari koordinat layar ke koordinat piksel citra asli.
   /// Langkah:
   /// 1. Layar ke scene melalui kebalikan (invers) matriks transformasi.

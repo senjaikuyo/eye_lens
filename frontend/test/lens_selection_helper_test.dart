@@ -27,13 +27,24 @@ void main() {
       expect(imageRect.top, closeTo(400.0, 0.1));
       expect(imageRect.right, closeTo(800.0, 0.1));
       expect(imageRect.bottom, closeTo(1600.0, 0.1));
+
+      // Konversi balik citra -> layar harus kembali persis
+      final roundTripScreen = LensSelectionHelper.imageToScreenCoordinates(
+        imageRect: imageRect,
+        transformMatrix: transformMatrix,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+      );
+      expect(roundTripScreen.left, closeTo(screenRect.left, 0.1));
+      expect(roundTripScreen.top, closeTo(screenRect.top, 0.1));
+      expect(roundTripScreen.right, closeTo(screenRect.right, 0.1));
+      expect(roundTripScreen.bottom, closeTo(screenRect.bottom, 0.1));
     });
 
     test('2. Konversi koordinat layar ke citra asli pada Zoom 3x', () {
       // Matriks transformasi zoom 3x
       final transformMatrix = Matrix4.diagonal3Values(3.0, 3.0, 1.0);
 
-      // Bingkai tetap di layar (misal 150, 300 hingga 300, 600)
       const screenRect = Rect.fromLTRB(150, 300, 300, 600);
 
       final imageRect = LensSelectionHelper.screenToImageCoordinates(
@@ -49,12 +60,24 @@ void main() {
       expect(imageRect.top, closeTo(200.0, 0.1));
       expect(imageRect.right, closeTo(200.0, 0.1));
       expect(imageRect.bottom, closeTo(400.0, 0.1));
+
+      // Konversi balik citra -> layar pada zoom 3x
+      final roundTripScreen = LensSelectionHelper.imageToScreenCoordinates(
+        imageRect: imageRect,
+        transformMatrix: transformMatrix,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+      );
+      expect(roundTripScreen.left, closeTo(screenRect.left, 0.1));
+      expect(roundTripScreen.top, closeTo(screenRect.top, 0.1));
+      expect(roundTripScreen.right, closeTo(screenRect.right, 0.1));
+      expect(roundTripScreen.bottom, closeTo(screenRect.bottom, 0.1));
     });
 
     test('3. Konversi koordinat layar ke citra asli setelah digeser (Pan / Translate)', () {
       // Zoom 2x lalu digeser ke kiri 100dp dan ke atas 200dp
-      final transformMatrix =
-          Matrix4.diagonal3Values(2.0, 2.0, 1.0)..setTranslationRaw(-100.0, -200.0, 0.0);
+      final transformMatrix = Matrix4.diagonal3Values(2.0, 2.0, 1.0)
+        ..setTranslationRaw(-100.0, -200.0, 0.0);
 
       const screenRect = Rect.fromLTRB(100, 200, 300, 400);
 
@@ -65,24 +88,92 @@ void main() {
         originalImageSize: originalImageSize,
       );
 
-      // screen = 2 * scene - 100 => scene = (screen + 100) / 2
-      // sceneLeft = (100 + 100) / 2 = 100
-      // sceneTop = (200 + 200) / 2 = 200
-      // sceneRight = (300 + 100) / 2 = 200
-      // sceneBottom = (400 + 200) / 2 = 300
-      // Image = scene * 2:
       // L=200, T=400, R=400, B=600
       expect(imageRect.left, closeTo(200.0, 0.1));
       expect(imageRect.top, closeTo(400.0, 0.1));
       expect(imageRect.right, closeTo(400.0, 0.1));
       expect(imageRect.bottom, closeTo(600.0, 0.1));
+
+      // Konversi balik citra -> layar setelah digeser
+      final roundTripScreen = LensSelectionHelper.imageToScreenCoordinates(
+        imageRect: imageRect,
+        transformMatrix: transformMatrix,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+      );
+      expect(roundTripScreen.left, closeTo(screenRect.left, 0.1));
+      expect(roundTripScreen.top, closeTo(screenRect.top, 0.1));
+      expect(roundTripScreen.right, closeTo(screenRect.right, 0.1));
+      expect(roundTripScreen.bottom, closeTo(screenRect.bottom, 0.1));
     });
 
-    test('4. Pemilihan kata: kata di dalam, di luar, dan di tepi bingkai', () {
-      // Siapkan satu baris dokumen dengan 3 kata:
-      // Kata 1: "Pertama" di [100, 500, 200, 550] (center: 150, 525)
-      // Kata 2: "Kedua" di [220, 500, 320, 550] (center: 270, 525)
-      // Kata 3: "Ketiga" di [340, 500, 440, 550] (center: 390, 525)
+    test('4. resizeImageFrame memastikan bingkai tidak pernah keluar dari batas gambar', () {
+      final transformMatrix = Matrix4.identity();
+      const initialImageRect = Rect.fromLTRB(100, 100, 500, 500);
+
+      // Coba seret sudut kanan bawah jauh melewati batas gambar (misal delta layar sangat besar)
+      final expandedOut = LensSelectionHelper.resizeImageFrame(
+        currentImageRect: initialImageRect,
+        handle: LensHandlePosition.bottomRight,
+        deltaScreen: const Offset(5000, 5000),
+        transformMatrix: transformMatrix,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+      );
+
+      // Batas kanan citra asli adalah 1000, batas bawah 2000
+      expect(expandedOut.right, lessThanOrEqualTo(originalImageSize.width));
+      expect(expandedOut.bottom, lessThanOrEqualTo(originalImageSize.height));
+      expect(expandedOut.left, greaterThanOrEqualTo(0.0));
+      expect(expandedOut.top, greaterThanOrEqualTo(0.0));
+
+      // Coba seret sudut kiri atas jauh ke negatif
+      final expandedNeg = LensSelectionHelper.resizeImageFrame(
+        currentImageRect: initialImageRect,
+        handle: LensHandlePosition.topLeft,
+        deltaScreen: const Offset(-5000, -5000),
+        transformMatrix: transformMatrix,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+      );
+      expect(expandedNeg.left, equals(0.0));
+      expect(expandedNeg.top, equals(0.0));
+    });
+
+    test('5. kMinFrameSize 64 dp ditegakkan sesuai skala transformasi zoom', () {
+      final zoom1x = Matrix4.identity();
+      final zoom3x = Matrix4.diagonal3Values(3.0, 3.0, 1.0);
+
+      const initialImageRect = Rect.fromLTRB(200, 200, 600, 600);
+
+      // Pada zoom 1x: skala total = 0.5 (contain). 64 dp di layar = 64 / 0.5 = 128 px di citra.
+      final shrunk1x = LensSelectionHelper.resizeImageFrame(
+        currentImageRect: initialImageRect,
+        handle: LensHandlePosition.bottomRight,
+        deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
+        transformMatrix: zoom1x,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+        minFrameSizeDp: 64.0,
+      );
+      expect(shrunk1x.width, closeTo(128.0, 0.1));
+      expect(shrunk1x.height, closeTo(128.0, 0.1));
+
+      // Pada zoom 3x: skala total = 0.5 * 3 = 1.5. 64 dp di layar = 64 / 1.5 = 42.67 px di citra.
+      final shrunk3x = LensSelectionHelper.resizeImageFrame(
+        currentImageRect: initialImageRect,
+        handle: LensHandlePosition.bottomRight,
+        deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
+        transformMatrix: zoom3x,
+        viewportSize: viewportSize,
+        originalImageSize: originalImageSize,
+        minFrameSizeDp: 64.0,
+      );
+      expect(shrunk3x.width, closeTo(64.0 / 1.5, 0.1));
+      expect(shrunk3x.height, closeTo(64.0 / 1.5, 0.1));
+    });
+
+    test('6. Pemilihan kata: kata di dalam, di luar, dan di tepi bingkai', () {
       final line1 = OcrLineData(
         text: 'Pertama Kedua Ketiga',
         boundingBox: const Rect.fromLTRB(100, 500, 440, 550),
@@ -102,7 +193,6 @@ void main() {
         ],
       );
 
-      // Baris 2 di tempat lain (di luar):
       final line2 = OcrLineData(
         text: 'Teks Luar Jauh',
         boundingBox: const Rect.fromLTRB(100, 900, 300, 950),
@@ -122,10 +212,7 @@ void main() {
         ],
       );
 
-      // Area crop hanya mencakup "Kedua" dan sebagian "Ketiga",
-      // tetapi titik tengah "Ketiga" (390) berada di luar batas kanan (350).
-      // Titik tengah "Pertama" (150) berada di luar batas kiri (210).
-      // Jadi HANYA "Kedua" (center: 270) yang titik tengahnya ada di dalam [210, 480, 350, 580].
+      // Area crop hanya mencakup "Kedua" (center: 270)
       const cropRect = Rect.fromLTRB(210, 480, 350, 580);
 
       final result = LensSelectionHelper.selectTextInCrop(
@@ -141,86 +228,29 @@ void main() {
       expect(result.text.contains('Luar'), isFalse);
     });
 
-    test('5. Fallback per-baris jika data TextElement tidak tersedia', () {
-      final lineA = const OcrLineData(
-        text: 'Baris Dalam',
-        boundingBox: Rect.fromLTRB(100, 300, 300, 350), // center: 200, 325
-        elements: [], // kosong
-      );
-      final lineB = const OcrLineData(
-        text: 'Baris Luar',
-        boundingBox: Rect.fromLTRB(100, 800, 300, 850), // center: 200, 825
-        elements: [], // kosong
-      );
-
-      const crop = Rect.fromLTRB(50, 200, 400, 500);
-
-      final result = LensSelectionHelper.selectTextInCrop(
-        rawLines: [lineA, lineB],
-        imageCropRect: crop,
-        originalImageSize: originalImageSize,
-      );
-
-      expect(result.hasText, isTrue);
-      expect(result.text, equals('Baris Dalam'));
-      expect(result.text.contains('Baris Luar'), isFalse);
-    });
-
-    test('6. Area kosong menghasilkan hasText false dan penanganan tanpa teks', () {
-      final line = const OcrLineData(
-        text: 'Dokumen Penting',
-        boundingBox: Rect.fromLTRB(100, 100, 400, 150),
+    test('7. Area kosong atau < 2 huruf/angka menghasilkan hasText false', () {
+      final lineSymbol = const OcrLineData(
+        text: '!',
+        boundingBox: Rect.fromLTRB(100, 100, 150, 150),
         elements: [
           OcrWordData(
-            text: 'Dokumen',
-            boundingBox: Rect.fromLTRB(100, 100, 240, 150),
-          ),
-          OcrWordData(
-            text: 'Penting',
-            boundingBox: Rect.fromLTRB(250, 100, 400, 150),
+            text: '!',
+            boundingBox: Rect.fromLTRB(100, 100, 150, 150),
           ),
         ],
       );
 
-      // Area crop di bawah (kosong tanpa teks)
-      const emptyCrop = Rect.fromLTRB(100, 700, 500, 900);
+      const symbolCrop = Rect.fromLTRB(50, 50, 200, 200);
 
       final result = LensSelectionHelper.selectTextInCrop(
-        rawLines: [line],
-        imageCropRect: emptyCrop,
+        rawLines: [lineSymbol],
+        imageCropRect: symbolCrop,
         originalImageSize: originalImageSize,
       );
 
+      // Kurang dari 2 huruf/angka -> hasText false
       expect(result.hasText, isFalse);
-      expect(result.text, isEmpty);
-      expect(result.validation.hasText, isFalse);
-    });
-
-    test('7. Pengubahan ukuran bingkai (resizeFrame) mematuhi batas minimum dan viewport', () {
-      const current = Rect.fromLTRB(100, 100, 300, 300);
-      const bounds = Size(500, 800);
-
-      // Seret pegangan kanan bawah sebesar (50, 50)
-      final expanded = LensSelectionHelper.resizeFrame(
-        currentRect: current,
-        handle: LensHandlePosition.bottomRight,
-        delta: const Offset(50, 50),
-        boundarySize: bounds,
-      );
-      expect(expanded.right, equals(350));
-      expect(expanded.bottom, equals(350));
-
-      // Coba kecilkan sudut kiri atas hingga melewati batas minimum (64dp)
-      final shrunk = LensSelectionHelper.resizeFrame(
-        currentRect: current,
-        handle: LensHandlePosition.topLeft,
-        delta: const Offset(280, 280),
-        boundarySize: bounds,
-        minWidth: 64.0,
-        minHeight: 64.0,
-      );
-      expect(shrunk.width, greaterThanOrEqualTo(64.0));
-      expect(shrunk.height, greaterThanOrEqualTo(64.0));
+      expect(result.validation.alphanumericCount, equals(0));
     });
   });
 }

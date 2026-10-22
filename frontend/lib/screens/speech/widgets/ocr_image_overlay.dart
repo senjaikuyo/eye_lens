@@ -10,20 +10,24 @@ import '../../../models/ocr_element.dart';
 import '../../../models/text_formatter_models.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../services/ocr_noise_filter.dart';
+import '../../../services/text_cluster_helper.dart';
 
 /// Menentukan apakah overlay visual debug OCR (kotak hijau/merah) diaktifkan.
 /// Default bernilai false: citra tampil bersih ala Google Lens tanpa kotak pada teks.
 const bool kDebugOcrOverlay = false;
 
-/// Widget untuk menampilkan citra hasil scan dengan bingkai pemilih area ala Google Lens.
+/// Widget untuk menampilkan citra hasil scan dengan deteksi kelompok teks otomatis
+/// dan bingkai pemilih area ala Google Lens.
+///
 /// Fitur utama:
-/// - Citra tampil bersih beresolusi penuh (FilterQuality.high) tanpa kotak sorotan teks.
-/// - Zoom interaktif (1x - 6x) dengan cubit dua jari, ketuk dua kali untuk zoom masuk/keluar, dan geser satu jari.
-/// - Bingkai pemilih area tetap di layar; gambar bergerak di bawah bingkai.
-/// - Pengguna dapat mengubah ukuran bingkai melalui titik pegangan sudut atau sisi (touch target >= 48dp).
-/// - Area di luar bingkai digelapkan (dimmed scrim); area di dalam bingkai tetap terang.
-/// - Tombol "Seluruh gambar" untuk mengembalikan zoom ke 1x dan memperluas bingkai ke seluruh gambar.
-/// - Debounce 300 ms untuk menghentikan TTS dan menghitung ulang seleksi teks di dalam bingkai.
+/// - Satu bingkai membungkus kelompok teks utama (terbesar dan terdekat ke tengah).
+/// - Bingkai disimpan dalam koordinat piksel citra asli dan menempel pada citra
+///   saat di-zoom (pinch) atau digeser (pan satu jari di dalam/luar bingkai).
+/// - Mengetuk kelompok teks lain memindahkan bingkai dengan animasi 200 ms.
+/// - Menyeret salah satu dari 8 titik pegangan mengubah ukuran bingkai (resize manual).
+/// - Ukuran minimum 64 dp ditegakkan sesuai skala transformasi aktif.
+/// - Tombol "Seluruh gambar" mengembalikan zoom ke 1x dan membentangkan bingkai ke seluruh citra.
+/// - Jika tidak ada kelompok teks terdeteksi, bingkai disembunyikan dan memicu alert tanpa teks.
 class OcrImageOverlay extends StatefulWidget {
   final Uint8List imageBytes;
   final Size imageSize;
@@ -52,30 +56,104 @@ class OcrImageOverlay extends StatefulWidget {
   State<OcrImageOverlay> createState() => _OcrImageOverlayState();
 }
 
-class _OcrImageOverlayState extends State<OcrImageOverlay> {
+class _OcrImageOverlayState extends State<OcrImageOverlay>
+    with SingleTickerProviderStateMixin {
   late final TransformationController _transformationController;
-  final ValueNotifier<Rect> _frameRectNotifier = ValueNotifier<Rect>(Rect.zero);
+  late final AnimationController _switchAnimationController;
+  Animation<Rect?>? _switchAnimation;
 
+  /// Posisi bingkai seleksi dalam koordinat piksel citra asli [0, width] x [0, height].
+  final ValueNotifier<Rect> _imageCropRectNotifier =
+      ValueNotifier<Rect>(Rect.zero);
+
+  List<TextCluster> _clusters = const [];
   Size _viewportSize = Size.zero;
   Timer? _debounceTimer;
+
   LensHandlePosition _activeHandle = LensHandlePosition.none;
   Offset _dragStartGlobal = Offset.zero;
-  Rect _dragStartRect = Rect.zero;
+  Rect _dragStartImageRect = Rect.zero;
 
   @override
   void initState() {
     super.initState();
     _transformationController = TransformationController();
     _transformationController.addListener(_onTransformationChanged);
+
+    _switchAnimationController = AnimationController(
+      vsync: this,
+      duration: TextClusterHelper.switchAnimationDuration,
+    );
+    _switchAnimationController.addListener(() {
+      if (_switchAnimation?.value != null) {
+        _imageCropRectNotifier.value = _switchAnimation!.value!;
+      }
+    });
+    _switchAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _scheduleSelectionCompute();
+      }
+    });
+
+    _detectInitialClusters();
+  }
+
+  @override
+  void didUpdateWidget(covariant OcrImageOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.rawLines != oldWidget.rawLines ||
+        widget.elements != oldWidget.elements ||
+        widget.imageSize != oldWidget.imageSize) {
+      _detectInitialClusters();
+      _scheduleSelectionCompute();
+    }
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _switchAnimationController.dispose();
     _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
-    _frameRectNotifier.dispose();
+    _imageCropRectNotifier.dispose();
     super.dispose();
+  }
+
+  /// Menjalankan deteksi awal kelompok teks dengan OcrNoiseFilter dan TextClusterHelper.
+  void _detectInitialClusters() {
+    List<OcrLineData> linesToUse = widget.rawLines;
+    if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
+      linesToUse = widget.elements.map((e) {
+        return OcrLineData(
+          text: e.text,
+          boundingBox: e.boundingBox,
+        );
+      }).toList();
+    }
+
+    if (linesToUse.isEmpty ||
+        widget.imageSize.width <= 0 ||
+        widget.imageSize.height <= 0) {
+      _clusters = const [];
+      _imageCropRectNotifier.value = Rect.zero;
+      return;
+    }
+
+    final filterResult = OcrNoiseFilter.filter(
+      lines: linesToUse,
+      imageSize: widget.imageSize,
+    );
+
+    _clusters = TextClusterHelper.detectClusters(
+      filteredLines: filterResult.acceptedLines,
+      imageSize: widget.imageSize,
+    );
+
+    if (_clusters.isNotEmpty) {
+      _imageCropRectNotifier.value = _clusters.first.boundingBox;
+    } else {
+      _imageCropRectNotifier.value = Rect.zero;
+    }
   }
 
   void _onTransformationChanged() {
@@ -85,24 +163,26 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
 
   void _scheduleSelectionCompute() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      _computeAndNotifySelection();
-    });
+    _debounceTimer = Timer(
+      TextClusterHelper.selectionDebounceDuration,
+      () {
+        if (!mounted) return;
+        _computeAndNotifySelection();
+      },
+    );
   }
 
   void _computeAndNotifySelection() {
-    final frame = _frameRectNotifier.value;
-    if (frame.width <= 0 || frame.height <= 0 || _viewportSize.isEmpty) return;
+    final imageCropRect = _imageCropRectNotifier.value;
+    if (_viewportSize.isEmpty) return;
 
-    final imageCropRect = LensSelectionHelper.screenToImageCoordinates(
-      screenRect: frame,
-      transformMatrix: _transformationController.value,
-      viewportSize: _viewportSize,
-      originalImageSize: widget.imageSize,
-    );
+    if (imageCropRect == Rect.zero ||
+        imageCropRect.width <= 0 ||
+        imageCropRect.height <= 0) {
+      widget.onSelectionComputed?.call(LensSelectionResult.empty);
+      return;
+    }
 
-    // Ambil baris mentah (rawLines) atau bangun dari elements jika rawLines kosong
     List<OcrLineData> linesToUse = widget.rawLines;
     if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
       linesToUse = widget.elements.map((e) {
@@ -122,6 +202,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
     widget.onSelectionComputed?.call(result);
   }
 
+  /// Mereset zoom ke 1x dan membentangkan bingkai ke seluruh citra.
   void _resetZoomAndFitImage() {
     HapticFeedback.mediumImpact();
     widget.onFrameChanging?.call();
@@ -129,44 +210,80 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
     // Kembalikan zoom ke 1x
     _transformationController.value = Matrix4.identity();
 
-    // Perbesar bingkai hingga menutupi seluruh gambar
-    final fullRect = LensSelectionHelper.calculateFullImageFrame(
+    // Rentangkan bingkai ke seluruh citra asli
+    _imageCropRectNotifier.value = Rect.fromLTWH(
+      0.0,
+      0.0,
+      widget.imageSize.width,
+      widget.imageSize.height,
+    );
+
+    _scheduleSelectionCompute();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (_viewportSize.isEmpty ||
+        widget.imageSize.width <= 0 ||
+        widget.imageSize.height <= 0) {
+      return;
+    }
+
+    final imagePoint = LensSelectionHelper.screenToImagePoint(
+      screenPoint: details.localPosition,
+      transformMatrix: _transformationController.value,
       viewportSize: _viewportSize,
       originalImageSize: widget.imageSize,
     );
-    _frameRectNotifier.value = fullRect;
 
-    _scheduleSelectionCompute();
-  }
+    final currentCropRect = _imageCropRectNotifier.value;
 
-  void _handleDoubleTap(TapDownDetails details) {
-    widget.onFrameChanging?.call();
-    HapticFeedback.lightImpact();
-
-    final currentScale = _transformationController.value.getMaxScaleOnAxis();
-    if (currentScale > 1.05) {
-      // Reset kembali ke 1.0x
-      _transformationController.value = Matrix4.identity();
-    } else {
-      // Zoom 2.5x ke titik ketukan
-      final tap = details.localPosition;
-      final targetScale = 2.5;
-      final x = -tap.dx * (targetScale - 1.0);
-      final y = -tap.dy * (targetScale - 1.0);
-
-    final Matrix4 target =
-        Matrix4.diagonal3Values(targetScale, targetScale, 1.0)
-          ..setTranslationRaw(x, y, 0.0);
-
-      _transformationController.value = target;
+    // 1. Ketukan di dalam bingkai aktif diabaikan
+    if (currentCropRect != Rect.zero && currentCropRect.contains(imagePoint)) {
+      return;
     }
-    _scheduleSelectionCompute();
+
+    // 2. Cek apakah ketukan mengenai kelompok teks lain
+    final targetCluster = TextClusterHelper.findClusterAtPoint(
+      imagePoint: imagePoint,
+      clusters: _clusters,
+    );
+
+    if (targetCluster != null) {
+      _animateToCluster(targetCluster.boundingBox);
+    }
   }
 
-  void _handleHandlePanStart(LensHandlePosition handle, DragStartDetails details) {
+  void _animateToCluster(Rect targetBoundingBox) {
+    widget.onFrameChanging?.call();
+    HapticFeedback.selectionClick();
+
+    _switchAnimationController.stop();
+
+    final startRect = _imageCropRectNotifier.value == Rect.zero
+        ? targetBoundingBox
+        : _imageCropRectNotifier.value;
+
+    _switchAnimation = RectTween(
+      begin: startRect,
+      end: targetBoundingBox,
+    ).animate(
+      CurvedAnimation(
+        parent: _switchAnimationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+
+    _switchAnimationController.forward(from: 0.0);
+  }
+
+  void _handleHandlePanStart(
+    LensHandlePosition handle,
+    DragStartDetails details,
+  ) {
     _activeHandle = handle;
     _dragStartGlobal = details.globalPosition;
-    _dragStartRect = _frameRectNotifier.value;
+    _dragStartImageRect = _imageCropRectNotifier.value;
+
     HapticFeedback.selectionClick();
     widget.onFrameChanging?.call();
   }
@@ -175,14 +292,17 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
     if (_activeHandle == LensHandlePosition.none) return;
 
     final totalDelta = details.globalPosition - _dragStartGlobal;
-    final newRect = LensSelectionHelper.resizeFrame(
-      currentRect: _dragStartRect,
+    final newRect = LensSelectionHelper.resizeImageFrame(
+      currentImageRect: _dragStartImageRect,
       handle: _activeHandle,
-      delta: totalDelta,
-      boundarySize: _viewportSize,
+      deltaScreen: totalDelta,
+      transformMatrix: _transformationController.value,
+      viewportSize: _viewportSize,
+      originalImageSize: widget.imageSize,
+      minFrameSizeDp: LensSelectionHelper.minFrameSize,
     );
 
-    _frameRectNotifier.value = newRect;
+    _imageCropRectNotifier.value = newRect;
     _scheduleSelectionCompute();
   }
 
@@ -194,7 +314,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
 
   Widget _buildHandle({
     required LensHandlePosition position,
-    required Rect frameRect,
+    required Rect screenFrameRect,
     required String semanticsLabel,
   }) {
     const touchSize = LensSelectionHelper.minTouchTarget; // 48dp
@@ -205,44 +325,44 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
 
     switch (position) {
       case LensHandlePosition.topLeft:
-        left = frameRect.left - touchSize / 2;
-        top = frameRect.top - touchSize / 2;
+        left = screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.top - touchSize / 2;
         break;
       case LensHandlePosition.topRight:
-        left = frameRect.right - touchSize / 2;
-        top = frameRect.top - touchSize / 2;
+        left = screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.top - touchSize / 2;
         break;
       case LensHandlePosition.bottomLeft:
-        left = frameRect.left - touchSize / 2;
-        top = frameRect.bottom - touchSize / 2;
+        left = screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.bottom - touchSize / 2;
         break;
       case LensHandlePosition.bottomRight:
-        left = frameRect.right - touchSize / 2;
-        top = frameRect.bottom - touchSize / 2;
+        left = screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.bottom - touchSize / 2;
         break;
       case LensHandlePosition.top:
-        left = frameRect.left + touchSize / 2;
-        top = frameRect.top - touchSize / 2;
-        width = max(0.0, frameRect.width - touchSize);
+        left = screenFrameRect.left + touchSize / 2;
+        top = screenFrameRect.top - touchSize / 2;
+        width = max(0.0, screenFrameRect.width - touchSize);
         height = touchSize;
         break;
       case LensHandlePosition.bottom:
-        left = frameRect.left + touchSize / 2;
-        top = frameRect.bottom - touchSize / 2;
-        width = max(0.0, frameRect.width - touchSize);
+        left = screenFrameRect.left + touchSize / 2;
+        top = screenFrameRect.bottom - touchSize / 2;
+        width = max(0.0, screenFrameRect.width - touchSize);
         height = touchSize;
         break;
       case LensHandlePosition.left:
-        left = frameRect.left - touchSize / 2;
-        top = frameRect.top + touchSize / 2;
+        left = screenFrameRect.left - touchSize / 2;
+        top = screenFrameRect.top + touchSize / 2;
         width = touchSize;
-        height = max(0.0, frameRect.height - touchSize);
+        height = max(0.0, screenFrameRect.height - touchSize);
         break;
       case LensHandlePosition.right:
-        left = frameRect.right - touchSize / 2;
-        top = frameRect.top + touchSize / 2;
+        left = screenFrameRect.right - touchSize / 2;
+        top = screenFrameRect.top + touchSize / 2;
         width = touchSize;
-        height = max(0.0, frameRect.height - touchSize);
+        height = max(0.0, screenFrameRect.height - touchSize);
         break;
       case LensHandlePosition.none:
         return const SizedBox.shrink();
@@ -281,160 +401,214 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
           _viewportSize = containerSize;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            if (_frameRectNotifier.value == Rect.zero) {
-              _frameRectNotifier.value = LensSelectionHelper.calculateInitialFrame(
-                viewportSize: _viewportSize,
-                originalImageSize: widget.imageSize,
-              );
-              _computeAndNotifySelection();
+            if (_imageCropRectNotifier.value == Rect.zero &&
+                _clusters.isNotEmpty) {
+              _imageCropRectNotifier.value = _clusters.first.boundingBox;
             }
+            _computeAndNotifySelection();
           });
         }
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            // 1. LAPISAN BAWAH: InteractiveViewer untuk zoom, pan, dan double tap
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onDoubleTapDown: _handleDoubleTap,
-              child: InteractiveViewer(
-                transformationController: _transformationController,
-                minScale: 1.0,
-                maxScale: 6.0,
-                boundaryMargin: EdgeInsets.zero,
-                clipBehavior: Clip.hardEdge,
-                child: Center(
-                  child: Image.memory(
-                    widget.imageBytes,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    width: constraints.maxWidth,
-                    height: constraints.maxHeight,
-                  ),
+            // 1. InteractiveViewer: zoom cubit & seret satu jari di dalam/luar bingkai
+            InteractiveViewer(
+              transformationController: _transformationController,
+              minScale: 1.0,
+              maxScale: 6.0,
+              boundaryMargin: EdgeInsets.zero,
+              clipBehavior: Clip.hardEdge,
+              child: Center(
+                child: Image.memory(
+                  widget.imageBytes,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
                 ),
               ),
             ),
 
-            // 2. LAPISAN BINGKAI PEMILIH AREA GOOGLE LENS
-            ValueListenableBuilder<Rect>(
-              valueListenable: _frameRectNotifier,
-              builder: (context, frameRect, _) {
-                if (frameRect == Rect.zero) return const SizedBox.shrink();
+            // 2. Lapisan tap detector transparan untuk deteksi perpindahan kelompok teks
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTapUp: _handleTapUp,
+              ),
+            ),
+
+            // 3. Bingkai pemilih area Google Lens
+            AnimatedBuilder(
+              animation: Listenable.merge([
+                _transformationController,
+                _imageCropRectNotifier,
+              ]),
+              builder: (context, _) {
+                final imageCropRect = _imageCropRectNotifier.value;
+                if (imageCropRect == Rect.zero ||
+                    imageCropRect.width <= 0 ||
+                    imageCropRect.height <= 0 ||
+                    _viewportSize.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final screenFrameRect =
+                    LensSelectionHelper.imageToScreenCoordinates(
+                  imageRect: imageCropRect,
+                  transformMatrix: _transformationController.value,
+                  viewportSize: _viewportSize,
+                  originalImageSize: widget.imageSize,
+                );
+
+                if (screenFrameRect.width <= 0 || screenFrameRect.height <= 0) {
+                  return const SizedBox.shrink();
+                }
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    // A. CustomPainter: Scrim gelap di luar bingkai & 4 sudut putih melengkung
+                    // Scrim gelap & 4 sudut rounded L-bracket
                     IgnorePointer(
                       child: CustomPaint(
                         size: Size.infinite,
                         painter: _GoogleLensFramePainter(
-                          frameRect: frameRect,
+                          frameRect: screenFrameRect,
                           isHighContrast: widget.isHighContrast,
                         ),
                       ),
                     ),
 
-                    // B. Titik pegangan 4 sudut (touch target 48dp)
+                    // Semantics label untuk bingkai utama
+                    Positioned(
+                      left: screenFrameRect.left,
+                      top: screenFrameRect.top,
+                      width: screenFrameRect.width,
+                      height: screenFrameRect.height,
+                      child: Semantics(
+                        label: strings.isIndonesian
+                            ? 'Bingkai seleksi teks Google Lens'
+                            : 'Google Lens text selection frame',
+                        container: true,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+
+                    // 4 titik pegangan sudut
                     _buildHandle(
                       position: LensHandlePosition.topLeft,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sudut kiri atas',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sudut kiri atas'
+                          : 'Top left corner handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.topRight,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sudut kanan atas',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sudut kanan atas'
+                          : 'Top right corner handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.bottomLeft,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sudut kiri bawah',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sudut kiri bawah'
+                          : 'Bottom left corner handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.bottomRight,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sudut kanan bawah',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sudut kanan bawah'
+                          : 'Bottom right corner handle',
                     ),
 
-                    // C. Titik pegangan 4 sisi (touch target 48dp)
+                    // 4 titik pegangan sisi
                     _buildHandle(
                       position: LensHandlePosition.top,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sisi atas',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sisi atas'
+                          : 'Top edge handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.bottom,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sisi bawah',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sisi bawah'
+                          : 'Bottom edge handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.left,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sisi kiri',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sisi kiri'
+                          : 'Left edge handle',
                     ),
                     _buildHandle(
                       position: LensHandlePosition.right,
-                      frameRect: frameRect,
-                      semanticsLabel: 'Pegangan sisi kanan',
+                      screenFrameRect: screenFrameRect,
+                      semanticsLabel: strings.isIndonesian
+                          ? 'Pegangan sisi kanan'
+                          : 'Right edge handle',
                     ),
 
-                    // D. Tombol "Seluruh gambar" (Full image)
+                    // Tombol "Seluruh gambar" (Full image)
                     Positioned(
-                      top: 14,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Semantics(
-                          label: 'Kembalikan zoom ke satu kali dan pilih seluruh gambar',
-                          button: true,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
+                      top: max(8.0, screenFrameRect.top - 46),
+                      left: screenFrameRect.left,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _resetZoomAndFitImage,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.75),
                               borderRadius: BorderRadius.circular(20),
-                              onTap: _resetZoomAndFitImage,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.75),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.7),
-                                    width: 1.2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.4),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.crop_free_rounded,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      strings.isIndonesian ? 'Seluruh gambar' : 'Full image',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              border: Border.all(
+                                color: widget.isHighContrast
+                                    ? const Color(0xFFFFE500)
+                                    : Colors.white70,
+                                width: 1.2,
                               ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black45,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.fullscreen_rounded,
+                                  color: widget.isHighContrast
+                                      ? const Color(0xFFFFE500)
+                                      : Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  strings.isIndonesian
+                                      ? 'Seluruh gambar'
+                                      : 'Full image',
+                                  style: TextStyle(
+                                    color: widget.isHighContrast
+                                        ? const Color(0xFFFFE500)
+                                        : Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -445,8 +619,8 @@ class _OcrImageOverlayState extends State<OcrImageOverlay> {
               },
             ),
 
-            // 3. LAPISAN DEBUG OCR (Hanya jika kDebugOcrOverlay dan kDebugMode aktif)
-            if (kDebugMode && kDebugOcrOverlay)
+            // 4. Bilah Debug OCR
+            if (kDebugOcrOverlay)
               Positioned(
                 bottom: 12,
                 right: 12,
@@ -492,7 +666,6 @@ class _GoogleLensFramePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (frameRect.width <= 0 || frameRect.height <= 0) return;
 
-    // 1. Lapisan scrim gelap di luar bingkai (cut-out area dalam bingkai)
     final scrimPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.55)
       ..style = PaintingStyle.fill;
@@ -509,7 +682,6 @@ class _GoogleLensFramePainter extends CustomPainter {
     );
     canvas.drawPath(cutOutPath, scrimPaint);
 
-    // 2. Empat sudut melengkung putih solid ala Google Lens (Rounded L-brackets)
     final cornerPaint = Paint()
       ..color = isHighContrast ? const Color(0xFFFFE500) : Colors.white
       ..style = PaintingStyle.stroke
@@ -517,10 +689,10 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final double cornerLength = min(28.0, min(frameRect.width, frameRect.height) * 0.35);
+    final double cornerLength =
+        min(28.0, min(frameRect.width, frameRect.height) * 0.35);
     final double radius = min(16.0, cornerLength * 0.65);
 
-    // Pojok Kiri Atas
     final tlPath = Path()
       ..moveTo(frameRect.left, frameRect.top + cornerLength)
       ..lineTo(frameRect.left, frameRect.top + radius)
@@ -532,7 +704,6 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.left + cornerLength, frameRect.top);
     canvas.drawPath(tlPath, cornerPaint);
 
-    // Pojok Kanan Atas
     final trPath = Path()
       ..moveTo(frameRect.right - cornerLength, frameRect.top)
       ..lineTo(frameRect.right - radius, frameRect.top)
@@ -544,10 +715,9 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.right, frameRect.top + cornerLength);
     canvas.drawPath(trPath, cornerPaint);
 
-    // Pojok Kanan Bawah
     final brPath = Path()
       ..moveTo(frameRect.right, frameRect.bottom - cornerLength)
-      ..lineTo(frameRect.right, frameRect.bottom - radius)
+      ..lineTo(frameRect.right - radius, frameRect.bottom)
       ..arcToPoint(
         Offset(frameRect.right - radius, frameRect.bottom),
         radius: Radius.circular(radius),
@@ -556,45 +726,40 @@ class _GoogleLensFramePainter extends CustomPainter {
       ..lineTo(frameRect.right - cornerLength, frameRect.bottom);
     canvas.drawPath(brPath, cornerPaint);
 
-    // Pojok Kiri Bawah
     final blPath = Path()
       ..moveTo(frameRect.left + cornerLength, frameRect.bottom)
       ..lineTo(frameRect.left + radius, frameRect.bottom)
       ..arcToPoint(
-        Offset(frameRect.left, frameRect.bottom - radius),
+        Offset(frameRect.left + radius, frameRect.bottom),
         radius: Radius.circular(radius),
         clockwise: true,
       )
       ..lineTo(frameRect.left, frameRect.bottom - cornerLength);
     canvas.drawPath(blPath, cornerPaint);
 
-    // 3. Garis penanda lembut pada 4 sisi tengah (subtle edge handles)
     final edgePaint = Paint()
-      ..color = (isHighContrast ? const Color(0xFFFFE500) : Colors.white).withValues(alpha: 0.65)
+      ..color = (isHighContrast ? const Color(0xFFFFE500) : Colors.white)
+          .withValues(alpha: 0.65)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
 
     const edgeMarkerLen = 14.0;
-    // Sisi Atas
     canvas.drawLine(
       Offset(frameRect.center.dx - edgeMarkerLen, frameRect.top),
       Offset(frameRect.center.dx + edgeMarkerLen, frameRect.top),
       edgePaint,
     );
-    // Sisi Bawah
     canvas.drawLine(
       Offset(frameRect.center.dx - edgeMarkerLen, frameRect.bottom),
       Offset(frameRect.center.dx + edgeMarkerLen, frameRect.bottom),
       edgePaint,
     );
-    // Sisi Kiri
     canvas.drawLine(
       Offset(frameRect.left, frameRect.center.dy - edgeMarkerLen),
       Offset(frameRect.left, frameRect.center.dy + edgeMarkerLen),
       edgePaint,
     );
-    // Sisi Kanan
     canvas.drawLine(
       Offset(frameRect.right, frameRect.center.dy - edgeMarkerLen),
       Offset(frameRect.right, frameRect.center.dy + edgeMarkerLen),

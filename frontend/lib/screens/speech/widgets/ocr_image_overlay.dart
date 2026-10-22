@@ -256,7 +256,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     _scheduleSelectionCompute();
   }
 
-  void _handleTapUp(TapUpDetails details) {
+  void _handleTapAtScreenPoint(Offset screenPoint) {
     if (_viewportSize.isEmpty ||
         widget.imageSize.width <= 0 ||
         widget.imageSize.height <= 0) {
@@ -264,30 +264,20 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     }
 
     final imagePoint = LensSelectionHelper.screenToImagePoint(
-      screenPoint: details.localPosition,
+      screenPoint: screenPoint,
       transformMatrix: _transformationController.value,
       viewportSize: _viewportSize,
       originalImageSize: widget.imageSize,
     );
 
-    // 1. Cek apakah ketukan mengenai salah satu kelompok teks
-    final targetCluster = TextClusterHelper.findClusterAtPoint(
+    final decision = TextClusterHelper.evaluateTapDecision(
       imagePoint: imagePoint,
       clusters: _clusters,
+      activeFrameRect: _imageCropRectNotifier.value,
     );
 
-    final currentCropRect = _imageCropRectNotifier.value;
-
-    // Jika mengenai kelompok teks dan posisinya berbeda dari bingkai aktif,
-    // langsung pindahkan bingkai ke kelompok tersebut (berfungsi juga saat Full image)
-    if (targetCluster != null && targetCluster.boundingBox != currentCropRect) {
-      _animateToCluster(targetCluster.boundingBox);
-      return;
-    }
-
-    // 2. Ketukan di dalam bingkai aktif saat ini (di luar teks lain) diabaikan
-    if (currentCropRect != Rect.zero && currentCropRect.contains(imagePoint)) {
-      return;
+    if (decision.shouldAnimate && decision.targetRect != null) {
+      _animateToCluster(decision.targetRect!);
     }
   }
 
@@ -434,11 +424,12 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
               ),
             ),
 
-            // 2. Lapisan tap detector transparan untuk deteksi perpindahan kelompok teks
+            // 2. Lapisan tap detector transparan untuk deteksi perpindahan kelompok teks di luar bingkai
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
-                onTapUp: _handleTapUp,
+                onTapUp: (details) =>
+                    _handleTapAtScreenPoint(details.localPosition),
               ),
             ),
 
@@ -482,7 +473,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                       ),
                     ),
 
-                    // Lapisan gestur seret satu jari di dalam bingkai
+                    // Lapisan gestur seret satu jari di dalam bingkai + tap seleksi kelompok
                     Positioned(
                       left: screenFrameRect.left,
                       top: screenFrameRect.top,
@@ -495,6 +486,13 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                         container: true,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
+                          onTapUp: (details) {
+                            final screenPoint = Offset(
+                              screenFrameRect.left + details.localPosition.dx,
+                              screenFrameRect.top + details.localPosition.dy,
+                            );
+                            _handleTapAtScreenPoint(screenPoint);
+                          },
                           onPanStart: (details) {
                             setState(() {
                               _isInteractivePanEnabled = false;
@@ -596,15 +594,28 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                           : 'Right edge handle',
                     ),
 
-                    // Tombol "Seluruh gambar" (Full image) di posisi aman yang tidak menutupi bingkai atau teks
+                    // Tombol "Seluruh gambar" (Full image) di posisi aman yang tidak menutupi bingkai atau teks.
+                    // Jika bingkai sudah berstatus Full image 1x, sembunyikan tombol agar tidak menutupi konten atas.
                     Builder(
                       builder: (context) {
+                        final bool isFullImage = (imageCropRect.width >=
+                                    widget.imageSize.width - 4.0) &&
+                                (imageCropRect.height >=
+                                    widget.imageSize.height - 4.0) &&
+                                _transformationController.value.isIdentity();
+                        if (isFullImage) {
+                          return const SizedBox.shrink();
+                        }
+
                         final bool hasSpaceBelow = (screenFrameRect.bottom +
                                 60) <
                             (_viewportSize.height - 110);
+                        final bool hasSpaceAbove = screenFrameRect.top > 60;
                         final double buttonTop = hasSpaceBelow
                             ? screenFrameRect.bottom + 12
-                            : max(16.0, screenFrameRect.top - 54);
+                            : (hasSpaceAbove
+                                ? screenFrameRect.top - 54
+                                : max(16.0, _viewportSize.height - 100));
                         final double buttonLeft =
                             (screenFrameRect.center.dx - 70).clamp(
                           16.0,

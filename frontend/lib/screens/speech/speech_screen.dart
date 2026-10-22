@@ -10,6 +10,7 @@ import '../../core/app_strings.dart';
 import '../../controllers/lens_selection_controller.dart';
 import '../../models/ocr_element.dart';
 import '../../models/text_formatter_models.dart';
+import '../../providers/language_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/lens_selection_helper.dart';
 import '../../services/tts_service.dart';
@@ -50,7 +51,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<int> _currentCharIndexNotifier = ValueNotifier<int>(0);
-  String _selectedLanguage = 'English'; // 'Indonesia' or 'English'
+  String _selectedLanguage = 'Indonesia'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
   late final LensSelectionController _lensSelectionController;
@@ -174,6 +175,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _currentFramedText = widget.text;
     _currentFramedFormattedResult = widget.ocrResult?.formattedResult;
     _hasTextInFrame = widget.text.trim().isNotEmpty;
+
+    final langProv = Provider.of<LanguageProvider>(context, listen: false);
+    _selectedLanguage = langProv.isEnglish ? 'English' : 'Indonesia';
 
     _ttsService.onProgress = (double progress, String word, [int? charIndex]) {
       if (!mounted) return;

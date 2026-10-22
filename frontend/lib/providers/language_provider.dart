@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LanguageProvider extends ChangeNotifier {
-  String _language = 'English'; // 'Indonesian' or 'English'
+  String _language = 'Indonesian'; // 'Indonesian' or 'English'
 
   String get language => _language;
   bool get isIndonesian => _language == 'Indonesian';

@@ -51,6 +51,7 @@ frontend/.widget_preview/
 **/ios/Flutter/.last_build_id
 app.*.symbols
 app.*.map.json
+docs/
 
 # ==========================================
 # Backend (Laravel) Ignored
@@ -72,3 +73,4 @@ backend/yarn-error.log
 backend/.fleet
 backend/.idea
 backend/.vscode
+

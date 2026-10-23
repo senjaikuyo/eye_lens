@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/core/app_strings.dart';
 import 'package:eye_lens/screens/scan/widgets/camera_viewfinder.dart';
 import 'package:eye_lens/screens/scan/widgets/scan_bottom_bar.dart';
-import 'package:eye_lens/services/camera_lifecycle_manager.dart';
 import 'package:eye_lens/services/camera_service.dart';
 
 void main() {

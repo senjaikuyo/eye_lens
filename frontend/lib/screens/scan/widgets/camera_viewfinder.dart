@@ -98,34 +98,33 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
               ),
             )
           else
-            Image.asset(
-              'assets/images/UI Scanning Teks.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-            ),
+            const ColoredBox(color: Colors.black),
 
-          // 2. Subtle Vignette Gradient
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.45),
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.6),
-                  ],
-                  stops: const [0.0, 0.2, 0.7, 1.0],
+          // 2. Subtle Vignette Gradient — hanya saat kamera siap
+          if (widget.cameraService.isInitialized &&
+              widget.cameraService.controller != null)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.45),
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.6),
+                    ],
+                    stops: const [0.0, 0.2, 0.7, 1.0],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // 3. Central Viewfinder Frame - 4 Sudut L Google Lens identik dengan SpeechScreen
-          if (widget.errorMessage == null)
+          // 3. Central Viewfinder Frame - hanya saat kamera siap dan tanpa error
+          if (widget.cameraService.isInitialized &&
+              widget.cameraService.controller != null &&
+              widget.errorMessage == null)
             Center(
               child: SizedBox(
                 width: widget.size.width * 0.78,

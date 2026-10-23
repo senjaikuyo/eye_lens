@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
 import '../home/home_screen.dart';
@@ -17,7 +18,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   String? _emailError;
   String? _passwordError;
@@ -34,7 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    // Email validation
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
       setState(() {
@@ -47,7 +49,6 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
 
-    // Password validation
     if (password.isEmpty) {
       setState(() {
         _passwordError = strings.passwordRequired;
@@ -67,11 +68,36 @@ class _LoginScreenState extends State<LoginScreen> {
     return isValid;
   }
 
-  void _onLoginPressed(AppStrings strings) {
-    if (_validate(strings)) {
+  Future<void> _onLoginPressed(AppStrings strings) async {
+    if (!_validate(strings) || _isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -83,7 +109,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final strings = AppStrings.of(context);
 
     return Scaffold(
@@ -95,8 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 50),
-
-              // Logo centered with dark mode adaptation
               Center(
                 child: Image.asset(
                   'assets/images/logo.png',
@@ -105,10 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-
               const SizedBox(height: 48),
-
-              // Email Input with visual validation
               CustomAuthField(
                 label: strings.email,
                 controller: _emailController,
@@ -122,10 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                 },
               ),
-
               const SizedBox(height: 18),
-
-              // Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.password,
                 controller: _passwordController,
@@ -147,10 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              // Link "haven`t register yet?"
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
@@ -169,51 +183,48 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              // Login Button (Outlined pill, centered)
               Center(
                 child: Material(
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: () => _onLoginPressed(strings),
+                    onTap: _isLoading ? null : () => _onLoginPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 130,
-                        minHeight: 52,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 36,
-                        vertical: 12,
-                      ),
+                      width: 140,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : AppColors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isDark ? Colors.white : AppColors.black,
                           width: 1.2,
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        strings.login,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Center(
+                        child: _isLoading
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? Colors.white : AppColors.black,
+                                ),
+                              )
+                            : Text(
+                                strings.login,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : AppColors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ),
                 ),
               ),
-
-              SizedBox(height: bottomPadding + 24),
+              const SizedBox(height: 40),
             ],
           ),
         ),

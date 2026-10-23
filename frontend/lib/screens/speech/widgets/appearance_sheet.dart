@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
-import '../../../providers/theme_provider.dart';
+import '../../../providers/display_preferences_provider.dart';
 import 'appearance_controls.dart';
 
 class AppearanceBottomSheet {
   static Future<void> show(
     BuildContext context, {
-    required ThemeProvider themeProvider,
+    required DisplayPreferencesProvider themeProvider,
     required AppStrings strings,
     required double fontSize,
     required ValueChanged<double> onFontSizeChanged,

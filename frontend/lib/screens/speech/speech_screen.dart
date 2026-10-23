@@ -12,7 +12,7 @@ import '../../models/ocr_element.dart';
 import '../../models/text_formatter_models.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/theme_provider.dart';
+import '../../providers/display_preferences_provider.dart';
 import '../../services/auto_play_helper.dart';
 import '../../services/lens_selection_helper.dart';
 import '../../services/tts_service.dart';
@@ -182,7 +182,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void initState() {
     super.initState();
     _lensSelectionController = LensSelectionController();
-    _fontSize = Provider.of<ThemeProvider>(context, listen: false).fontSize;
+    _fontSize = Provider.of<DisplayPreferencesProvider>(context, listen: false).fontSize;
     _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
@@ -303,7 +303,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
     final strings = AppStrings.of(context);
     final topPadding = MediaQuery.of(context).padding.top;

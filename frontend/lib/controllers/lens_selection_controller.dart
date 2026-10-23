@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/lens_selection_helper.dart';
 
-/// Controller untuk menyimpan state bingkai seleksi ala Google Lens,
+/// Controller untuk menyimpan state bingkai seleksi,
 /// matriks zoom/pan, dan hasil kalkulasi seleksi teks agar bertahan
 /// saat berpindah antara mode citra dan mode teks (SpeechScreen).
 class LensSelectionController extends ChangeNotifier {

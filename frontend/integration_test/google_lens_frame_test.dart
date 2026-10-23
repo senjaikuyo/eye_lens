@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:eye_lens/models/ocr_element.dart';
 import 'package:eye_lens/providers/history_provider.dart';
 import 'package:eye_lens/providers/language_provider.dart';
-import 'package:eye_lens/providers/theme_provider.dart';
+import 'package:eye_lens/providers/display_preferences_provider.dart';
 import 'package:eye_lens/screens/scan/widgets/no_text_alert_banner.dart';
 import 'package:eye_lens/screens/speech/speech_screen.dart';
 import 'package:eye_lens/screens/speech/widgets/highlighted_text_view.dart';
@@ -40,7 +40,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
             ChangeNotifierProvider(create: (_) => languageProvider),
             ChangeNotifierProvider(create: (_) => HistoryProvider()),
           ],
@@ -80,7 +80,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
             ChangeNotifierProvider(create: (_) => languageProvider),
             ChangeNotifierProvider(create: (_) => HistoryProvider()),
           ],
@@ -113,7 +113,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
             ChangeNotifierProvider(create: (_) => LanguageProvider()),
             ChangeNotifierProvider(create: (_) => HistoryProvider()),
           ],
@@ -150,7 +150,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
             ChangeNotifierProvider(create: (_) => languageProvider),
             ChangeNotifierProvider(create: (_) => HistoryProvider()),
           ],

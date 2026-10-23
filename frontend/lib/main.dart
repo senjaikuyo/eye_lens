@@ -6,7 +6,7 @@ import 'core/app_theme.dart';
 import 'providers/history_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/settings_provider.dart';
-import 'providers/theme_provider.dart';
+import 'providers/display_preferences_provider.dart';
 import 'screens/splash/splash_screen.dart';
 
 /// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
@@ -23,7 +23,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
@@ -38,7 +38,7 @@ class EyeLensApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final languageProvider = context.watch<LanguageProvider>();
 
     return MaterialApp(

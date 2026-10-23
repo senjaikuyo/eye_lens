@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ThemeProvider extends ChangeNotifier {
+class DisplayPreferencesProvider extends ChangeNotifier {
   // Default values requested by user:
   // - High contrast OFF by default
   // - Light mode by default
@@ -21,7 +21,7 @@ class ThemeProvider extends ChangeNotifier {
 
   Color _highlightColor = const Color(0xFFE58E1B);
 
-  ThemeProvider() {
+  DisplayPreferencesProvider() {
     _loadPreferences();
   }
 

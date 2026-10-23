@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eye_lens/main.dart';
 import 'package:eye_lens/providers/language_provider.dart';
-import 'package:eye_lens/providers/theme_provider.dart';
+import 'package:eye_lens/providers/display_preferences_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
           ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ],
         child: const EyeLensApp(),

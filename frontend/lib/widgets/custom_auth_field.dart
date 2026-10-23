@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_colors.dart';
-import '../providers/theme_provider.dart';
+import '../providers/display_preferences_provider.dart';
 
 class CustomAuthField extends StatelessWidget {
   final String label;
@@ -26,7 +26,7 @@ class CustomAuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
     final isHighContrast = themeProvider.isHighContrast;
     final hasError = errorText != null && errorText!.isNotEmpty;

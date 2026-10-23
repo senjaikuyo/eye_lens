@@ -11,7 +11,7 @@ import '../../core/app_strings.dart';
 import '../../main.dart';
 import '../../models/ocr_element.dart';
 import '../../providers/history_provider.dart';
-import '../../providers/theme_provider.dart';
+import '../../providers/display_preferences_provider.dart';
 import '../../services/camera_lifecycle_manager.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
@@ -432,7 +432,7 @@ class _ScanningScreenState extends State<ScanningScreen>
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final strings = AppStrings.of(context);
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
 
     final isCameraStarting =

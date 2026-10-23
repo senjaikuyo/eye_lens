@@ -5,7 +5,7 @@ import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/theme_provider.dart';
+import '../../providers/display_preferences_provider.dart';
 import 'change_password_screen.dart';
 import 'faq_screen.dart';
 import 'widgets/language_selector_tile.dart';
@@ -25,7 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
     final isHighContrast = themeProvider.isHighContrast;
     final strings = AppStrings.of(context);

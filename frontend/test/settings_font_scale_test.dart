@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eye_lens/providers/language_provider.dart';
 import 'package:eye_lens/providers/settings_provider.dart';
-import 'package:eye_lens/providers/theme_provider.dart';
+import 'package:eye_lens/providers/display_preferences_provider.dart';
 import 'package:eye_lens/screens/settings/settings_screen.dart';
 
 Widget createTestSettingsApp({required double textScaleFactor}) {
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
       ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ChangeNotifierProvider(create: (_) => SettingsProvider()),
     ],

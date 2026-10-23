@@ -5,7 +5,7 @@ import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
 import '../../models/riwayat_model.dart';
 import '../../providers/history_provider.dart';
-import '../../providers/theme_provider.dart';
+import '../../providers/display_preferences_provider.dart';
 import '../speech/speech_screen.dart';
 import 'widgets/history_delete_dialog.dart';
 import 'widgets/history_empty_state.dart';
@@ -57,7 +57,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<DisplayPreferencesProvider>();
     final historyProvider = context.watch<HistoryProvider>();
     final isDark = themeProvider.isDark(context);
     final isHighContrast = themeProvider.isHighContrast;

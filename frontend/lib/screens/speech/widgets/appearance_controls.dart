@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
-import '../../../providers/theme_provider.dart';
+import '../../../providers/display_preferences_provider.dart';
 
 class AppearanceBoxContainer extends StatelessWidget {
   final Widget child;
@@ -53,10 +53,10 @@ class CursorColorTile extends StatelessWidget {
   });
 
   String _getColorName(Color color) {
-    if (color == ThemeProvider.highlightColors[0]) return 'Orange (Default)';
-    if (color == ThemeProvider.highlightColors[1]) return 'Blue';
-    if (color == ThemeProvider.highlightColors[2]) return 'Red';
-    if (color == ThemeProvider.highlightColors[3]) return 'Green';
+    if (color == DisplayPreferencesProvider.highlightColors[0]) return 'Orange (Default)';
+    if (color == DisplayPreferencesProvider.highlightColors[1]) return 'Blue';
+    if (color == DisplayPreferencesProvider.highlightColors[2]) return 'Red';
+    if (color == DisplayPreferencesProvider.highlightColors[3]) return 'Green';
     return 'Purple';
   }
 
@@ -91,7 +91,7 @@ class CursorColorTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             itemBuilder: (context) =>
-                ThemeProvider.highlightColors.map((color) {
+                DisplayPreferencesProvider.highlightColors.map((color) {
                   return PopupMenuItem(
                     value: color,
                     child: Row(

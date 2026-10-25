@@ -57,7 +57,7 @@ eye_lens/
    ```bash
    flutter build apk --release --split-per-abi
    ```
-   *File installer akan tersedia di: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.*
+   *File installer tersedia di: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.*
 
 ---
 
@@ -81,9 +81,8 @@ eye_lens/
 
 4. Build aset frontend & panel admin:
    ```bash
-   npm run build
+   npm run build / `npm run dev`
    ```
-   *(Gunakan `npm run dev` jika sedang melakukan pengembangan antarmuka Blade).*
 
 5. Buat Application Encryption Key:
    ```bash
@@ -120,17 +119,8 @@ eye_lens/
 
 ---
 
-### 4. Setup Backend dengan Docker Compose (Alternatif Portabel)
+### 4. Setup Docker
 
-Jika tidak ingin memasang PHP 8.3, Composer, atau basis data lokal di mesin host, backend dapat dijalankan secara terisolasi via Docker Compose.
-
-#### Layanan yang Disediakan
-- **app (`eyelens`)**: PHP 8.3 FPM Alpine (Backend Laravel 11 & Sanctum API)
-- **webserver (`nginx:alpine`)**: Port host `8000:80`
-- **db (`mariadb:10.11`)**: Port host `3307:3306` (agar tidak konflik dengan MariaDB lokal host)
-- **phpmyadmin (`phpmyadmin/phpmyadmin`)**: Port host `8080:80`
-
-#### Langkah Menjalankan
 1. Pastikan Docker dan Docker Compose telah terpasang dan service Docker berjalan.
 2. Dari root proyek (`eye_lens/`), jalankan:
    ```bash

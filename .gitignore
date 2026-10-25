@@ -25,6 +25,7 @@ migrate_working_dir/
 *.gif
 *.jpeg
 devtools_options.yaml
+docs/
 
 # ==========================================
 # Frontend (Flutter) Ignored
@@ -51,7 +52,6 @@ frontend/.widget_preview/
 **/ios/Flutter/.last_build_id
 app.*.symbols
 app.*.map.json
-docs/
 
 # ==========================================
 # Backend (Laravel) Ignored

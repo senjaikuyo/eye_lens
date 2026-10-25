@@ -6,11 +6,8 @@
 
 ##  Fitur Utama
 - **Digital Magnifier (1.0x – 10.0x)**: Perbesaran kamera fleksibel via slider kanan atau swipe 1 jari vertikal.
-- **On-Device OCR (<500 ms)**: Ekstraksi teks aksara Latin langsung di memori RAM via Google ML Kit tanpa internet.
-- **Ephemeral Memory (Privasi Terjaga)**: Citra kamera hanya ditahan di RAM untuk ekstraksi teks dan langsung dimusnahkan (`0 byte` file foto tersimpan di penyimpanan gawai).
-- **Text-to-Speech (TTS) & Auto-Scroll**: Pembacaan suara otomatis dengan penyorotan kata aktif (*synchronized word highlighting*) yang otomatis bergulir mengikuti alur bacaan.
-- **Penyimpanan Lokal (SQLite)**: Riwayat bacaan tersimpan di basis data lokal HP dengan batas maksimal 50 data terbaru (`trg_limit_riwayat_50`).
-- **Cloud Sync (Laravel Backend)**: Penyelarasan riwayat dan preferensi pengguna dua arah saat internet aktif, dengan enkripsi **AES-256-CBC** untuk isi teks di server.
+- **On-Device OCR**: Ekstraksi teks aksara Latin langsung di memori RAM via Google ML Kit tanpa internet.
+- **Text-to-Speech (TTS) & Auto-Scroll**: Pembacaan suara otomatis dengan penyorotan kata aktif yang otomatis bergulir mengikuti alur bacaan.
 
 ---
 
@@ -29,9 +26,9 @@ eye_lens/
 - **Flutter SDK**: v3.24+ / 3.35+
 - **PHP**: v8.2+ atau v8.3+
 - **Composer**: Dependency manager PHP
-- **Node.js & npm**: v18+ (untuk build aset Vite/CSS Admin)
+- **Node.js & npm**: v18+
 - **MySQL / MariaDB Server**: Basis data server (port 3306)
-- **Android SDK / Device**: HP Android fisik (mode USB Debugging aktif) atau Android Emulator
+- **Android SDK / Device**: HP Android fisik atau Android Emulator
 
 ---
 
@@ -115,11 +112,6 @@ eye_lens/
    ```bash
    php artisan migrate --seed
    ```
-   *Akun administrator bawaan untuk panel web:*
-   - **URL Panel**: `http://localhost:8000/`
-   - **Email**: `admin@gmail.com`
-   - **Password**: `admin123`
-
 9. Jalankan server lokal:
    ```bash
    php artisan serve --host=0.0.0.0 --port=8000
@@ -172,9 +164,6 @@ docker-compose down
      ```
 
 ---
-
-##  Kebijakan Privasi & Keamanan
--
 
 ---
 

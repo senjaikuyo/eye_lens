@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
@@ -150,7 +151,12 @@ class OcrService {
     try {
       final imageSize = await ImageDimensionHelper.getImageSize(bytes);
 
-      final tempDir = Directory.systemTemp;
+      Directory tempDir;
+      try {
+        tempDir = await getTemporaryDirectory();
+      } catch (_) {
+        tempDir = Directory.systemTemp;
+      }
       final tempPath =
           '${tempDir.path}/ocr_ephemeral_${DateTime.now().microsecondsSinceEpoch}.jpg';
       tempFile = File(tempPath);

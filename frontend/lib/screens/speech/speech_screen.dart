@@ -7,13 +7,13 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
-import '../../controllers/lens_selection_controller.dart';
 import '../../models/ocr_element.dart';
 import '../../models/text_formatter_models.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/display_preferences_provider.dart';
 import '../../services/auto_play_helper.dart';
+import '../../services/lens_selection_controller.dart';
 import '../../services/lens_selection_helper.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/feedback_dialog.dart';

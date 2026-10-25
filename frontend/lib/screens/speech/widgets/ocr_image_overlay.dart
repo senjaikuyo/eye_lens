@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../controllers/lens_selection_controller.dart';
 import '../../../core/app_strings.dart';
 import '../../../models/ocr_element.dart';
 import '../../../models/text_formatter_models.dart';
 import '../../../services/auto_play_helper.dart';
+import '../../../services/lens_selection_controller.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../services/ocr_noise_filter.dart';
 import '../../../services/text_cluster_helper.dart';

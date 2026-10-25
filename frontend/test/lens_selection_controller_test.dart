@@ -1,4 +1,4 @@
-import 'package:eye_lens/controllers/lens_selection_controller.dart';
+import 'package:eye_lens/services/lens_selection_controller.dart';
 import 'package:eye_lens/services/lens_selection_helper.dart';
 import 'package:eye_lens/services/ocr_text_validator.dart';
 import 'package:flutter/material.dart';

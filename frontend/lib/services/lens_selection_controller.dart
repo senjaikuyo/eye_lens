@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/lens_selection_helper.dart';
+import 'lens_selection_helper.dart';
 
 /// Controller untuk menyimpan state bingkai seleksi,
 /// matriks zoom/pan, dan hasil kalkulasi seleksi teks agar bertahan

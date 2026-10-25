@@ -46,48 +46,40 @@
 
 
             {{-- Form --}}
-            <form id="loginForm">
+            <form id="loginForm" method="POST" action="{{ route('admin.login.submit') }}">
+                @csrf
 
                 {{-- Email --}}
                 <div class="input-group">
-
-                    <i data-lucide="user-round" class="input-icon">
-                    </i>
-
-                    <input type="email" id="email" placeholder="Email" required>
-
+                    <i data-lucide="user-round" class="input-icon"></i>
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="Email" required autofocus>
                 </div>
 
 
                 {{-- Password --}}
                 <div class="input-group">
-
-                    <i data-lucide="lock-keyhole" class="input-icon">
-                    </i>
-
-                    <input type="password" id="password" placeholder="Password" required>
+                    <i data-lucide="lock-keyhole" class="input-icon"></i>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
 
                     <button type="button" class="password-toggle" id="passwordToggle">
-                        <i data-lucide="eye" id="eyeIcon">
-                        </i>
+                        <i data-lucide="eye" id="eyeIcon"></i>
                     </button>
-
                 </div>
 
 
                 {{-- Error Message --}}
-                <p id="loginError" class="login-error">
-                    Email or password is incorrect.
-                </p>
+                @if ($errors->any())
+                    <p id="loginError" class="login-error" style="display: block;">
+                        {{ $errors->first() }}
+                    </p>
+                @endif
 
 
                 {{-- Login Button --}}
                 <div class="button-wrapper">
-
                     <button type="submit" class="login-button">
                         Login
                     </button>
-
                 </div>
 
             </form>
@@ -98,97 +90,27 @@
 
 
     <script>
-
         lucide.createIcons();
-
 
         // =========================
         // SHOW / HIDE PASSWORD
         // =========================
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.getElementById('passwordToggle');
 
-        const passwordInput =
-            document.getElementById('password');
-
-        const passwordToggle =
-            document.getElementById('passwordToggle');
-
-
-        passwordToggle.addEventListener('click', function () {
-
-            const eyeIcon =
-                document.getElementById('eyeIcon');
-
-            if (passwordInput.type === 'password') {
-
-                passwordInput.type = 'text';
-
-                eyeIcon.setAttribute(
-                    'data-lucide',
-                    'eye-off'
-                );
-
-            } else {
-
-                passwordInput.type = 'password';
-
-                eyeIcon.setAttribute(
-                    'data-lucide',
-                    'eye'
-                );
-
-            }
-
-            lucide.createIcons();
-
-        });
-
-
-        // =========================
-        // STATIC ADMIN LOGIN
-        // =========================
-
-        const loginForm =
-            document.getElementById('loginForm');
-
-        const loginError =
-            document.getElementById('loginError');
-
-
-        loginForm.addEventListener('submit', function (event) {
-
-            // Mencegah form refresh
-            event.preventDefault();
-
-
-            const email =
-                document.getElementById('email').value;
-
-            const password =
-                document.getElementById('password').value;
-
-
-            // Akun admin sementara
-            const adminEmail = 'admin@gmail.com';
-            const adminPassword = '123';
-
-
-            if (
-                email === adminEmail &&
-                password === adminPassword
-            ) {
-
-                // Login berhasil
-                window.location.href = '/admin/dashboard';
-
-            } else {
-
-                // Login gagal
-                loginError.style.display = 'block';
-
-            }
-
-        });
-
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener('click', function () {
+                const eyeIcon = document.getElementById('eyeIcon');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeIcon.setAttribute('data-lucide', 'eye-off');
+                } else {
+                    passwordInput.type = 'password';
+                    eyeIcon.setAttribute('data-lucide', 'eye');
+                }
+                lucide.createIcons();
+            });
+        }
     </script>
 
 </body>

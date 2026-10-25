@@ -47,13 +47,13 @@
     {{-- Logout --}}
     <div class="sidebar-footer">
 
-        <a href="/" class="logout-button">
-
-            <span>Logout</span>
-
-            <i data-lucide="log-out"></i>
-
-        </a>
+        <form action="{{ route('admin.logout') }}" method="POST" style="margin: 0; width: 100%;">
+            @csrf
+            <button type="submit" class="logout-button" style="background: none; border: none; cursor: pointer; width: 100%; text-align: left; font-family: inherit;">
+                <span>Logout</span>
+                <i data-lucide="log-out"></i>
+            </button>
+        </form>
 
     </div>
 

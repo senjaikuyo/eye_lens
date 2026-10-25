@@ -1,27 +1,25 @@
 <?php
 
+use App\Http\Controllers\AdminAuthController;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
 
+// Login & Logout Admin
+Route::get('/', [AdminAuthController::class, 'showLoginForm'])->name('login');
+Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
+Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
-// Login
-Route::get('/', function () {
-    return view('auth.login');
-})->name('login');
+// Rute Panel Admin Terproteksi
+Route::middleware(EnsureUserIsAdmin::class)->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', function () {
+        return view('Admin.dashboardAdmin');
+    })->name('dashboard');
 
+    Route::get('/logActivity', function () {
+        return view('Admin.logActivity');
+    })->name('logActivity');
 
-// Dashboard
-Route::get('/admin/dashboard', function () {
-    return view('Admin.dashboardAdmin');
-})->name('admin.dashboard');
-
-
-// Log Activity
-Route::get('/admin/logActivity', function () {
-    return view('Admin.logActivity');
-})->name('admin.logActivity');
-
-
-// Feedback User
-Route::get('/admin/feedback', function () {
-    return view('Admin.feedbackUser');
-})->name('admin.feedback');
+    Route::get('/feedback', function () {
+        return view('Admin.feedbackUser');
+    })->name('feedback');
+});

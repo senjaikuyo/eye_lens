@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../core/password_validator.dart';
 import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
@@ -74,9 +75,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordError = strings.passwordRequired;
       });
       isValid = false;
-    } else if (password.length < 6) {
+    } else if (!PasswordValidator.isComplex(password)) {
       setState(() {
-        _passwordError = strings.passwordTooShort;
+        _passwordError = strings.passwordComplexityRequirements;
       });
       isValid = false;
     } else {

@@ -6,6 +6,7 @@ import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
 import '../home/home_screen.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -101,6 +102,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _onForgotPasswordTap() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+    );
+  }
+
   void _onRegisterTap() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
@@ -165,23 +172,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: _onRegisterTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Text(
-                      strings.haventRegistered,
-                      style: const TextStyle(
-                        color: AppColors.linkBlue,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: _onForgotPasswordTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Text(
+                        strings.forgotPasswordQuestion,
+                        style: const TextStyle(
+                          color: AppColors.linkBlue,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  GestureDetector(
+                    onTap: _onRegisterTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Text(
+                        strings.haventRegistered,
+                        style: const TextStyle(
+                          color: AppColors.linkBlue,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 36),
               Center(

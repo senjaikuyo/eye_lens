@@ -66,6 +66,51 @@ class AppStrings {
   String get registerSuccess => isIndonesian
       ? 'Pendaftaran berhasil! Silakan masuk.'
       : 'Registration successful! Please login.';
+  String get forgotPasswordQuestion =>
+      isIndonesian ? 'Lupa password?' : 'Forgot password?';
+  String get forgotPasswordTitle =>
+      isIndonesian ? 'Lupa Kata Sandi' : 'Forgot Password';
+  String get createNewPassword =>
+      isIndonesian ? 'Buat Kata Sandi Baru' : 'Create New Password';
+  String get confirmNewPassword =>
+      isIndonesian ? 'Konfirmasi Kata Sandi Baru' : 'Confirm New Password';
+  String get codeSentTo =>
+      isIndonesian ? 'Kode telah dikirim ke' : 'Code has been sent to';
+  String get forgotPasswordStep1Desc => isIndonesian
+      ? 'Masukkan alamat email akun Anda. Kami akan mengirimkan 6 digit kode verifikasi.'
+      : 'Enter your account email. We will send a 6-digit verification code.';
+  String get forgotPasswordStep2Desc => isIndonesian
+      ? 'Masukkan 6 digit kode verifikasi yang dikirim ke'
+      : 'Enter the 6-digit verification code sent to';
+  String get forgotPasswordStep3Desc => isIndonesian
+      ? 'Buat kata sandi baru untuk akun Anda.'
+      : 'Create a new password for your account.';
+  String get sendCode => isIndonesian ? 'Kirim Kode' : 'Send Code';
+  String get verifyCode => isIndonesian ? 'Verifikasi' : 'Verify';
+  String get codeExpiresNotice => isIndonesian
+      ? 'Kode verifikasi berlaku selama 10 menit'
+      : 'Verification code is valid for 10 minutes';
+  String resendInSeconds(int s) => isIndonesian
+      ? 'Kirim ulang dalam $s detik'
+      : 'Resend in $s seconds';
+  String get resendCode =>
+      isIndonesian ? 'Kirim Ulang Kode' : 'Resend Code';
+  String get passwordComplexityRequirements => isIndonesian
+      ? 'Kata sandi minimal 8 karakter, kombinasi huruf besar, kecil, angka, dan simbol'
+      : 'Password must be at least 8 characters, combination of uppercase, lowercase, numbers, and symbols';
+  String get saveNewPassword =>
+      isIndonesian ? 'Simpan Kata Sandi' : 'Save Password';
+  String get passwordResetSuccessMessage => isIndonesian
+      ? 'Kata sandi berhasil diperbarui! Silakan masuk kembali.'
+      : 'Password successfully updated! Please login again.';
+  String get passwordStrengthLabel =>
+      isIndonesian ? 'Kekuatan sandi' : 'Password strength';
+  String get passwordStrengthWeak =>
+      isIndonesian ? 'Lemah' : 'Weak';
+  String get passwordStrengthMedium =>
+      isIndonesian ? 'Sedang' : 'Medium';
+  String get passwordStrengthStrong =>
+      isIndonesian ? 'Kuat' : 'Strong';
 
   // --- Camera & Scanner ---
   String get cameraInitializing =>

@@ -243,4 +243,8 @@ class AppStrings {
             'a': 'After scanning or selecting from history, simply press the big Play button at the bottom of the screen.',
           },
         ];
+
+
+  String get name => isIndonesian ? 'Nama' : 'Name';
+  String get nameRequired => isIndonesian ? 'Nama wajib diisi' : 'Name is required';
 }

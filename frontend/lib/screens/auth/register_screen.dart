@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
 
@@ -13,20 +14,25 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -35,11 +41,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _validate(AppStrings strings) {
     bool isValid = true;
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
-    // Email validation
+    if (name.isEmpty) {
+      setState(() {
+        _nameError = strings.nameRequired;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _nameError = null;
+      });
+    }
+
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
       setState(() {
@@ -52,7 +69,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
     }
 
-    // Password validation
     if (password.isEmpty) {
       setState(() {
         _passwordError = strings.passwordRequired;
@@ -69,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
     }
 
-    // Confirm password validation
     if (confirmPassword.isEmpty) {
       setState(() {
         _confirmPasswordError = strings.passwordRequired;
@@ -89,8 +104,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return isValid;
   }
 
-  void _onRegisterPressed(AppStrings strings) {
-    if (_validate(strings)) {
+  Future<void> _onRegisterPressed(AppStrings strings) async {
+    if (!_validate(strings) || _isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
+      );
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(strings.registerSuccess),
@@ -99,6 +127,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
       Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -109,7 +151,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
     final strings = AppStrings.of(context);
 
     return Scaffold(
@@ -121,8 +162,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 50),
-
-              // Logo centered with dark mode adaptation
               Center(
                 child: Image.asset(
                   'assets/images/logo.png',
@@ -131,10 +170,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-
               const SizedBox(height: 48),
-
-              // Email Input with visual validation
+              CustomAuthField(
+                label: strings.name,
+                controller: _nameController,
+                keyboardType: TextInputType.name,
+                errorText: _nameError,
+                onChanged: (_) {
+                  if (_nameError != null) {
+                    setState(() {
+                      _nameError = null;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 18),
               CustomAuthField(
                 label: strings.email,
                 controller: _emailController,
@@ -148,10 +198,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                 },
               ),
-
               const SizedBox(height: 18),
-
-              // Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.password,
                 controller: _passwordController,
@@ -173,10 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
               ),
-
               const SizedBox(height: 18),
-
-              // Confirm Password Input with Eyelash Toggle & visual validation
               CustomAuthField(
                 label: strings.confirmPassword,
                 controller: _confirmPasswordController,
@@ -198,10 +242,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
               ),
-
               const SizedBox(height: 8),
-
-              // Link "Do you have an account?"
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
@@ -220,51 +261,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              // Register Button (Outlined pill, centered)
               Center(
                 child: Material(
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: () => _onRegisterPressed(strings),
+                    onTap: _isLoading ? null : () => _onRegisterPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 130,
-                        minHeight: 52,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 36,
-                        vertical: 12,
-                      ),
+                      width: 140,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : AppColors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isDark ? Colors.white : AppColors.black,
                           width: 1.2,
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        strings.register,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Center(
+                        child: _isLoading
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? Colors.white : AppColors.black,
+                                ),
+                              )
+                            : Text(
+                                strings.register,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : AppColors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ),
                 ),
               ),
-
-              SizedBox(height: bottomPadding + 24),
+              const SizedBox(height: 40),
             ],
           ),
         ),

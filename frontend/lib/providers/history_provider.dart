@@ -8,23 +8,32 @@ class HistoryProvider extends ChangeNotifier {
 
   List<RiwayatModel> _items = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   List<RiwayatModel> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
   bool get isEmpty => _items.isEmpty;
+  String? get errorMessage => _errorMessage;
 
   HistoryProvider() {
     loadRiwayat();
   }
 
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> loadRiwayat() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       _items = await _dbHelper.getRiwayatModelList();
     } catch (e) {
       debugPrint('Error loading history: $e');
+      _errorMessage = 'Gagal memuat riwayat';
       _items = [];
     } finally {
       _isLoading = false;
@@ -75,6 +84,8 @@ class HistoryProvider extends ChangeNotifier {
       return savedModel;
     } catch (e) {
       debugPrint('Error saving history: $e');
+      _errorMessage = 'Gagal menyimpan riwayat';
+      notifyListeners();
       return null;
     }
   }
@@ -84,11 +95,14 @@ class HistoryProvider extends ChangeNotifier {
       final rows = await _dbHelper.deleteRiwayat(idRiwayat);
       if (rows > 0) {
         _items.removeWhere((item) => item.idRiwayat == idRiwayat);
+        _errorMessage = null;
         notifyListeners();
         return true;
       }
     } catch (e) {
       debugPrint('Error deleting history item: $e');
+      _errorMessage = 'Gagal menghapus riwayat';
+      notifyListeners();
     }
     return false;
   }
@@ -97,10 +111,13 @@ class HistoryProvider extends ChangeNotifier {
     try {
       await _dbHelper.clearAllRiwayat();
       _items.clear();
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
       debugPrint('Error clearing history: $e');
+      _errorMessage = 'Gagal membersihkan riwayat';
+      notifyListeners();
       return false;
     }
   }

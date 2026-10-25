@@ -274,10 +274,12 @@ class _ScanningScreenState extends State<ScanningScreen>
             _checkAndShowLowQualityWarning(ocrResult);
 
             // Simpan hasil pemindaian langsung ke SQLite
-            context.read<HistoryProvider>().addRiwayat(
+            await context.read<HistoryProvider>().addRiwayat(
               text: finalText,
               sumber: 'kamera',
             );
+
+            if (!mounted) return;
 
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -368,10 +370,12 @@ class _ScanningScreenState extends State<ScanningScreen>
         _checkAndShowLowQualityWarning(ocrResult);
 
         // Simpan hasil pemindaian galeri langsung ke SQLite
-        context.read<HistoryProvider>().addRiwayat(
+        await context.read<HistoryProvider>().addRiwayat(
           text: extractedText,
           sumber: 'galeri',
         );
+
+        if (!mounted) return;
 
         Navigator.of(context).push(
           MaterialPageRoute(

@@ -9,6 +9,7 @@ import '../models/riwayat_model.dart';
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+  static Completer<Database>? _dbOpenCompleter;
 
   static DatabaseHelper get instance => _instance;
   factory DatabaseHelper() => _instance;
@@ -17,15 +18,38 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
+    if (_dbOpenCompleter != null) return _dbOpenCompleter!.future;
+
+    final completer = Completer<Database>();
+    _dbOpenCompleter = completer;
+
+    try {
+      _database = await _initDatabase();
+      completer.complete(_database);
+      return _database!;
+    } catch (e) {
+      completer.completeError(e);
+      _dbOpenCompleter = null;
+      rethrow;
+    } finally {
+      _dbOpenCompleter = null;
+    }
   }
 
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'eyelens.db');
 
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Handler migrasi skema untuk versi masa depan jika diperlukan
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -254,5 +278,6 @@ class DatabaseHelper {
       await db.close();
       _database = null;
     }
+    _dbOpenCompleter = null;
   }
 }

@@ -29,7 +29,8 @@ eye_lens/
 - **Flutter SDK**: v3.24+ / 3.35+
 - **PHP**: v8.2+ atau v8.3+
 - **Composer**: Dependency manager PHP
-- **MySQL Server**: Basis data server (port 3306)
+- **Node.js & npm**: v18+ (untuk build aset Vite/CSS Admin)
+- **MySQL / MariaDB Server**: Basis data server (port 3306)
 - **Android SDK / Device**: HP Android fisik (mode USB Debugging aktif) atau Android Emulator
 
 ---
@@ -75,36 +76,55 @@ eye_lens/
    cp .env.example .env
    ```
 
-3. Pasang dependensi PHP via Composer:
+3. Pasang dependensi PHP dan Node.js:
    ```bash
    composer install
+   npm install
    ```
 
-4. Buat Application Encryption Key:
+4. Build aset frontend & panel admin:
+   ```bash
+   npm run build
+   ```
+   *(Gunakan `npm run dev` jika sedang melakukan pengembangan antarmuka Blade).*
+
+5. Buat Application Encryption Key:
    ```bash
    php artisan key:generate
    ```
 
-5. Konfigurasi koneksi MySQL di file `.env`:
+6. Siapkan basis data dan hak akses pengguna di MariaDB/MySQL:
+   ```bash
+   sudo mariadb -e "CREATE DATABASE IF NOT EXISTS db_eyelens;
+   CREATE USER IF NOT EXISTS 'eyelens_app'@'127.0.0.1' IDENTIFIED BY 'eyelens123';
+   GRANT ALL PRIVILEGES ON db_eyelens.* TO 'eyelens_app'@'127.0.0.1';
+   FLUSH PRIVILEGES;"
+   ```
+
+7. Konfigurasi koneksi MySQL di file `.env`:
    ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
    DB_PORT=3306
-   DB_DATABASE=eyelens_db
-   DB_USERNAME=root
-   DB_PASSWORD=password_kamu
+   DB_DATABASE=db_eyelens
+   DB_USERNAME=eyelens_app
+   DB_PASSWORD=eyelens123
    ```
 
-6. Buat database `eyelens_db` di MySQL, lalu jalankan migrasi tabel:
+8. Jalankan migrasi tabel beserta seeder akun admin:
    ```bash
-   php artisan migrate
+   php artisan migrate --seed
    ```
+   *Akun administrator bawaan untuk panel web:*
+   - **URL Panel**: `http://localhost:8000/`
+   - **Email**: `admin@gmail.com`
+   - **Password**: `admin123`
 
-7. Jalankan server lokal:
+9. Jalankan server lokal:
    ```bash
-   php artisan serve
+   php artisan serve --host=0.0.0.0 --port=8000
    ```
-   *Server akan berjalan di `http://127.0.0.1:8000`.*
+   *Server akan berjalan di `http://0.0.0.0:8000` sehingga dapat diakses oleh gawai fisik Android pada jaringan yang sama.*
 
 ---
 

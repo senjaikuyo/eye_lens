@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../core/app_strings.dart';
+import '../../../services/auth/auth_service.dart';
 import '../../auth/login_screen.dart';
 
 class LogoutDialog {
@@ -56,8 +57,10 @@ class LogoutDialog {
               minimumSize: const Size(80, 48),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(dialogContext).pop();
+              await AuthService().logout();
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
                 (route) => false,

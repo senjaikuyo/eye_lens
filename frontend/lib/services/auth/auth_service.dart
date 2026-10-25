@@ -1,40 +1,17 @@
 import "dart:convert";
 
+import "package:flutter/foundation.dart";
 import "package:http/http.dart" as http;
 import "package:shared_preferences/shared_preferences.dart";
 
 class AuthService {
-  static const String baseUrl = "http://127.0.0.1:8000/api";
-
-  String _cleanJson(String body) {
-    String cleaned = body.replaceAll("\ufeff", "").trim();
-    final objStart = cleaned.indexOf("{");
-    final arrStart = cleaned.indexOf("[");
-    int start = -1;
-    if (objStart >= 0 && arrStart >= 0) {
-      start = objStart < arrStart ? objStart : arrStart;
-    } else if (objStart >= 0) {
-      start = objStart;
-    } else if (arrStart >= 0) {
-      start = arrStart;
+  static String get baseUrl {
+    const customUrl = String.fromEnvironment('API_BASE_URL');
+    if (customUrl.isNotEmpty) return customUrl;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return "http://10.0.2.2:8000/api";
     }
-    if (start > 0) {
-      cleaned = cleaned.substring(start);
-    }
-    final objEnd = cleaned.lastIndexOf("}");
-    final arrEnd = cleaned.lastIndexOf("]");
-    int end = -1;
-    if (objEnd >= 0 && arrEnd >= 0) {
-      end = objEnd > arrEnd ? objEnd : arrEnd;
-    } else if (objEnd >= 0) {
-      end = objEnd;
-    } else if (arrEnd >= 0) {
-      end = arrEnd;
-    }
-    if (end >= 0 && end + 1 < cleaned.length) {
-      cleaned = cleaned.substring(0, end + 1);
-    }
-    return cleaned;
+    return "http://127.0.0.1:8000/api";
   }
 
   Future<Map<String, dynamic>> register({
@@ -57,7 +34,7 @@ class AuthService {
       }),
     );
 
-    final data = jsonDecode(_cleanJson(response.body));
+    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       await _saveToken(data["access_token"]);
@@ -92,7 +69,7 @@ class AuthService {
       }),
     );
 
-    final data = jsonDecode(_cleanJson(response.body));
+    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       await _saveToken(data["access_token"]);
@@ -113,6 +90,22 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+
+    if (token != null) {
+      try {
+        await http.post(
+          Uri.parse("$baseUrl/logout"),
+          headers: {
+            "Accept": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
+      } catch (_) {
+        // Biarkan lolos jika jaringan offline agar pembersihan sesi lokal tetap berjalan
+      }
+    }
+
     await prefs.remove("auth_token");
     await prefs.remove("auth_user");
   }

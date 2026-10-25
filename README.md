@@ -168,4 +168,4 @@ docker-compose down
 ---
 
 ##  Pengembang
-Dibuat sebagai solusi aksesibilitas digital untuk presbiopia & low vision (EyeLens Team).
+EyeLens.

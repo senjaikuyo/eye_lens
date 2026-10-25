@@ -148,10 +148,6 @@ Jika tidak ingin memasang PHP 8.3, Composer, atau basis data lokal di mesin host
    ```bash
    docker-compose exec app php artisan migrate --seed
    ```
-4. Akses layanan:
-   - Panel Admin: `http://localhost:8000/` (Email: `admin@gmail.com` | Password: `admin123`)
-   - Endpoint API: `http://localhost:8000/api/`
-   - phpMyAdmin: `http://localhost:8080/` (User: `eyelens_app` | Password: `eyelens123`)
 
 #### Mematikan Layanan
 ```bash

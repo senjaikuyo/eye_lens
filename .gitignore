@@ -74,3 +74,5 @@ backend/.fleet
 backend/.idea
 backend/.vscode
 
+eyelens-backend-image.tar
+eyelens.tar

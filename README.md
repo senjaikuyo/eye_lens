@@ -128,6 +128,55 @@ eye_lens/
 
 ---
 
+### 4. Setup Backend dengan Docker Compose (Alternatif Portabel)
+
+Jika tidak ingin memasang PHP 8.3, Composer, atau basis data lokal di mesin host, backend dapat dijalankan secara terisolasi via Docker Compose.
+
+#### Layanan yang Disediakan
+- **app (`eyelens`)**: PHP 8.3 FPM Alpine (Backend Laravel 11 & Sanctum API)
+- **webserver (`nginx:alpine`)**: Port host `8000:80`
+- **db (`mariadb:10.11`)**: Port host `3307:3306` (agar tidak konflik dengan MariaDB lokal host)
+- **phpmyadmin (`phpmyadmin/phpmyadmin`)**: Port host `8080:80`
+
+#### Langkah Menjalankan
+1. Pastikan Docker dan Docker Compose telah terpasang dan service Docker berjalan.
+2. Dari root proyek (`eye_lens/`), jalankan:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Jalankan migrasi dan seeder database awal:
+   ```bash
+   docker-compose exec app php artisan migrate --seed
+   ```
+4. Akses layanan:
+   - Panel Admin: `http://localhost:8000/` (Email: `admin@gmail.com` | Password: `admin123`)
+   - Endpoint API: `http://localhost:8000/api/`
+   - phpMyAdmin: `http://localhost:8080/` (User: `eyelens_app` | Password: `eyelens123`)
+
+#### Mematikan Layanan
+```bash
+docker-compose down
+```
+
+#### Ekspor dan Migrasi Image ke Lingkungan Lain
+1. Ekspor image backend ke file `.tar`:
+   ```bash
+   docker save -o eyelens.tar eyelens:latest
+   ```
+2. Di lingkungan/komputer lain:
+   - Salin file `docker-compose.yml`, folder `backend/`, dan file `eyelens.tar`.
+   - Muat image ke Docker:
+     ```bash
+     docker load -i eyelens.tar
+     ```
+   - Jalankan stack tanpa build ulang:
+     ```bash
+     docker-compose up -d
+     docker-compose exec app php artisan migrate --seed
+     ```
+
+---
+
 ##  Kebijakan Privasi & Keamanan
 -
 

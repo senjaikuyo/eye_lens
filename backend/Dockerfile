@@ -18,5 +18,8 @@ COPY . /var/www/html
 
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 
+RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chmod -R 777 storage bootstrap/cache
+
 EXPOSE 9000
 CMD ["php-fpm"]

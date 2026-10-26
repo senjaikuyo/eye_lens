@@ -121,20 +121,23 @@ eye_lens/
 
 ### 4. Setup Docker
 
-1. Pastikan Docker dan Docker Compose telah terpasang dan service Docker berjalan.
-2. Siapkan file environment untuk Docker (opsional, jika ingin mengirim email Gmail nyata):
-   ```bash
-   cp .env.docker.example .env
-   ```
-   *Isi `MAIL_USERNAME`, `MAIL_PASSWORD` (App Password Gmail 16 digit), dan `MAIL_FROM_ADDRESS` di file `.env` root jika ingin kode verifikasi langsung masuk ke inbox Gmail pengguna. Jika dilewati, default email akan tercatat di log container.*
-3. Dari root proyek (`eye_lens/`), jalankan:
+Jika menjalankan di perangkat/komputer lain:
+1. Pastikan Docker dan Docker Compose telah terpasang.
+2. Jalankan container:
    ```bash
    docker-compose up -d --build
    ```
-4. Jalankan migrasi dan seeder database awal:
+3. Di perangkat baru (pertama kali), jalankan migrasi database:
    ```bash
    docker-compose exec app php artisan migrate --seed
    ```
+
+*Opsional (Pengiriman Email Gmail Nyata):*
+Jika ingin kode OTP lupa password langsung dikirim ke inbox Gmail pengguna, buat file `.env` di root proyek:
+```bash
+cp .env.docker.example .env
+```
+Lalu isi `MAIL_USERNAME` dan `MAIL_PASSWORD` (App Password Gmail 16 digit). Jika file `.env` tidak dibuat, sistem tetap berjalan normal dan kode OTP dicatat di log container (`docker-compose logs -f app`).
 
 #### Mematikan Layanan
 ```bash

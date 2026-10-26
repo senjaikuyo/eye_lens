@@ -121,41 +121,54 @@ eye_lens/
 
 ### 4. Setup Docker
 
-Jika menjalankan di perangkat/komputer lain:
-1. Pastikan Docker dan Docker Compose telah terpasang.
-2. Jalankan container:
+#### A. Menjalankan di Komputer Baru (Pertama Kali)
+Saat repository baru di-clone di perangkat/komputer lain:
+1. Pastikan Docker dan Docker Compose telah terpasang dan aktif.
+2. Build dan jalankan seluruh container:
    ```bash
    docker-compose up -d --build
    ```
-3. Di perangkat baru (pertama kali), jalankan migrasi database:
+3. Inisialisasi basis data dan data bawaan (karena MariaDB di perangkat baru masih kosong):
    ```bash
    docker-compose exec app php artisan migrate --seed
    ```
+   *Setelah langkah ini selesai, API siap digunakan di `http://localhost:8000` dan phpMyAdmin di `http://localhost:8080`.*
 
-*Opsional (Pengiriman Email Gmail Nyata):*
-Jika ingin kode OTP lupa password langsung dikirim ke inbox Gmail pengguna, buat file `.env` di root proyek:
+#### B. Menjalankan Sehari-hari (Setelah Setup Pertama Selesai)
+Jika perangkat sudah pernah menjalankan langkah inisialisasi di atas (volume data sudah terbentuk), cukup jalankan satu perintah:
 ```bash
-cp .env.docker.example .env
+docker-compose up -d
 ```
-Lalu isi `MAIL_USERNAME` dan `MAIL_PASSWORD` (App Password Gmail 16 digit). Jika file `.env` tidak dibuat, sistem tetap berjalan normal dan kode OTP dicatat di log container (`docker-compose logs -f app`).
 
-#### Mematikan Layanan
+#### C. Pengaturan Email OTP Lupa Password di Docker
+- **Default (Tanpa Setup Tambahan)**: Kode OTP tidak hilang, melainkan dicatat langsung di log container Docker. Buka terminal dan pantau dengan:
+  ```bash
+  docker-compose logs -f app
+  ```
+- **Kirim ke Gmail Nyata**:
+  Salin template environment di root folder proyek:
+  ```bash
+  cp .env.docker.example .env
+  ```
+  Lalu isi `MAIL_USERNAME` (alamat Gmail) dan `MAIL_PASSWORD` (App Password 16 digit dari Google). Restart container dengan `docker-compose up -d`.
+
+#### D. Mematikan Layanan
 ```bash
 docker-compose down
 ```
 
-#### Ekspor dan Migrasi Image ke Lingkungan Lain
-1. Ekspor image backend ke file `.tar`:
+#### E. Menjalankan Secara Offline / Tanpa Build Ulang
+1. Ekspor image backend ke file `.tar` dari komputer pengembang:
    ```bash
    docker save -o eyelens.tar eyelens:latest
    ```
-2. Di lingkungan/komputer lain:
+2. Di komputer lain tanpa koneksi internet:
    - Salin file `docker-compose.yml`, folder `backend/`, dan file `eyelens.tar`.
    - Muat image ke Docker:
      ```bash
      docker load -i eyelens.tar
      ```
-   - Jalankan stack tanpa build ulang:
+   - Jalankan container dan inisialisasi database:
      ```bash
      docker-compose up -d
      docker-compose exec app php artisan migrate --seed

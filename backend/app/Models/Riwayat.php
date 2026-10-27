@@ -10,7 +10,7 @@ class Riwayat extends Model
 {
     use HasFactory;
 
-    protected $table = 'riwayats';
+    protected $table = 'riwayat';
 
     protected $fillable = [
         'user_id',

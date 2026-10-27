@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('masukans', function (Blueprint $table) {
+        Schema::create('masukan', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('tipe_masukan')->default('saran'); // saran, bug, keluhan, lainnya
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('masukans');
+        Schema::dropIfExists('masukan');
     }
 };

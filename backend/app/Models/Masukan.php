@@ -10,7 +10,7 @@ class Masukan extends Model
 {
     use HasFactory;
 
-    protected $table = 'masukans';
+    protected $table = 'masukan';
 
     protected $fillable = [
         'user_id',

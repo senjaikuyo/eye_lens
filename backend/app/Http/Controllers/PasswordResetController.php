@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ResetPasswordOtpMail;
-use App\Models\PasswordResetCode;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -30,18 +29,18 @@ class PasswordResetController extends Controller
         $user = User::where('email', $email)->first();
 
         if ($user) {
-            // Hapus kode lama milik email ini
-            PasswordResetCode::where('email', $email)->delete();
+            // Hapus cache OTP dan token lama jika ada
+            Cache::forget("pwd_reset:{$email}");
+            Cache::forget("pwd_reset_token:{$email}");
 
             // Generate kriptografis 6 digit angka
             $otp = (string) random_int(100000, 999999);
 
-            PasswordResetCode::create([
-                'email' => $email,
+            // Simpan hash OTP di Cache selama 10 menit
+            Cache::put("pwd_reset:{$email}", [
                 'otp_hash' => Hash::make($otp),
                 'attempts' => 0,
-                'expires_at' => Carbon::now()->addMinutes(10),
-            ]);
+            ], now()->addMinutes(10));
 
             // Kirim email
             try {
@@ -58,7 +57,7 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Verifikasi kode OTP 6 digit dan berikan reset token sementara.
+     * Verifikasi kode OTP 6 digit dan berikan reset token sementara via Cache.
      */
     public function verifyResetCode(Request $request): JsonResponse
     {
@@ -70,33 +69,33 @@ class PasswordResetController extends Controller
         $email = strtolower(trim($request->email));
         $code = trim($request->code);
 
-        $record = PasswordResetCode::where('email', $email)
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
+        $cacheData = Cache::get("pwd_reset:{$email}");
 
-        if (! $record) {
+        if (! $cacheData) {
             throw ValidationException::withMessages([
                 'code' => ['Kode verifikasi tidak valid atau telah kedaluwarsa.'],
             ]);
         }
 
-        if ($record->attempts >= 5) {
-            $record->delete();
+        if ($cacheData['attempts'] >= 5) {
+            Cache::forget("pwd_reset:{$email}");
             throw ValidationException::withMessages([
                 'code' => ['Batas percobaan telah habis. Silakan minta kode baru.'],
             ]);
         }
 
-        if (! Hash::check($code, $record->otp_hash)) {
-            $record->increment('attempts');
-            $remaining = 5 - $record->attempts;
-            
+        if (! Hash::check($code, $cacheData['otp_hash'])) {
+            $cacheData['attempts']++;
+            $remaining = 5 - $cacheData['attempts'];
+
             if ($remaining <= 0) {
-                $record->delete();
+                Cache::forget("pwd_reset:{$email}");
                 throw ValidationException::withMessages([
                     'code' => ['Batas percobaan telah habis. Silakan minta kode baru.'],
                 ]);
             }
+
+            Cache::put("pwd_reset:{$email}", $cacheData, now()->addMinutes(10));
 
             throw ValidationException::withMessages([
                 'code' => ["Kode verifikasi salah. Sisa percobaan: {$remaining}."],
@@ -106,11 +105,11 @@ class PasswordResetController extends Controller
         // OTP valid -> generate reset token 64 karakter
         $plainResetToken = Str::random(64);
 
-        $record->update([
-            'reset_token_hash' => hash('sha256', $plainResetToken),
-            'reset_token_expires_at' => Carbon::now()->addMinutes(15),
-            'attempts' => 0,
-        ]);
+        // Simpan token hash di Cache selama 15 menit
+        Cache::put("pwd_reset_token:{$email}", hash('sha256', $plainResetToken), now()->addMinutes(15));
+        
+        // Hapus cache OTP karena sudah berhasil diverifikasi
+        Cache::forget("pwd_reset:{$email}");
 
         return response()->json([
             'message' => 'Kode valid.',
@@ -119,7 +118,7 @@ class PasswordResetController extends Controller
     }
 
     /**
-     * Simpan password baru menggunakan reset token.
+     * Simpan password baru menggunakan reset token dari Cache.
      */
     public function resetPassword(Request $request): JsonResponse
     {
@@ -141,12 +140,9 @@ class PasswordResetController extends Controller
         $email = strtolower(trim($request->email));
         $resetTokenHash = hash('sha256', $request->reset_token);
 
-        $record = PasswordResetCode::where('email', $email)
-            ->where('reset_token_hash', $resetTokenHash)
-            ->where('reset_token_expires_at', '>', Carbon::now())
-            ->first();
+        $cachedTokenHash = Cache::get("pwd_reset_token:{$email}");
 
-        if (! $record) {
+        if (! $cachedTokenHash || ! hash_equals($cachedTokenHash, $resetTokenHash)) {
             throw ValidationException::withMessages([
                 'reset_token' => ['Sesi reset password tidak valid atau telah kedaluwarsa. Silakan ulangi proses.'],
             ]);
@@ -176,8 +172,8 @@ class PasswordResetController extends Controller
             // Revokasi seluruh token Sanctum aktif
             $user->tokens()->delete();
 
-            // Hapus record reset code
-            PasswordResetCode::where('email', $email)->delete();
+            // Hapus reset token dari cache
+            Cache::forget("pwd_reset_token:{$email}");
         });
 
         return response()->json([

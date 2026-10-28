@@ -12,23 +12,24 @@ class AuditLog extends Model
 
     public $timestamps = false;
 
-    protected $table = 'audit_logs';
+    protected $table = 'audit_log';
 
     protected $fillable = [
         'user_id',
+        'aktor',
         'aksi',
-        'tabel',
-        'ip_address',
+        'objek',
+        'ip',
+        'result',
         'user_agent',
         'keterangan',
-        'created_at',
+        'timestamp',
     ];
 
     protected function casts(): array
     {
         return [
-            'keterangan' => 'array',
-            'created_at' => 'datetime',
+            'timestamp' => 'datetime',
         ];
     }
 

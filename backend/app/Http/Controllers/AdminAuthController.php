@@ -41,7 +41,7 @@ class AdminAuthController extends Controller
                     'objek' => 'Admin Login Page',
                     'ip' => $request->ip(),
                     'user_agent' => $request->header('User-Agent'),
-                    'keterangan' => 'Percobaan login ditolak: Akun bukan administrator',
+                    'keterangan' => 'Percobaan login ditolak: Kredensial tidak valid',
                     'result' => 'FAILED',
                     'timestamp' => now(),
                 ]);

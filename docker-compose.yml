@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     working_dir: /var/www/html
     environment:
-      - APP_KEY=${APP_KEY:-base64:3f0iQ3+4qT01NkJvWjJqWXZhY0JjQWJDREVGR0hJSktMTU8=}
+      - APP_KEY=${APP_KEY:-base64:sSdt1T7IFpltj3EyVIxR9X/nZghG+a9caqqtUrn48+Y=}
       - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=db_eyelens
@@ -56,6 +56,7 @@ services:
       - "3307:3306"
     volumes:
       - dbdata:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - eyelens_network
 

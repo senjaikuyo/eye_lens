@@ -140,6 +140,10 @@ Jika perangkat sudah pernah menjalankan langkah inisialisasi di atas (volume dat
 docker-compose up -d
 ```
 
+Catatan Docker:
+- Folder `vendor` disimpan di Docker volume `eye_lens_vendor` (bukan bind mount Windows) agar request tidak lambat. Setelah mengubah dependensi PHP, jalankan `docker-compose exec app composer install`.
+- Aset Vite (`public/build`) dibangun otomatis saat image Docker dibuat, jadi tidak perlu menjalankan `npm run build` di host untuk mode Docker.
+
 #### C. Pengaturan Email OTP Lupa Password di Docker
 - **Default (Tanpa Setup Tambahan)**: Kode OTP tidak hilang, melainkan dicatat langsung di log container Docker. Buka terminal dan pantau dengan:
   ```bash

@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     working_dir: /var/www/html
     environment:
-      - APP_KEY=${APP_KEY:-base64:3f0iQ3+4qT01NkJvWjJqWXZhY0JjQWJDREVGR0hJSktMTU8=}
+      - APP_KEY=${APP_KEY:-base64:Usf+XJnCBl4F+sSYqOBFoL5hvyreOue+6r/1uVAuGV0=}
       - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=db_eyelens
@@ -22,8 +22,11 @@ services:
       - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-hello@example.com}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME:-EyeLens}
+      - LOG_CHANNEL=stderr
     volumes:
       - ./backend:/var/www/html
+      - vendor:/var/www/html/vendor
+      - bootstrap_cache:/var/www/html/bootstrap/cache
     networks:
       - eyelens_network
     depends_on:
@@ -75,6 +78,10 @@ services:
 
 volumes:
   dbdata:
+    driver: local
+  vendor:
+    driver: local
+  bootstrap_cache:
     driver: local
 
 networks:

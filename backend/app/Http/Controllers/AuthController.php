@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -49,7 +50,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(Request $request)
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -61,50 +62,42 @@ class AuthController extends Controller
         // 1. Kondisi jika Login Gagal (Password salah atau User tidak ditemukan)
         if (!$user || !Hash::check($request->password, $user->password)) {
 
-            // Catat log gagal ke tabel audit_logs
+            // Catat log gagal ke tabel audit_log
             AuditLog::create([
                 'user_id' => $user?->id ?? null,
-                'aktor' => $request->email, // Mencatat email yang mencoba masuk
+                'aktor' => $request->email,
                 'aksi' => 'USER_LOGIN_FAILED',
-                'objek' => 'Auth System / Login Page',
+                'objek' => 'Admin Login Page',
                 'ip' => $request->ip(),
                 'user_agent' => $request->header('User-Agent'),
-                'keterangan' => 'Percobaan login gagal karena kredensial tidak valid',
+                'keterangan' => 'Percobaan login admin gagal karena kredensial tidak valid',
                 'result' => 'FAILED',
                 'timestamp' => now(),
             ]);
 
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+            return back()->withErrors([
+                'email' => 'The provided credentials are incorrect.',
+            ])->withInput($request->only('email'));
         }
 
         // 2. Kondisi jika Login Berhasil
-        $token = $user->createToken('auth_token')->plainTextToken;
+        Auth::login($user);
+        $request->session()->regenerate();
 
-        // Catat log sukses ke tabel audit_logs
+        // Catat log sukses ke tabel audit_log
         AuditLog::create([
             'user_id' => $user->id,
-            'aktor' => $user->name, // Atau pakai $user->email
+            'aktor' => $user->name,
             'aksi' => 'USER_LOGIN_SUCCESS',
-            'objek' => 'Auth System / Dashboard',
+            'objek' => 'Admin Dashboard',
             'ip' => $request->ip(),
             'user_agent' => $request->header('User-Agent'),
-            'keterangan' => 'User berhasil masuk ke dalam sistem',
+            'keterangan' => 'Admin berhasil masuk ke dalam sistem',
             'result' => 'SUCCESS',
             'timestamp' => now(),
         ]);
 
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+        return redirect()->intended(route('admin.dashboard'));
     }
 
     public function logout(Request $request): JsonResponse

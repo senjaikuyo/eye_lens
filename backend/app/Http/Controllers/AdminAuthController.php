@@ -6,6 +6,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Models\AuditLog;
+use App\Models\User;
 
 class AdminAuthController extends Controller
 {
@@ -25,8 +27,25 @@ class AdminAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $user = User::where('email', $request->email)->first();
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            if (! Auth::user()->isAdmin()) {
+            // Cek apakah user adalah admin
+            if (!Auth::user()->isAdmin()) {
+
+                // Catat log gagal karena bukan admin
+                AuditLog::create([
+                    'user_id' => Auth::id(),
+                    'aktor' => Auth::user()->name ?? $request->email,
+                    'aksi' => 'USER_LOGIN_FAILED',
+                    'objek' => 'Admin Login Page',
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->header('User-Agent'),
+                    'keterangan' => 'Percobaan login ditolak: Akun bukan administrator',
+                    'result' => 'FAILED',
+                    'timestamp' => now(),
+                ]);
+
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
@@ -38,8 +57,34 @@ class AdminAuthController extends Controller
 
             $request->session()->regenerate();
 
+            // Catat log sukses
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'aktor' => Auth::user()->name,
+                'aksi' => 'USER_LOGIN_SUCCESS',
+                'objek' => 'Admin Dashboard',
+                'ip' => $request->ip(),
+                'user_agent' => $request->header('User-Agent'),
+                'keterangan' => 'Admin berhasil masuk ke dalam sistem',
+                'result' => 'SUCCESS',
+                'timestamp' => now(),
+            ]);
+
             return redirect()->intended(route('admin.dashboard'));
         }
+
+        // Catat log gagal karena salah email / password
+        AuditLog::create([
+            'user_id' => $user?->id ?? null,
+            'aktor' => $request->email,
+            'aksi' => 'USER_LOGIN_FAILED',
+            'objek' => 'Admin Login Page',
+            'ip' => $request->ip(),
+            'user_agent' => $request->header('User-Agent'),
+            'keterangan' => 'Percobaan login gagal karena kredensial tidak valid',
+            'result' => 'FAILED',
+            'timestamp' => now(),
+        ]);
 
         return back()
             ->withErrors(['email' => 'Email atau password salah.'])

@@ -14,9 +14,7 @@ class Masukan extends Model
 
     protected $fillable = [
         'user_id',
-        'tipe_masukan',
         'pesan',
-        'status',
     ];
 
     public function user(): BelongsTo

@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('audit_logs', function (Blueprint $table) {
+        Schema::create('audit_log', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('aksi'); // LOGIN, LOGOUT, SYNC_RIWAYAT, UPDATE_PENGATURAN, dll
-            $table->string('tabel')->nullable();
-            $table->string('ip_address', 45)->nullable();
+            $table->string('aktor')->nullable();
+            $table->string('aksi', 50);
+            $table->string('objek', 100);
+            $table->string('ip', 45)->nullable();
+            $table->string('result', 20)->default('SUCCESS');
             $table->text('user_agent')->nullable();
-            $table->json('keterangan')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->text('keterangan')->nullable();
+            $table->timestamp('timestamp')->useCurrent();
         });
     }
 
@@ -28,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('audit_logs');
+        Schema::dropIfExists('audit_log');
     }
 };

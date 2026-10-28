@@ -13,10 +13,8 @@ return new class extends Migration
     {
         Schema::create('masukan', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('tipe_masukan')->default('saran'); // saran, bug, keluhan, lainnya
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->text('pesan');
-            $table->string('status')->default('baru'); // baru, diproses, selesai
             $table->timestamps();
         });
     }

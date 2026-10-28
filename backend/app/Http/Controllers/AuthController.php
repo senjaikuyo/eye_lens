@@ -50,7 +50,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         $request->validate([
             'email' => ['required', 'email'],
@@ -67,37 +67,45 @@ class AuthController extends Controller
                 'user_id' => $user?->id ?? null,
                 'aktor' => $request->email,
                 'aksi' => 'USER_LOGIN_FAILED',
-                'objek' => 'Admin Login Page',
+                'objek' => 'Mobile Login API',
                 'ip' => $request->ip(),
                 'user_agent' => $request->header('User-Agent'),
-                'keterangan' => 'Percobaan login admin gagal karena kredensial tidak valid',
+                'keterangan' => 'Percobaan login mobile gagal karena kredensial tidak valid',
                 'result' => 'FAILED',
                 'timestamp' => now(),
             ]);
 
-            return back()->withErrors([
-                'email' => 'The provided credentials are incorrect.',
-            ])->withInput($request->only('email'));
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
         }
 
         // 2. Kondisi jika Login Berhasil
-        Auth::login($user);
-        $request->session()->regenerate();
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         // Catat log sukses ke tabel audit_log
         AuditLog::create([
             'user_id' => $user->id,
             'aktor' => $user->name,
             'aksi' => 'USER_LOGIN_SUCCESS',
-            'objek' => 'Admin Dashboard',
+            'objek' => 'Mobile Login API',
             'ip' => $request->ip(),
             'user_agent' => $request->header('User-Agent'),
-            'keterangan' => 'Admin berhasil masuk ke dalam sistem',
+            'keterangan' => 'User mobile berhasil masuk ke dalam sistem',
             'result' => 'SUCCESS',
             'timestamp' => now(),
         ]);
 
-        return redirect()->intended(route('admin.dashboard'));
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ]);
     }
 
     public function logout(Request $request): JsonResponse

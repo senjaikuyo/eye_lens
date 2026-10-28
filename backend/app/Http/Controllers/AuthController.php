@@ -67,7 +67,7 @@ class AuthController extends Controller
                 'aktor' => $request->email, // Mencatat email yang mencoba masuk
                 'aksi' => 'USER_LOGIN_FAILED',
                 'objek' => 'Auth System / Login Page',
-                'ip_address' => $request->ip(),
+                'ip' => $request->ip(),
                 'user_agent' => $request->header('User-Agent'),
                 'keterangan' => 'Percobaan login gagal karena kredensial tidak valid',
                 'result' => 'FAILED',
@@ -88,7 +88,7 @@ class AuthController extends Controller
             'aktor' => $user->name, // Atau pakai $user->email
             'aksi' => 'USER_LOGIN_SUCCESS',
             'objek' => 'Auth System / Dashboard',
-            'ip_address' => $request->ip(),
+            'ip' => $request->ip(),
             'user_agent' => $request->header('User-Agent'),
             'keterangan' => 'User berhasil masuk ke dalam sistem',
             'result' => 'SUCCESS',

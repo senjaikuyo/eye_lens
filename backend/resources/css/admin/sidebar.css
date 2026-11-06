@@ -63,6 +63,14 @@
 }
 
 
+.sidebar-logo-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
 .sidebar-logo-symbol {
     width: 38px;
     height: 38px;

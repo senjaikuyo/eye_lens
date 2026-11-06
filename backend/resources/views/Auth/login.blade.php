@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Login Admin | EyeLens</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
 
     @vite('resources/css/auth/login.css')
 
@@ -27,9 +28,7 @@
 
             {{-- Logo --}}
             <div class="logo">
-                <div class="logo-symbol">
-                    e
-                </div>
+                <img src="{{ asset('images/logo.png') }}" alt="eyeLens Logo" class="login-logo-img">
 
                 <span class="logo-text">
                     eyeLens

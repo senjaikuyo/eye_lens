@@ -82,6 +82,14 @@ body {
 }
 
 
+.login-logo-img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    margin-right: 9px;
+    flex-shrink: 0;
+}
+
 .logo-symbol {
     width: 38px;
     height: 38px;

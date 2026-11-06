@@ -4,7 +4,7 @@
     <div class="sidebar-header">
 
         <div class="sidebar-logo">
-            <div class="sidebar-logo-symbol">e</div>
+            <img src="{{ asset('images/logo.png') }}" alt="eyeLens Logo" class="sidebar-logo-img">
             <span>eyeLens</span>
         </div>
 

@@ -119,7 +119,84 @@ eye_lens/
 
 ---
 
-### 4. Setup Docker
+### 4. Konfigurasi Email OTP Lupa Password (Gmail SMTP)
+
+Fitur lupa password mengirim kode OTP 6 digit ke email pengguna melalui Gmail SMTP.
+
+1. Aktifkan **Verifikasi 2 Langkah** pada akun Google yang akan dipakai.
+2. Buat **App Password 16 digit** di <https://myaccount.google.com/apppasswords>.
+3. Isi konfigurasi berikut di `backend/.env`. File yang sama juga dipakai saat menjalankan aplikasi lewat Docker:
+
+   ```env
+   MAIL_MAILER=smtp
+   MAIL_SCHEME=smtp
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USERNAME=email_anda@gmail.com
+   MAIL_PASSWORD=app_password_16_digit
+   MAIL_FROM_ADDRESS=email_anda@gmail.com
+   MAIL_FROM_NAME="EyeLens"
+   MAIL_TIMEOUT=15
+
+   OTP_EXPIRY_MINUTES=5
+   OTP_RESEND_COOLDOWN_SECONDS=60
+   OTP_MAX_ATTEMPTS=5
+   OTP_RESET_TOKEN_TTL_MINUTES=15
+   ```
+
+4. Bersihkan cache konfigurasi setelah mengubah `.env`:
+
+   ```bash
+   cd backend
+   php artisan config:clear
+   ```
+
+   Jika memakai Docker, buat ulang container agar environment baru diterapkan:
+
+   ```bash
+   docker-compose up -d --force-recreate app
+   docker exec eyelens_app php artisan config:clear
+   ```
+
+5. Uji pengiriman email tanpa harus lewat alur lupa password:
+
+   ```bash
+   # Di host (non-Docker)
+   cd backend
+   php artisan mail:test email_anda@gmail.com
+
+   # Di Docker
+   docker exec eyelens_app php artisan mail:test email_anda@gmail.com
+   ```
+
+   Jika perintah ini berhasil, OTP juga akan terkirim. Jika gagal, pesan error SMTP akan ditampilkan langsung.
+
+**Ketentuan keamanan yang diterapkan:**
+- OTP 6 digit hanya disimpan sebagai hash, berlaku **5 menit**, dan hangus setelah dipakai.
+- Kirim ulang OTP dibatasi **60 detik** per email (HTTP 429 + `retry_after`).
+- Maksimal **5 percobaan** verifikasi per kode.
+- Reset token 64 karakter di-hash, berlaku 15 menit, dan hanya bisa dipakai sekali.
+- Respons untuk email terdaftar dan tidak terdaftar dibuat seragam.
+- Seluruh token Sanctum pengguna direvoke setelah password berhasil diubah.
+
+**Endpoint API:**
+- `POST /api/forgot-password`
+- `POST /api/verify-reset-code`
+- `POST /api/reset-password`
+
+**Menjalankan test fitur:**
+
+```bash
+cd backend
+vendor/bin/phpunit --filter=PasswordResetTest
+
+cd ../frontend
+flutter test test/auth_password_reset_test.dart test/forgot_password_screen_test.dart
+```
+
+---
+
+### 5. Setup Docker
 
 #### A. Menjalankan di Komputer Baru (Pertama Kali)
 Saat repository baru di-clone di perangkat/komputer lain:
@@ -145,16 +222,24 @@ Catatan Docker:
 - Aset Vite (`public/build`) dibangun otomatis saat image Docker dibuat, jadi tidak perlu menjalankan `npm run build` di host untuk mode Docker.
 
 #### C. Pengaturan Email OTP Lupa Password di Docker
-- **Default (Tanpa Setup Tambahan)**: Kode OTP tidak hilang, melainkan dicatat langsung di log container Docker. Buka terminal dan pantau dengan:
+Docker membaca konfigurasi yang sama dari `backend/.env` (lihat langkah 4 pada bagian setup email).
+
+- **Kirim ke Gmail Nyata**:
+  1. Isi `MAIL_USERNAME` (alamat Gmail) dan `MAIL_PASSWORD` (App Password 16 digit) di `backend/.env`.
+  2. Buat ulang container agar environment baru diterapkan:
+     ```bash
+     docker-compose up -d --force-recreate app
+     docker exec eyelens_app php artisan config:clear
+     ```
+  3. Verifikasi:
+     ```bash
+     docker exec eyelens_app php artisan mail:test email_anda@gmail.com
+     ```
+
+- **Mode pengembangan tanpa SMTP**: ubah `MAIL_MAILER=log` pada `backend/.env`, lalu jalankan `docker-compose up -d --force-recreate app`. Kode OTP akan tercatat di log container:
   ```bash
   docker-compose logs -f app
   ```
-- **Kirim ke Gmail Nyata**:
-  Salin template environment di root folder proyek:
-  ```bash
-  cp .env.docker.example .env
-  ```
-  Lalu isi `MAIL_USERNAME` (alamat Gmail) dan `MAIL_PASSWORD` (App Password 16 digit dari Google). Restart container dengan `docker-compose up -d`.
 
 #### D. Mematikan Layanan
 ```bash

@@ -26,21 +26,52 @@ void main() {
       expect(msg, 'Kode verifikasi telah dikirim.');
     });
 
-    test('requestPasswordReset melempar exception saat rate limited (429)', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'message': 'Too Many Requests'}),
-          429,
-          headers: {'content-type': 'application/json'},
-        );
-      });
+    test(
+      'requestPasswordReset menampilkan pesan cooldown dari server (429)',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'message': 'Mohon tunggu 60 detik sebelum meminta kode baru.',
+              'retry_after': 60,
+            }),
+            429,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final authService = AuthService(client: mockClient);
-      expect(
-        () => authService.requestPasswordReset('user@example.com'),
-        throwsA(isA<Exception>()),
-      );
-    });
+        final authService = AuthService(client: mockClient);
+        expect(
+          () => authService.requestPasswordReset('user@example.com'),
+          throwsA(
+            predicate((e) => e.toString().contains('Mohon tunggu 60 detik')),
+          ),
+        );
+      },
+    );
+
+    test(
+      'requestPasswordReset memakai fallback saat 429 tanpa pesan server',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'message': 'Too Many Requests'}),
+            429,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final authService = AuthService(client: mockClient);
+        expect(
+          () => authService.requestPasswordReset('user@example.com'),
+          throwsA(
+            predicate(
+              (e) => e.toString().contains('Terlalu banyak permintaan'),
+            ),
+          ),
+        );
+      },
+    );
 
     test('verifyResetCode sukses dan mengembalikan reset token', () async {
       final mockClient = MockClient((request) async {
@@ -86,7 +117,9 @@ void main() {
           email: 'user@example.com',
           code: '000000',
         ),
-        throwsA(predicate((e) => e.toString().contains('Kode verifikasi salah'))),
+        throwsA(
+          predicate((e) => e.toString().contains('Kode verifikasi salah')),
+        ),
       );
     });
 

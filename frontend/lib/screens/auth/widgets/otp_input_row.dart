@@ -26,14 +26,8 @@ class _OtpInputRowState extends State<OtpInputRow> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      widget.length,
-      (_) => TextEditingController(),
-    );
-    _focusNodes = List.generate(
-      widget.length,
-      (_) => FocusNode(),
-    );
+    _controllers = List.generate(widget.length, (_) => TextEditingController());
+    _focusNodes = List.generate(widget.length, (_) => FocusNode());
   }
 
   @override
@@ -113,6 +107,9 @@ class _OtpInputRowState extends State<OtpInputRow> {
                 controller: _controllers[index],
                 focusNode: _focusNodes[index],
                 keyboardType: TextInputType.number,
+                autofillHints: index == 0
+                    ? const [AutofillHints.oneTimeCode]
+                    : null,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22,
@@ -121,17 +118,23 @@ class _OtpInputRowState extends State<OtpInputRow> {
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(widget.length), // Izinkan paste
+                  LengthLimitingTextInputFormatter(
+                    widget.length,
+                  ), // Izinkan paste
                 ],
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF7F7F8),
+                  fillColor: isDark
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF7F7F8),
                   contentPadding: EdgeInsets.zero,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(
-                      color: isDark ? const Color(0xFF333333) : const Color(0xFFD1D5DB),
+                      color: isDark
+                          ? const Color(0xFF333333)
+                          : const Color(0xFFD1D5DB),
                       width: 1.2,
                     ),
                   ),

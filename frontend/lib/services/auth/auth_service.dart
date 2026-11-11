@@ -38,7 +38,7 @@ class AuthService {
       }),
     );
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       await _saveToken(data["access_token"]);
@@ -46,15 +46,7 @@ class AuthService {
       return data;
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Registration failed");
+    throw Exception(_extractErrorMessage(data, "Registration failed"));
   }
 
   Future<Map<String, dynamic>> login({
@@ -67,13 +59,10 @@ class AuthService {
         "Accept": "application/json",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-      }),
+      body: jsonEncode({"email": email, "password": password}),
     );
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       await _saveToken(data["access_token"]);
@@ -81,15 +70,7 @@ class AuthService {
       return data;
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Login failed");
+    throw Exception(_extractErrorMessage(data, "Login failed"));
   }
 
   /// Meminta kode OTP 6-digit untuk lupa kata sandi
@@ -100,30 +81,22 @@ class AuthService {
         "Accept": "application/json",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({
-        "email": email.trim(),
-      }),
+      body: jsonEncode({"email": email.trim()}),
     );
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeResponse(response);
 
     if (response.statusCode == 429) {
-      throw Exception("Terlalu banyak permintaan. Silakan tunggu 15 menit.");
+      throw Exception(_rateLimitMessage(data));
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data["message"] ?? "Kode verifikasi telah dikirim.";
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Gagal mengirim kode verifikasi.");
+    throw Exception(
+      _extractErrorMessage(data, "Gagal mengirim kode verifikasi."),
+    );
   }
 
   /// Verifikasi kode OTP 6-digit dan mengembalikan reset token
@@ -137,27 +110,25 @@ class AuthService {
         "Accept": "application/json",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({
-        "email": email.trim(),
-        "code": code.trim(),
-      }),
+      body: jsonEncode({"email": email.trim(), "code": code.trim()}),
     );
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeResponse(response);
+
+    if (response.statusCode == 429) {
+      throw Exception(_rateLimitMessage(data));
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return data["reset_token"] as String;
-    }
-
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
+      final resetToken = data["reset_token"];
+      if (resetToken is String && resetToken.isNotEmpty) {
+        return resetToken;
       }
+
+      throw Exception("Reset token tidak ditemukan pada respons server.");
     }
 
-    throw Exception(data["message"] ?? "Kode verifikasi tidak valid.");
+    throw Exception(_extractErrorMessage(data, "Kode verifikasi tidak valid."));
   }
 
   /// Simpan password baru menggunakan reset token
@@ -181,21 +152,19 @@ class AuthService {
       }),
     );
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeResponse(response);
+
+    if (response.statusCode == 429) {
+      throw Exception(_rateLimitMessage(data));
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data["message"] ?? "Kata sandi berhasil diperbarui.";
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Gagal memperbarui kata sandi.");
+    throw Exception(
+      _extractErrorMessage(data, "Gagal memperbarui kata sandi."),
+    );
   }
 
   Future<void> logout() async {
@@ -230,6 +199,51 @@ class AuthService {
     final userJson = prefs.getString("auth_user");
     if (userJson == null) return null;
     return jsonDecode(userJson);
+  }
+
+  Map<String, dynamic> _decodeResponse(http.Response response) {
+    final rawBody = utf8.decode(response.bodyBytes).trim();
+    if (rawBody.isEmpty) return <String, dynamic>{};
+
+    try {
+      final decoded = jsonDecode(rawBody);
+      return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+    } on FormatException {
+      return <String, dynamic>{};
+    }
+  }
+
+  String _extractErrorMessage(Map<String, dynamic> data, String fallback) {
+    final errors = data["errors"];
+    if (errors is Map && errors.isNotEmpty) {
+      final firstError = errors.values.first;
+      if (firstError is List && firstError.isNotEmpty) {
+        return firstError.first.toString();
+      }
+    }
+
+    final message = data["message"];
+    if (message is String && message.trim().isNotEmpty) {
+      return message;
+    }
+
+    return fallback;
+  }
+
+  String _rateLimitMessage(Map<String, dynamic> data) {
+    final message = data["message"];
+    if (message is String &&
+        message.trim().isNotEmpty &&
+        message != "Too Many Requests") {
+      return message;
+    }
+
+    final retryAfter = data["retry_after"];
+    if (retryAfter is num && retryAfter > 0) {
+      return "Terlalu banyak permintaan. Coba lagi dalam ${retryAfter.toInt()} detik.";
+    }
+
+    return "Terlalu banyak permintaan. Silakan coba lagi nanti.";
   }
 
   Future<void> _saveToken(String token) async {

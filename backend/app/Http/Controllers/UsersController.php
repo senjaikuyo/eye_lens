@@ -11,7 +11,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use App\Models\AuditLog;
 
-class AuthController extends Controller
+class UsersController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
@@ -117,10 +117,15 @@ class AuthController extends Controller
         ]);
     }
 
-    public function me(Request $request): JsonResponse
+    public function getProfile(Request $request): JsonResponse
     {
         return response()->json([
             'user' => $request->user(),
         ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return $this->getProfile($request);
     }
 }

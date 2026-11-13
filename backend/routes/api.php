@@ -1,19 +1,22 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\UsersController;
+use App\Http\Controllers\ChangePasswordController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Rute Publik (Autentikasi & Reset Password)
+Route::post('/register', [UsersController::class, 'register']);
+Route::post('/login', [UsersController::class, 'login']);
 
-// Password Reset Routes
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode'])
+Route::post('/forgot-password', [ChangePasswordController::class, 'sendResetCode'])
     ->middleware('throttle:3,15');
-Route::post('/verify-reset-code', [PasswordResetController::class, 'verifyResetCode']);
-Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
+Route::post('/verify-reset-code', [ChangePasswordController::class, 'verifyResetCode']);
+Route::post('/reset-password', [ChangePasswordController::class, 'resetPassword']);
 
+// Rute Terproteksi Sanctum
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [UsersController::class, 'logout']);
+    Route::get('/me', [UsersController::class, 'getProfile']);
+    Route::get('/profile', [UsersController::class, 'getProfile']);
+    Route::post('/change-password', [ChangePasswordController::class, 'changePassword']);
 });

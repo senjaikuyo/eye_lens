@@ -7,23 +7,23 @@ services:
     container_name: eyelens_app
     restart: unless-stopped
     working_dir: /var/www/html
+    # Konfigurasi aplikasi (termasuk Gmail SMTP dan OTP) dibaca dari satu
+    # sumber yang sama dengan mode non-Docker, yaitu backend/.env.
+    env_file:
+      - ./backend/.env
     environment:
+      # Nilai khusus container: host database dan log ke stderr.
       - APP_KEY=${APP_KEY:-base64:sSdt1T7IFpltj3EyVIxR9X/nZghG+a9caqqtUrn48+Y=}
       - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=db_eyelens
       - DB_USERNAME=eyelens_app
       - DB_PASSWORD=eyelens123
-      - MAIL_MAILER=${MAIL_MAILER:-log}
-      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
-      - MAIL_PORT=${MAIL_PORT:-587}
-      - MAIL_USERNAME=${MAIL_USERNAME:-}
-      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
-      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-hello@example.com}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-EyeLens}
+      - LOG_CHANNEL=stderr
     volumes:
       - ./backend:/var/www/html
+      - vendor:/var/www/html/vendor
+      - bootstrap_cache:/var/www/html/bootstrap/cache
     networks:
       - eyelens_network
     depends_on:
@@ -76,6 +76,10 @@ services:
 
 volumes:
   dbdata:
+    driver: local
+  vendor:
+    driver: local
+  bootstrap_cache:
     driver: local
 
 networks:

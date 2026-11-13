@@ -8,6 +8,7 @@ import '../../core/password_validator.dart';
 import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
+import 'login_screen.dart';
 import 'widgets/otp_input_row.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -38,11 +39,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // Step 3: Password Baru
   String? _resetToken;
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _passwordError;
   String? _confirmPasswordError;
+
+  // Dipakai untuk me-reset seluruh kotak OTP saat kode baru dikirim.
+  int _otpGeneration = 0;
 
   @override
   void initState() {
@@ -82,9 +87,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
+  String get _email => _emailController.text.trim().toLowerCase();
+
   // --- Step 1: Kirim Kode ---
   Future<void> _handleSendCode(AppStrings strings) async {
-    final email = _emailController.text.trim();
+    if (_isLoading) return;
+
+    final email = _email;
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
@@ -105,6 +114,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _startResendTimer();
       setState(() {
         _currentStep = 2;
+        _otpCode = '';
+        _otpError = null;
+        _otpGeneration++;
       });
     } catch (e) {
       if (!mounted) return;
@@ -133,10 +145,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      final email = _emailController.text.trim();
+      final email = _email;
       await _authService.requestPasswordReset(email);
       if (!mounted) return;
       _startResendTimer();
+      setState(() {
+        _otpCode = '';
+        _otpError = null;
+        _otpGeneration++;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${strings.codeSentTo} $email'),
@@ -162,6 +179,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   // --- Step 2: Verifikasi Kode ---
   Future<void> _handleVerifyCode(AppStrings strings) async {
+    if (_isLoading) return;
+
     if (_otpCode.length != 6) {
       setState(() {
         _otpError = 'Harap isi 6 digit kode verifikasi';
@@ -176,7 +195,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       final token = await _authService.verifyResetCode(
-        email: _emailController.text.trim(),
+        email: _email,
         code: _otpCode,
       );
       if (!mounted) return;
@@ -191,10 +210,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _otpError = errorMsg;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMsg),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -252,19 +268,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       await _authService.resetPassword(
-        email: _emailController.text.trim(),
+        email: _email,
         resetToken: _resetToken!,
         password: password,
         passwordConfirmation: confirmPassword,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.passwordResetSuccessMessage),
-          backgroundColor: Colors.green,
-        ),
+
+      // Backend sudah merevoke seluruh token Sanctum. Bersihkan juga sesi
+      // lokal agar token lama tidak tertinggal di perangkat.
+      await _authService.logout();
+      if (!mounted) return;
+
+      await _showResetSuccessDialog(
+        strings,
+        Theme.of(context).brightness == Brightness.dark,
       );
-      Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,6 +304,75 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         });
       }
     }
+  }
+
+  Future<void> _showResetSuccessDialog(AppStrings strings, bool isDark) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: AppColors.accentGreen,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              strings.passwordResetSuccessTitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? Colors.white : AppColors.black,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.passwordResetSuccessMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? const Color(0xFFCCCCCC)
+                    : const Color(0xFF555555),
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              key: const Key('backToLoginButton'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? Colors.white : AppColors.black,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                strings.backToLogin,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildStepIndicator(bool isDark) {
@@ -300,8 +393,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: isActive
                     ? (isDark ? AppColors.white : AppColors.black)
                     : (isCompleted
-                        ? Colors.green
-                        : (isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB))),
+                          ? Colors.green
+                          : (isDark
+                                ? const Color(0xFF333333)
+                                : const Color(0xFFE5E7EB))),
               ),
               child: Center(
                 child: isCompleted
@@ -324,7 +419,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 height: 2,
                 color: isCompleted
                     ? Colors.green
-                    : (isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB)),
+                    : (isDark
+                          ? const Color(0xFF333333)
+                          : const Color(0xFFE5E7EB)),
               ),
           ],
         );
@@ -438,7 +535,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          '${strings.forgotPasswordStep2Desc} ${_emailController.text}',
+          '${strings.forgotPasswordStep2Desc} $_email',
           style: TextStyle(
             fontSize: 16,
             color: isDark ? Colors.white70 : Colors.black87,
@@ -448,13 +545,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 8),
         Text(
           strings.codeExpiresNotice,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
         const SizedBox(height: 32),
         OtpInputRow(
+          key: ValueKey<int>(_otpGeneration),
           onChanged: (code) {
             setState(() {
               _otpCode = code;
@@ -476,8 +571,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             GestureDetector(
               onTap: () {
+                _resendTimer?.cancel();
                 setState(() {
                   _currentStep = 1;
+                  _resendCountdown = 0;
+                  _otpCode = '';
+                  _otpError = null;
+                  _otpGeneration++;
                 });
               },
               child: const Text(
@@ -490,13 +590,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ),
             GestureDetector(
-              onTap: _resendCountdown == 0 ? () => _handleResendCode(strings) : null,
+              onTap: _resendCountdown == 0
+                  ? () => _handleResendCode(strings)
+                  : null,
               child: Text(
                 _resendCountdown > 0
                     ? strings.resendInSeconds(_resendCountdown)
                     : strings.resendCode,
                 style: TextStyle(
-                  color: _resendCountdown == 0 ? AppColors.linkBlue : Colors.grey,
+                  color: _resendCountdown == 0
+                      ? AppColors.linkBlue
+                      : Colors.grey,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -578,7 +682,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: LinearProgressIndicator(
                     value: strength,
                     color: strengthColor,
-                    backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
+                    backgroundColor: isDark
+                        ? const Color(0xFF333333)
+                        : const Color(0xFFE5E7EB),
                     minHeight: 6,
                   ),
                 ),

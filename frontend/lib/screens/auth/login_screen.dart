@@ -113,6 +113,68 @@ class _LoginScreenState extends State<LoginScreen> {
         .push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
   }
 
+  void _showServerConfigDialog() async {
+    final currentUrl = await AuthService.getBaseUrl();
+    if (!mounted) return;
+    final controller = TextEditingController(text: currentUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          title: const Text('Atur Alamat Server'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Masukkan alamat IP/domain backend Laravel (contoh: http://192.168.1.10:8000/api)',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Server URL',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final input = controller.text.trim();
+                if (input.isNotEmpty) {
+                  await AuthService.setBaseUrl(input);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                  }
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Server diarahkan ke: ${AuthService.baseUrl}'),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -126,7 +188,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 50),
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  icon: const Icon(Icons.settings_ethernet, size: 22),
+                  tooltip: 'Konfigurasi Server',
+                  onPressed: _showServerConfigDialog,
+                ),
+              ),
+              const SizedBox(height: 20),
               Center(
                 child: Image.asset(
                   'assets/images/logo.png',

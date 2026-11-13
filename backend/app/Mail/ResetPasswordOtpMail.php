@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -12,15 +13,14 @@ class ResetPasswordOtpMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $otp;
-
     /**
-     * Create a new message instance.
+     * @param  string  $otp  Kode verifikasi 6 digit.
+     * @param  int  $expiryMinutes  Masa berlaku kode dalam menit.
      */
-    public function __construct(string $otp)
-    {
-        $this->otp = $otp;
-    }
+    public function __construct(
+        public string $otp,
+        public int $expiryMinutes = 5,
+    ) {}
 
     /**
      * Get the message envelope.
@@ -45,7 +45,7 @@ class ResetPasswordOtpMail extends Mailable
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {

@@ -6,6 +6,7 @@ import '../../core/app_strings.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/display_preferences_provider.dart';
+import '../../services/auth/auth_service.dart';
 import 'change_password_screen.dart';
 import 'faq_screen.dart';
 import 'widgets/language_selector_tile.dart';
@@ -23,6 +24,23 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String _userEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserEmail();
+  }
+
+  Future<void> _loadUserEmail() async {
+    final user = await AuthService().getUser();
+    if (mounted && user != null && user['email'] != null) {
+      setState(() {
+        _userEmail = user['email'].toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<DisplayPreferencesProvider>();
@@ -91,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // 1. Email Section
               SettingsEmailTile(
                 emailLabel: strings.email,
-                email: 'afifhamzah21@gmail.com',
+                email: _userEmail.isNotEmpty ? _userEmail : '-',
                 isDark: isDark,
                 isHighContrast: isHighContrast,
               ),

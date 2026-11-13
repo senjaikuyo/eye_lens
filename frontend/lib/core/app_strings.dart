@@ -88,13 +88,11 @@ class AppStrings {
   String get sendCode => isIndonesian ? 'Kirim Kode' : 'Send Code';
   String get verifyCode => isIndonesian ? 'Verifikasi' : 'Verify';
   String get codeExpiresNotice => isIndonesian
-      ? 'Kode verifikasi berlaku selama 10 menit'
-      : 'Verification code is valid for 10 minutes';
-  String resendInSeconds(int s) => isIndonesian
-      ? 'Kirim ulang dalam $s detik'
-      : 'Resend in $s seconds';
-  String get resendCode =>
-      isIndonesian ? 'Kirim Ulang Kode' : 'Resend Code';
+      ? 'Kode verifikasi berlaku selama 5 menit dan hanya dapat digunakan satu kali'
+      : 'Verification code is valid for 5 minutes and can only be used once';
+  String resendInSeconds(int s) =>
+      isIndonesian ? 'Kirim ulang dalam $s detik' : 'Resend in $s seconds';
+  String get resendCode => isIndonesian ? 'Kirim Ulang Kode' : 'Resend Code';
   String get passwordComplexityRequirements => isIndonesian
       ? 'Kata sandi minimal 8 karakter, kombinasi huruf besar, kecil, angka, dan simbol'
       : 'Password must be at least 8 characters, combination of uppercase, lowercase, numbers, and symbols';
@@ -103,14 +101,14 @@ class AppStrings {
   String get passwordResetSuccessMessage => isIndonesian
       ? 'Kata sandi berhasil diperbarui! Silakan masuk kembali.'
       : 'Password successfully updated! Please login again.';
+  String get passwordResetSuccessTitle =>
+      isIndonesian ? 'Kata Sandi Diperbarui' : 'Password Updated';
+  String get backToLogin => isIndonesian ? 'Kembali ke Login' : 'Back to Login';
   String get passwordStrengthLabel =>
       isIndonesian ? 'Kekuatan sandi' : 'Password strength';
-  String get passwordStrengthWeak =>
-      isIndonesian ? 'Lemah' : 'Weak';
-  String get passwordStrengthMedium =>
-      isIndonesian ? 'Sedang' : 'Medium';
-  String get passwordStrengthStrong =>
-      isIndonesian ? 'Kuat' : 'Strong';
+  String get passwordStrengthWeak => isIndonesian ? 'Lemah' : 'Weak';
+  String get passwordStrengthMedium => isIndonesian ? 'Sedang' : 'Medium';
+  String get passwordStrengthStrong => isIndonesian ? 'Kuat' : 'Strong';
 
   // --- Camera & Scanner ---
   String get cameraInitializing =>
@@ -289,7 +287,7 @@ class AppStrings {
           },
         ];
 
-
   String get name => isIndonesian ? 'Nama' : 'Name';
-  String get nameRequired => isIndonesian ? 'Nama wajib diisi' : 'Name is required';
+  String get nameRequired =>
+      isIndonesian ? 'Nama wajib diisi' : 'Name is required';
 }

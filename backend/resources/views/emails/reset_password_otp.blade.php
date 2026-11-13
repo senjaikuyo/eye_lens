@@ -24,6 +24,12 @@
             text-align: center;
             margin-bottom: 24px;
         }
+        .brand {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px;
+        }
         .otp-box {
             background-color: #0d1b2a;
             color: #ffffff;
@@ -34,6 +40,13 @@
             padding: 16px;
             border-radius: 6px;
             margin: 24px 0;
+        }
+        .note {
+            background-color: #f7f7f8;
+            border-left: 4px solid #0d1b2a;
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-size: 14px;
         }
         .footer {
             font-size: 13px;
@@ -47,7 +60,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>EyeLens</h2>
+            <h2 class="brand">EyeLens</h2>
             <p>Permintaan Pengaturan Ulang Kata Sandi</p>
         </div>
         <p>Halo,</p>
@@ -55,7 +68,13 @@
         <div class="otp-box">
             {{ $otp }}
         </div>
-        <p>Kode ini berlaku selama <strong>10 menit</strong>. Jika Anda tidak merasa meminta pengaturan ulang kata sandi, abaikan email ini dan kata sandi Anda akan tetap aman.</p>
+        <div class="note">
+            <p style="margin: 0;">
+                Kode ini berlaku selama <strong>{{ $expiryMinutes }} menit</strong> dan hanya dapat digunakan
+                <strong>satu kali</strong>. Jangan bagikan kode ini kepada siapa pun.
+            </p>
+        </div>
+        <p>Jika Anda tidak merasa meminta pengaturan ulang kata sandi, abaikan email ini dan kata sandi Anda akan tetap aman.</p>
         <div class="footer">
             <p>&copy; {{ date('Y') }} EyeLens. Pesan ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
         </div>

@@ -10,8 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        DB::statement("DROP VIEW IF EXISTS v_public_users;");
         DB::statement("
-            CREATE OR REPLACE VIEW v_public_users AS
+            CREATE VIEW v_public_users AS
             SELECT
                 id,
                 name,

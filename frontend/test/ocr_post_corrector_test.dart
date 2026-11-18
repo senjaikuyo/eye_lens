@@ -278,5 +278,37 @@ void main() {
         const Rect.fromLTWH(0, 50, 300, 45),
       );
     });
+
+    test('13. Mengoreksi ambigu optik tulisan tangan (rn->m, cl->d, 9->g, 7->t) dan melindungi kata valid (Issue i Phase I)', () {
+      // rn -> m
+      expect(
+        OcrPostCorrector.correctLine('terirna kasih banyak'),
+        'terima kasih banyak',
+      );
+      // cl -> d
+      expect(
+        OcrPostCorrector.correctLine('clalam rumah baru'),
+        'dalam rumah baru',
+      );
+      // 9 -> g
+      expect(
+        OcrPostCorrector.correctLine('jangan per9i dulu'),
+        'jangan pergi dulu',
+      );
+      // 7 -> t
+      expect(
+        OcrPostCorrector.correctLine('ki7a bersama mereka'),
+        'kita bersama mereka',
+      );
+      // Proteksi kata sah yang memiliki 'rn' atau 'cl'
+      expect(
+        OcrPostCorrector.correctLine('arsitektur modern masa kini'),
+        'arsitektur modern masa kini',
+      );
+      expect(
+        OcrPostCorrector.correctLine('clear and clean audio'),
+        'clear and clean audio',
+      );
+    });
   });
 }

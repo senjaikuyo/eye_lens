@@ -283,5 +283,35 @@ void main() {
       );
       expect(identity, equals(boxInCropped));
     });
+
+    test('11. preprocessHandwriting menghasilkan citra PNG valid dengan dimensi yang sama (Issue i Phase I)', () async {
+      final inputBytes = await createSampleImageBytes(width: 100, height: 80);
+      final processedBytes = await OcrPreprocessor.preprocessHandwriting(
+        inputBytes,
+        contrast: 1.6,
+        strokeThickening: true,
+      );
+
+      expect(processedBytes.isNotEmpty, isTrue);
+      final ui.Image decoded = await decodeImageFromList(processedBytes);
+      expect(decoded.width, equals(100));
+      expect(decoded.height, equals(80));
+      decoded.dispose();
+    });
+
+    test('12. preprocessHandwriting mendukung strokeThickening false secara aman', () async {
+      final inputBytes = await createSampleImageBytes(width: 80, height: 60);
+      final processedBytes = await OcrPreprocessor.preprocessHandwriting(
+        inputBytes,
+        contrast: 1.5,
+        strokeThickening: false,
+      );
+
+      expect(processedBytes.isNotEmpty, isTrue);
+      final ui.Image decoded = await decodeImageFromList(processedBytes);
+      expect(decoded.width, equals(80));
+      expect(decoded.height, equals(60));
+      decoded.dispose();
+    });
   });
 }

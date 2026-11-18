@@ -197,6 +197,19 @@ class _ScanningScreenState extends State<ScanningScreen>
     }
   }
 
+  String _getScanModeTip(AppStrings strings) {
+    switch (_currentScanMode) {
+      case OcrScanMode.screenText:
+        return strings.modeScreenTip;
+      case OcrScanMode.smallText:
+        return strings.modeSmallTextTip;
+      case OcrScanMode.handwriting:
+        return strings.modeHandwritingTip;
+      case OcrScanMode.document:
+        return '';
+    }
+  }
+
   void _updateZoom(double newZoom) {
     final clamped = newZoom.clamp(_minZoom, _maxZoom);
     if ((clamped - _currentZoom).abs() > 0.01) {
@@ -482,9 +495,8 @@ class _ScanningScreenState extends State<ScanningScreen>
             strings: strings,
           ),
 
-          // 2b. Petunjuk Singkat Khusus Mode Layar / Teliti (Issue e & c)
-          if (_currentScanMode == OcrScanMode.screenText ||
-              _currentScanMode == OcrScanMode.smallText)
+          // 2b. Petunjuk Singkat Khusus Mode Non-Dokumen (Issue e, c, & i)
+          if (_currentScanMode != OcrScanMode.document)
             Positioned(
               top: topPadding + 66,
               left: 20,
@@ -521,9 +533,7 @@ class _ScanningScreenState extends State<ScanningScreen>
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          _currentScanMode == OcrScanMode.screenText
-                              ? strings.modeScreenTip
-                              : strings.modeSmallTextTip,
+                          _getScanModeTip(strings),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Colors.white,

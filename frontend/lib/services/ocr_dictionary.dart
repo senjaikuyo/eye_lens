@@ -756,6 +756,7 @@ class OcrDictionary {
     'perasaan',
     'perawat',
     'percaya',
+    'pergi',
     'perihal',
     'peringatan',
     'perjalanan',

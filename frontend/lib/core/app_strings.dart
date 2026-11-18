@@ -291,7 +291,7 @@ class AppStrings {
   String get nameRequired =>
       isIndonesian ? 'Nama wajib diisi' : 'Name is required';
 
-  // --- Scan Modes (Issue f, e, & c) ---
+  // --- Scan Modes (Issue f, e, c, & i) ---
   String get modeDocument => isIndonesian ? 'Dokumen' : 'Document';
   String get modeSmallText => isIndonesian ? 'Teliti' : 'Small Text';
   String get modeScreenText => isIndonesian ? 'Layar' : 'Screen';
@@ -302,4 +302,7 @@ class AppStrings {
   String get modeSmallTextTip => isIndonesian
       ? 'Tips: Dekatkan kamera ke teks kecil atau tempatkan di tengah bingkai.'
       : 'Tip: Bring camera closer to small text or place it in the center frame.';
+  String get modeHandwritingTip => isIndonesian
+      ? 'Tips: Pastikan pencahayaan cukup & tulisan tangan berbaris jelas.'
+      : 'Tip: Ensure sufficient lighting & align handwriting clearly.';
 }

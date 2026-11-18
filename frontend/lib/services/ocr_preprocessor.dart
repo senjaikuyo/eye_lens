@@ -138,6 +138,84 @@ class OcrPreprocessor {
     return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
   }
 
+  /// Memproses citra tulisan tangan (handwriting) di atas kertas:
+  /// - Mengonversi ke grayscale dan meningkatkan kontras tinta terhadap kertas (contrast ~1.6x).
+  /// - Mempertebal goresan pena / pensil tipis (stroke thickening) via hardware BlendMode.darken
+  ///   agar karakter bersambung dan tidak terputus saat dianalisis ML Kit (Issue i Phase I).
+  /// - Menjaga memori: setiap ui.Image dan Canvas recorder segera dimusnahkan.
+  static Future<Uint8List> preprocessHandwriting(
+    Uint8List imageBytes, {
+    double contrast = 1.6,
+    bool strokeThickening = true,
+  }) async {
+    final ui.Image baseImage = await decodeImageFromList(imageBytes);
+    final int width = baseImage.width;
+    final int height = baseImage.height;
+
+    // Tahap 1: Grayscale + Contrast Shader
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    );
+
+    final double c = contrast.clamp(0.5, 3.0);
+    final double offset = (1.0 - c) * 128.0;
+
+    final contrastPaint = Paint()
+      ..colorFilter = ui.ColorFilter.matrix([
+        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
+        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
+        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
+        0, 0, 0, 1, 0,
+      ]);
+
+    canvas.drawImage(baseImage, Offset.zero, contrastPaint);
+    baseImage.dispose();
+
+    final contrastPicture = recorder.endRecording();
+    final contrastImage = await contrastPicture.toImage(width, height);
+    contrastPicture.dispose();
+
+    if (!strokeThickening) {
+      final byteData = await contrastImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      contrastImage.dispose();
+      return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
+    }
+
+    // Tahap 2: Stroke Thickening via BlendMode.darken (min-filter 4-arah)
+    final thickenRecorder = ui.PictureRecorder();
+    final thickenCanvas = Canvas(
+      thickenRecorder,
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    );
+
+    // Gambar citra dasar
+    thickenCanvas.drawImage(contrastImage, Offset.zero, Paint());
+
+    // Blend citra dengan geseran 1 piksel di 4 arah mata angin menggunakan BlendMode.darken
+    final darkenPaint = Paint()..blendMode = ui.BlendMode.darken;
+    thickenCanvas.drawImage(contrastImage, const Offset(1, 0), darkenPaint);
+    thickenCanvas.drawImage(contrastImage, const Offset(-1, 0), darkenPaint);
+    thickenCanvas.drawImage(contrastImage, const Offset(0, 1), darkenPaint);
+    thickenCanvas.drawImage(contrastImage, const Offset(0, -1), darkenPaint);
+
+    contrastImage.dispose();
+
+    final thickenPicture = thickenRecorder.endRecording();
+    final thickenedImage = await thickenPicture.toImage(width, height);
+    thickenPicture.dispose();
+
+    final byteData = await thickenedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    thickenedImage.dispose();
+
+    return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
+  }
+
   /// Menghitung ambang batas (threshold) binarisasi optimal menggunakan metode Otsu.
   static double calculateOtsuThreshold(Uint8List rgbaPixels, int totalPixels) {
     if (totalPixels <= 0) return 128.0;

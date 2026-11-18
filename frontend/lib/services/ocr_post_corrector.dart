@@ -47,7 +47,9 @@ class OcrPostCorrector {
     '4': ['a'],
     '5': ['s'],
     '6': ['g', 'b'],
+    '7': ['t'],
     '8': ['b'],
+    '9': ['g', 'q'],
   };
 
   static final RegExp _currencyPrefixRegex = RegExp(
@@ -278,10 +280,42 @@ class OcrPostCorrector {
       return null; // Melindungi "A4", "4K", "3D", dll.
     }
 
-    // Token harus mengandung huruf DAN digit (atau '|')
+    // Token harus mengandung huruf DAN digit (atau '|'), atau ambigu optik tulisan tangan
     final hasLetters = RegExp(r'[a-zA-Z]').hasMatch(core);
     final hasDigits = RegExp(r'[0-9|]').hasMatch(core);
-    if (!hasLetters || !hasDigits) {
+    if (!hasLetters) {
+      return null;
+    }
+
+    if (!hasDigits) {
+      // Periksa ambigu optik tulisan tangan (rn -> m, cl -> d) jika kata saat ini tidak valid di kamus
+      if (!OcrDictionary.isValidWord(core)) {
+        final isAllUpper = core.toUpperCase() == core;
+        final isCapitalized = core[0].toUpperCase() == core[0];
+
+        if (core.contains('rn')) {
+          final cand = core.replaceAll('rn', 'm');
+          if (OcrDictionary.isValidWord(cand)) {
+            final cased = isAllUpper
+                ? cand.toUpperCase()
+                : (isCapitalized
+                    ? cand[0].toUpperCase() + cand.substring(1)
+                    : cand);
+            return prefix + cased + suffix;
+          }
+        }
+        if (core.contains('cl')) {
+          final cand = core.replaceAll('cl', 'd');
+          if (OcrDictionary.isValidWord(cand)) {
+            final cased = isAllUpper
+                ? cand.toUpperCase()
+                : (isCapitalized
+                    ? cand[0].toUpperCase() + cand.substring(1)
+                    : cand);
+            return prefix + cased + suffix;
+          }
+        }
+      }
       return null;
     }
 

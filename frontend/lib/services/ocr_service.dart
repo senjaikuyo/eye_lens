@@ -365,13 +365,21 @@ class OcrService {
           }
         } else {
           // --- Alur Mode Dokumen, Layar, & Tulis Tangan ---
-          // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast, Mode lainnya -> Grayscale + Contrast
+          // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast,
+          //         Mode Tulis Tangan -> Stroke thickening + Contrast,
+          //         Mode Dokumen -> Grayscale + Contrast
           final Uint8List pass2Bytes;
           if (scanMode == OcrScanMode.screenText) {
             pass2Bytes = await OcrPreprocessor.preprocessScreenText(
               bytes,
               blurSigma: 0.8,
               contrast: 1.5,
+            );
+          } else if (scanMode == OcrScanMode.handwriting) {
+            pass2Bytes = await OcrPreprocessor.preprocessHandwriting(
+              bytes,
+              contrast: 1.6,
+              strokeThickening: true,
             );
           } else {
             pass2Bytes = await OcrPreprocessor.enhanceContrast(

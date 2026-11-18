@@ -69,6 +69,72 @@ class OcrPreprocessor {
     return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
   }
 
+  /// Memproses citra tangkapan layar (layar monitor/laptop/ponsel):
+  /// - Meredam interferensi kisi piksel frekuensi tinggi (efek moiré) via blur Gaussian halus (sigma ~0.8).
+  /// - Meningkatkan kontras teks terhadap backlight (contrast ~1.5x) dalam ruang grayscale.
+  /// - Mengeliminasi noise grid LCD/OLED agar karakter teks kembali solid dan mudah dibaca OCR.
+  static Future<Uint8List> preprocessScreenText(
+    Uint8List imageBytes, {
+    double blurSigma = 0.8,
+    double contrast = 1.5,
+  }) async {
+    final ui.Image baseImage = await decodeImageFromList(imageBytes);
+    final int width = baseImage.width;
+    final int height = baseImage.height;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    );
+
+    final double c = contrast;
+    final double offset = 128.0 * (1.0 - c);
+
+    final paint = Paint()
+      ..imageFilter = ui.ImageFilter.blur(
+        sigmaX: blurSigma,
+        sigmaY: blurSigma,
+        tileMode: TileMode.clamp,
+      )
+      ..colorFilter = ColorFilter.matrix(<double>[
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0,
+        0,
+        0,
+        1,
+        0,
+      ]);
+
+    canvas.drawImage(baseImage, Offset.zero, paint);
+    baseImage.dispose();
+
+    final picture = recorder.endRecording();
+    final processedImage = await picture.toImage(width, height);
+    picture.dispose();
+
+    final byteData = await processedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    processedImage.dispose();
+
+    return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
+  }
+
   /// Menghitung ambang batas (threshold) binarisasi optimal menggunakan metode Otsu.
   static double calculateOtsuThreshold(Uint8List rgbaPixels, int totalPixels) {
     if (totalPixels <= 0) return 128.0;

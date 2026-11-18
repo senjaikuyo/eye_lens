@@ -291,9 +291,12 @@ class AppStrings {
   String get nameRequired =>
       isIndonesian ? 'Nama wajib diisi' : 'Name is required';
 
-  // --- Scan Modes (Issue f) ---
+  // --- Scan Modes (Issue f & e) ---
   String get modeDocument => isIndonesian ? 'Dokumen' : 'Document';
   String get modeSmallText => isIndonesian ? 'Teliti' : 'Small Text';
   String get modeScreenText => isIndonesian ? 'Layar' : 'Screen';
   String get modeHandwriting => isIndonesian ? 'Tulis Tangan' : 'Handwriting';
+  String get modeScreenTip => isIndonesian
+      ? 'Tips: Hindari pantulan silau & arahkan kamera tegak lurus ke layar.'
+      : 'Tip: Avoid glare reflection & point camera straight at the screen.';
 }

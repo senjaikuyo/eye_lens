@@ -169,5 +169,20 @@ void main() {
 
       await normalFile.delete();
     });
+
+    test('5. preprocessScreenText menghasilkan citra terfilter dengan dimensi yang persis sama', () async {
+      final inputBytes = await createSampleImageBytes(width: 120, height: 90);
+      final processedBytes = await OcrPreprocessor.preprocessScreenText(
+        inputBytes,
+        blurSigma: 0.8,
+        contrast: 1.5,
+      );
+
+      expect(processedBytes.isNotEmpty, isTrue);
+      final ui.Image decoded = await decodeImageFromList(processedBytes);
+      expect(decoded.width, equals(120));
+      expect(decoded.height, equals(90));
+      decoded.dispose();
+    });
   });
 }

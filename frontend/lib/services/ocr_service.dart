@@ -258,15 +258,24 @@ class OcrService {
         return pass1Result;
       }
 
-      // Pass 2: Grayscale + Enhanced Contrast
+      // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast, Mode lainnya -> Grayscale + Contrast
       OcrResult bestResult = pass1Result;
       double bestScore = pass1Score;
 
       try {
-        final pass2Bytes = await OcrPreprocessor.enhanceContrast(
-          bytes,
-          contrast: 1.6,
-        );
+        final Uint8List pass2Bytes;
+        if (scanMode == OcrScanMode.screenText) {
+          pass2Bytes = await OcrPreprocessor.preprocessScreenText(
+            bytes,
+            blurSigma: 0.8,
+            contrast: 1.5,
+          );
+        } else {
+          pass2Bytes = await OcrPreprocessor.enhanceContrast(
+            bytes,
+            contrast: 1.6,
+          );
+        }
         final pass2Result = await _recognizeSinglePass(
           imageBytes: pass2Bytes,
           imageSize: imageSize,

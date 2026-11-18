@@ -9,6 +9,7 @@ import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
 import 'ocr_noise_filter.dart';
+import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
 import 'ocr_quality_scorer.dart';
 import 'text_formatter.dart';
@@ -114,32 +115,43 @@ class OcrService {
       allRawLines: allLines,
     );
 
+    // 2b. Koreksi karakter ambigu OCR via kamus leksikal on-device (Issue h)
+    final correctedDocumentData = OcrPostCorrector.correctDocument(
+      documentData,
+      scanMode: scanMode,
+    );
+
     // 3. Rapikan hasil teks menggunakan TextFormatter murni di isolate
     final FormattedTextResult formattedResult =
-        await TextFormatter.formatWithCompute(documentData);
+        await TextFormatter.formatWithCompute(correctedDocumentData);
 
     final String finalText = formattedResult.fullText.isNotEmpty
         ? formattedResult.fullText
-        : filterResult.acceptedLines.map((l) => l.text).join('\n');
+        : correctedDocumentData.blocks
+              .expand((b) => b.lines)
+              .map((l) => l.text)
+              .join('\n');
 
-    // 4. Siapkan OcrElement hanya untuk baris yang lolos filter
+    // 4. Siapkan OcrElement hanya untuk baris yang lolos filter dan telah dikoreksi
     final List<OcrElement> elements = [];
     int elementIndex = 0;
-    for (final line in filterResult.acceptedLines) {
-      elements.add(
-        OcrElement(
-          id: 'elem_${elementIndex++}',
-          text: line.text,
-          boundingBox: line.boundingBox,
-        ),
-      );
+    for (final block in correctedDocumentData.blocks) {
+      for (final line in block.lines) {
+        elements.add(
+          OcrElement(
+            id: 'elem_${elementIndex++}',
+            text: line.text,
+            boundingBox: line.boundingBox,
+          ),
+        );
+      }
     }
 
     return OcrResult(
       fullText: finalText,
       elements: elements,
       imageSize: imageSize,
-      documentData: documentData,
+      documentData: correctedDocumentData,
       formattedResult: formattedResult,
       rejectedLines: filterResult.rejectedLines,
       fallbackUsed: filterResult.fallbackUsed,

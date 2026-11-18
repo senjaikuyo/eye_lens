@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../models/text_formatter_models.dart';
+import 'ocr_post_corrector.dart';
 import 'reading_order_resolver.dart';
 
 /// Konfigurasi dan ambang batas aturan perapian teks OCR.
@@ -56,13 +57,16 @@ class TextFormatter {
 
   /// Fungsi murni utama: memformat dokumen OCR menjadi daftar paragraf dan kata berindeks.
   static FormattedTextResult format(OcrDocumentData data) {
-    if (data.blocks.isEmpty) {
-      return formatRawText(data.rawText);
+    // Terapkan koreksi karakter ambigu kamus & heuristik leksikal (Issue h)
+    final correctedData = OcrPostCorrector.correctDocument(data);
+
+    if (correctedData.blocks.isEmpty) {
+      return formatRawText(correctedData.rawText);
     }
 
     // 1. Kumpulkan semua baris valid
     final List<OcrLineData> allLines = [];
-    for (final block in data.blocks) {
+    for (final block in correctedData.blocks) {
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
           allLines.add(line);
@@ -71,7 +75,7 @@ class TextFormatter {
     }
 
     if (allLines.isEmpty) {
-      return formatRawText(data.rawText);
+      return formatRawText(correctedData.rawText);
     }
 
     // 2. Hitung tinggi baris median sebagai satuan ukuran acuan
@@ -84,7 +88,7 @@ class TextFormatter {
 
     // 3. Pertahankan blok ML Kit sebagai unit baca. Resolver mengurutkan
     // kolom dan blok, tetapi tidak pernah mencampurkan baris lintas blok.
-    final orderedBlocks = ReadingOrderResolver.resolve(data.blocks);
+    final orderedBlocks = ReadingOrderResolver.resolve(correctedData.blocks);
 
     final List<_RawParagraphAccumulator> rawParagraphs = [];
 
@@ -98,7 +102,7 @@ class TextFormatter {
     }
 
     if (rawParagraphs.isEmpty) {
-      return formatRawText(data.rawText);
+      return formatRawText(correctedData.rawText);
     }
 
     // 6. Bangun hasil akhir terformat dengan pemetaan indeks karakter persis
@@ -194,7 +198,8 @@ class TextFormatter {
 
   /// Fallback untuk memformat teks mentah jika tidak ada data posisi/koordinat.
   static FormattedTextResult formatRawText(String rawText) {
-    final clean = rawText.trim();
+    final correctedRawText = OcrPostCorrector.correctText(rawText);
+    final clean = correctedRawText.trim();
     if (clean.isEmpty) return FormattedTextResult.empty;
 
     final rawLines = clean.split('\n');

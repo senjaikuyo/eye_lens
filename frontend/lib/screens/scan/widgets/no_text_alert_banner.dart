@@ -40,7 +40,7 @@ class NoTextAlertBanner extends StatelessWidget {
     return Positioned(
       left: 16,
       right: 16,
-      bottom: bottomPadding + 130,
+      bottom: bottomPadding + 224,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
@@ -49,10 +49,7 @@ class NoTextAlertBanner extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.alertErrorBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.alertErrorBorder,
-              width: 1.0,
-            ),
+            border: Border.all(color: AppColors.alertErrorBorder, width: 1.0),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.28),

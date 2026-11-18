@@ -32,6 +32,8 @@ class OcrService {
   Future<OcrResult> _buildOcrResult({
     required RecognizedText recognizedText,
     required Size imageSize,
+    OcrNoiseFilterConfig? noiseFilterConfig,
+    OcrScanMode scanMode = OcrScanMode.document,
   }) async {
     final List<OcrLineData> allLines = [];
     final List<Rect> originalBlockBounds = [];
@@ -69,9 +71,15 @@ class OcrService {
       }
     }
 
-    // 1. Jalankan penyaring noise di background isolate
+    // 1. Jalankan penyaring noise di background isolate sesuai konfigurasi mode
+    final effectiveConfig =
+        noiseFilterConfig ?? OcrNoiseFilterConfig.fromMode(scanMode);
     final filterResult = await OcrNoiseFilter.filterWithCompute(
-      OcrNoiseFilterInput(lines: allLines, imageSize: imageSize),
+      OcrNoiseFilterInput(
+        lines: allLines,
+        imageSize: imageSize,
+        config: effectiveConfig,
+      ),
     );
 
     // 2. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
@@ -170,6 +178,8 @@ class OcrService {
     required Uint8List imageBytes,
     required Size imageSize,
     required Directory tempDir,
+    OcrScanMode scanMode = OcrScanMode.document,
+    OcrNoiseFilterConfig? noiseFilterConfig,
   }) async {
     File? tempFile;
     try {
@@ -186,6 +196,8 @@ class OcrService {
       return await _buildOcrResult(
         recognizedText: recognizedText,
         imageSize: imageSize,
+        scanMode: scanMode,
+        noiseFilterConfig: noiseFilterConfig,
       );
     } finally {
       if (tempFile != null) {
@@ -204,6 +216,8 @@ class OcrService {
   Future<OcrResult> processImageWithCoordinates(
     Uint8List bytes, {
     bool enableMultiPass = true,
+    OcrScanMode scanMode = OcrScanMode.document,
+    OcrNoiseFilterConfig? noiseFilterConfig,
   }) async {
     if (_isDisposed) return OcrResult.empty;
 
@@ -222,6 +236,8 @@ class OcrService {
         imageBytes: bytes,
         imageSize: imageSize,
         tempDir: tempDir,
+        scanMode: scanMode,
+        noiseFilterConfig: noiseFilterConfig,
       );
 
       if (!enableMultiPass) {
@@ -255,6 +271,8 @@ class OcrService {
           imageBytes: pass2Bytes,
           imageSize: imageSize,
           tempDir: tempDir,
+          scanMode: scanMode,
+          noiseFilterConfig: noiseFilterConfig,
         );
         final double pass2Score = OcrQualityScorer.scoreLines(
           pass2Result.rawLines,
@@ -274,6 +292,8 @@ class OcrService {
               imageBytes: pass3Bytes,
               imageSize: imageSize,
               tempDir: tempDir,
+              scanMode: scanMode,
+              noiseFilterConfig: noiseFilterConfig,
             );
             final double pass3Score = OcrQualityScorer.scoreLines(
               pass3Result.rawLines,
@@ -302,6 +322,8 @@ class OcrService {
   Future<OcrResult> processFileWithCoordinates(
     String filePath, {
     bool enableMultiPass = true,
+    OcrScanMode scanMode = OcrScanMode.document,
+    OcrNoiseFilterConfig? noiseFilterConfig,
   }) async {
     if (_isDisposed) return OcrResult.empty;
 
@@ -310,6 +332,8 @@ class OcrService {
       return await processImageWithCoordinates(
         bytes,
         enableMultiPass: enableMultiPass,
+        scanMode: scanMode,
+        noiseFilterConfig: noiseFilterConfig,
       );
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR file berkoordinat gagal: $e');

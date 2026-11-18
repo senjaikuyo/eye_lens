@@ -290,4 +290,10 @@ class AppStrings {
   String get name => isIndonesian ? 'Nama' : 'Name';
   String get nameRequired =>
       isIndonesian ? 'Nama wajib diisi' : 'Name is required';
+
+  // --- Scan Modes (Issue f) ---
+  String get modeDocument => isIndonesian ? 'Dokumen' : 'Document';
+  String get modeSmallText => isIndonesian ? 'Teliti' : 'Small Text';
+  String get modeScreenText => isIndonesian ? 'Layar' : 'Screen';
+  String get modeHandwriting => isIndonesian ? 'Tulis Tangan' : 'Handwriting';
 }

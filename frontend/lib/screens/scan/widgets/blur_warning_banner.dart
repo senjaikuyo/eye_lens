@@ -19,7 +19,7 @@ class BlurWarningBanner extends StatelessWidget {
     return Positioned(
       left: 24,
       right: 24,
-      bottom: bottomPadding + 130,
+      bottom: bottomPadding + 224,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: isVisible ? 1.0 : 0.0,

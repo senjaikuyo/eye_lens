@@ -15,6 +15,7 @@ import '../../providers/display_preferences_provider.dart';
 import '../../services/camera_lifecycle_manager.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
+import '../../services/ocr_noise_filter.dart';
 import '../../services/ocr_service.dart';
 import '../../services/ocr_text_validator.dart';
 import '../../services/tts_service.dart';
@@ -25,6 +26,7 @@ import 'widgets/camera_viewfinder.dart';
 import 'widgets/no_text_alert_banner.dart';
 import 'widgets/ocr_processing_overlay.dart';
 import 'widgets/scan_bottom_bar.dart';
+import 'widgets/scan_mode_selector.dart';
 import 'widgets/scan_top_bar.dart';
 import 'widgets/zoom_pill_indicator.dart';
 
@@ -45,6 +47,7 @@ class _ScanningScreenState extends State<ScanningScreen>
 
   bool _isSubscribedToRouteObserver = false;
   bool _isFlashOn = false;
+  OcrScanMode _currentScanMode = OcrScanMode.document;
   double _currentZoom = 1.0;
   bool _isBlurry = false;
   bool _isProcessingOcr = false;
@@ -251,7 +254,10 @@ class _ScanningScreenState extends State<ScanningScreen>
         // agar lampu indikator kamera padam dan baterai terlindungi
         await _cameraService.stop();
 
-        final ocrResult = await _ocrService.processImageWithCoordinates(bytes);
+        final ocrResult = await _ocrService.processImageWithCoordinates(
+          bytes,
+          scanMode: _currentScanMode,
+        );
         final check = OcrTextValidator.validateResult(ocrResult);
 
         if (!mounted) return;
@@ -349,6 +355,7 @@ class _ScanningScreenState extends State<ScanningScreen>
       final bytes = await pickedFile.readAsBytes();
       final ocrResult = await _ocrService.processFileWithCoordinates(
         pickedFile.path,
+        scanMode: _currentScanMode,
       );
       final check = OcrTextValidator.validateResult(ocrResult);
 
@@ -439,8 +446,7 @@ class _ScanningScreenState extends State<ScanningScreen>
     final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
 
-    final isCameraStarting =
-        _cameraService.status == CameraStatus.starting;
+    final isCameraStarting = _cameraService.status == CameraStatus.starting;
     final isCameraError = _cameraService.status == CameraStatus.error;
 
     return Scaffold(
@@ -492,11 +498,22 @@ class _ScanningScreenState extends State<ScanningScreen>
           Positioned(
             left: 0,
             right: 0,
-            bottom: bottomPadding + 130,
+            bottom: bottomPadding + 180,
             child: ZoomPillIndicator(
               currentZoom: _currentZoom,
               onTap: () => _updateZoom(1.0),
             ),
+          ),
+
+          // 4b. Pemilih Mode Pemindaian Manual (Dokumen, Teliti, Layar, Tulis Tangan)
+          ScanModeSelector(
+            selectedMode: _currentScanMode,
+            onModeChanged: (newMode) {
+              setState(() {
+                _currentScanMode = newMode;
+              });
+            },
+            bottomPadding: bottomPadding,
           ),
 
           // 5. Floating Blur Warning Alert Banner

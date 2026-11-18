@@ -1,7 +1,26 @@
 import 'dart:math';
 import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
+
 import '../models/text_formatter_models.dart';
+
+/// Mode pemindaian OCR manual untuk menyesuaikan toleransi penyaring noise
+/// sesuai skenario pengguna (tanpa deteksi otomatis yang rawan salah klasifikasi).
+enum OcrScanMode {
+  /// Dokumen cetak umum (buku, surat, artikel).
+  document,
+
+  /// Teks kecil / detail ("Teliti"): melonggarkan batas tinggi baris agar teks
+  /// bahan obat, komposisi makanan, catatan kaki, atau struk belanja tidak dibuang.
+  smallText,
+
+  /// Tangkapan layar antarmuka: menyaring jam, status bar, dan elemen antarmuka tepi.
+  screenText,
+
+  /// Tulisan tangan: melonggarkan toleransi confidence dan rasio alfanumerik.
+  handwriting,
+}
 
 /// Alasan penolakan baris OCR oleh [OcrNoiseFilter].
 enum NoiseRejectionReason {
@@ -79,6 +98,18 @@ class OcrNoiseFilterConfig {
   /// Daftar nama operator telekomunikasi populer (case-insensitive).
   final Set<String> knownCarriers;
 
+  /// Apakah mode teks kecil ("Teliti") aktif (melonggarkan minLineHeightRatio ke 0.05).
+  final bool isSmallTextMode;
+
+  /// Apakah mode teks layar aktif (memperketat zona tepi status bar ke 12%).
+  final bool isScreenTextMode;
+
+  /// Apakah mode tulisan tangan aktif (melonggarkan minConfidence ke 0.25 dan minAlphaRatio ke 0.30).
+  final bool isHandwritingMode;
+
+  /// Apakah deteksi otomatis tangkapan layar diizinkan jika mode layar tidak eksplisit.
+  final bool enableAutoScreenshotDetection;
+
   const OcrNoiseFilterConfig({
     this.minConfidence = 0.5,
     this.minLineHeightRatio = 0.4,
@@ -92,6 +123,10 @@ class OcrNoiseFilterConfig {
     this.screenshotShortLinesRatio = 0.50,
     this.screenshotShortLineCharLimit = 20,
     this.screenshotMinLines = 4,
+    this.isSmallTextMode = false,
+    this.isScreenTextMode = false,
+    this.isHandwritingMode = false,
+    this.enableAutoScreenshotDetection = true,
     this.validShortWords = const {
       'a',
       'i',
@@ -146,6 +181,29 @@ class OcrNoiseFilterConfig {
       'darurat',
     },
   });
+
+  /// Factory untuk membuat konfigurasi berdasarkan pilihan [OcrScanMode] manual pengguna.
+  factory OcrNoiseFilterConfig.fromMode(OcrScanMode mode) {
+    switch (mode) {
+      case OcrScanMode.smallText:
+        return const OcrNoiseFilterConfig(
+          isSmallTextMode: true,
+          enableAutoScreenshotDetection: false,
+        );
+      case OcrScanMode.screenText:
+        return const OcrNoiseFilterConfig(
+          isScreenTextMode: true,
+          enableAutoScreenshotDetection: false,
+        );
+      case OcrScanMode.handwriting:
+        return const OcrNoiseFilterConfig(
+          isHandwritingMode: true,
+          enableAutoScreenshotDetection: false,
+        );
+      case OcrScanMode.document:
+        return const OcrNoiseFilterConfig(enableAutoScreenshotDetection: false);
+    }
+  }
 }
 
 /// Hasil penyaringan noise OCR.
@@ -206,9 +264,7 @@ class OcrNoiseFilter {
   );
 
   /// Pola persen status bar: 85%, 100 %, dsb.
-  static final RegExp _statusBarPercentRegex = RegExp(
-    r'^\s*\d{1,3}\s*%\s*$',
-  );
+  static final RegExp _statusBarPercentRegex = RegExp(r'^\s*\d{1,3}\s*%\s*$');
 
   /// Pola indikator sinyal/jaringan: 4G, 5G, LTE, Wi-Fi, WiFi, VoLTE, dsb.
   static final RegExp _statusBarNetworkRegex = RegExp(
@@ -319,31 +375,34 @@ class OcrNoiseFilter {
     }
 
     // 1. Hitung tinggi baris median untuk evaluasi ukuran
-    final validHeights = lines
-        .map((l) => l.boundingBox.height)
-        .where((h) => h > 0)
-        .toList()
-      ..sort();
+    final validHeights =
+        lines.map((l) => l.boundingBox.height).where((h) => h > 0).toList()
+          ..sort();
 
     final double medianHeight = validHeights.isNotEmpty
         ? (validHeights.length.isOdd
-            ? validHeights[validHeights.length ~/ 2]
-            : (validHeights[(validHeights.length ~/ 2) - 1] +
-                    validHeights[validHeights.length ~/ 2]) /
-                2.0)
+              ? validHeights[validHeights.length ~/ 2]
+              : (validHeights[(validHeights.length ~/ 2) - 1] +
+                        validHeights[validHeights.length ~/ 2]) /
+                    2.0)
         : 0.0;
 
     // Deteksi apakah citra bertipe tangkapan layar antarmuka aplikasi
-    final bool isScreenshot = isLikelyScreenshot(
-      lines: lines,
-      imageSize: imageSize,
-      config: config,
-    );
+    final bool isScreenshot =
+        config.isScreenTextMode ||
+        (config.enableAutoScreenshotDetection &&
+            isLikelyScreenshot(
+              lines: lines,
+              imageSize: imageSize,
+              config: config,
+            ));
 
     // Sensitivitas zona tepi lebih ketat untuk tangkapan layar UI
     final double effectiveEdgeZoneRatio = isScreenshot
-        ? (config.edgeZoneHeightRatio * config.screenshotSensitivity)
-            .clamp(0.0, 0.4)
+        ? (config.edgeZoneHeightRatio * config.screenshotSensitivity).clamp(
+            0.0,
+            0.4,
+          )
         : config.edgeZoneHeightRatio;
 
     final double topEdgeBoundary = imageSize.height > 0
@@ -355,8 +414,11 @@ class OcrNoiseFilter {
 
     bool isInEdgeZone(Rect box) {
       if (imageSize.height <= 0) return false;
-      final inTop = box.top <= topEdgeBoundary || box.center.dy <= topEdgeBoundary;
-      final inBottom = box.bottom >= bottomEdgeBoundary || box.center.dy >= bottomEdgeBoundary;
+      final inTop =
+          box.top <= topEdgeBoundary || box.center.dy <= topEdgeBoundary;
+      final inBottom =
+          box.bottom >= bottomEdgeBoundary ||
+          box.center.dy >= bottomEdgeBoundary;
       return inTop || inBottom;
     }
 
@@ -380,29 +442,38 @@ class OcrNoiseFilter {
       }
 
       // Aturan 1: Keyakinan (Confidence)
-      // Jika bernilai null (misal iOS atau tidak didukung), lewati dan jangan gagal.
-      if (line.confidence != null && line.confidence! < config.minConfidence) {
+      // Jika mode tulisan tangan aktif, batas confidence dilonggarkan ke 0.25
+      final double effectiveMinConfidence = config.isHandwritingMode
+          ? min(config.minConfidence, 0.25)
+          : config.minConfidence;
+      if (line.confidence != null &&
+          line.confidence! < effectiveMinConfidence) {
         rejected.add(
           RejectedLineInfo(
             line: line,
             reason: NoiseRejectionReason.lowConfidence,
             explanation:
-                'Confidence ${line.confidence} < batas minimal ${config.minConfidence}.',
+                'Confidence ${line.confidence} < batas minimal $effectiveMinConfidence.',
           ),
         );
         continue;
       }
 
       // Aturan 2: Ukuran (Size)
-      // Buang baris yang tingginya < 40% median (tulisan kecil di background)
+      // Buang baris yang tingginya < 40% median (tulisan kecil di background).
+      // Mode "Teliti" (small text) melonggarkan batas ke 5% (0.05) agar teks kecil pada obat,
+      // struk belanja, dan catatan kaki tidak terbuang.
+      final double effectiveMinHeightRatio = config.isSmallTextMode
+          ? 0.05
+          : config.minLineHeightRatio;
       if (medianHeight > 0 &&
-          line.boundingBox.height < (medianHeight * config.minLineHeightRatio)) {
+          line.boundingBox.height < (medianHeight * effectiveMinHeightRatio)) {
         rejected.add(
           RejectedLineInfo(
             line: line,
             reason: NoiseRejectionReason.tooSmall,
             explanation:
-                'Tinggi baris ${line.boundingBox.height} < ${(medianHeight * config.minLineHeightRatio).toStringAsFixed(1)} (40% dari median ${medianHeight.toStringAsFixed(1)}).',
+                'Tinggi baris ${line.boundingBox.height} < ${(medianHeight * effectiveMinHeightRatio).toStringAsFixed(1)} (${(effectiveMinHeightRatio * 100).toInt()}% dari median ${medianHeight.toStringAsFixed(1)}).',
           ),
         );
         continue;
@@ -415,8 +486,7 @@ class OcrNoiseFilter {
         final leftTouch = line.boundingBox.left <= tol;
         final topTouch = line.boundingBox.top <= tol;
         final rightTouch = line.boundingBox.right >= (imageSize.width - tol);
-        final bottomTouch =
-            line.boundingBox.bottom >= (imageSize.height - tol);
+        final bottomTouch = line.boundingBox.bottom >= (imageSize.height - tol);
 
         if (leftTouch || topTouch || rightTouch || bottomTouch) {
           rejected.add(
@@ -433,10 +503,7 @@ class OcrNoiseFilter {
 
       // Aturan 4: Keterpencilan (Isolation)
       // Buang baris pendek yang jauh dari kelompok teks utama (> 5x tinggi median).
-      // Catatan:
-      // - Angka sah (seperti nomor halaman di bawah/atas) dikecualikan agar tidak terbuang.
-      // - Pola jam dan elemen status bar didelegasikan ke Aturan 6 agar tercatat dengan
-      //   NoiseRejectionReason.clockPattern / statusBarPattern yang tepat untuk mode debug.
+      // Mode "Teliti" menggandakan faktor jarak agar nomor batch/expiry date terpencil tidak terbuang.
       final isNumber = _numberRegex.hasMatch(trimmed);
       final isClock = isClockPattern(trimmed);
       final isStatusBar = isStatusBarPattern(trimmed, config);
@@ -457,7 +524,10 @@ class OcrNoiseFilter {
           }
         }
 
-        final maxAllowedDistance = config.isolationDistanceFactor * medianHeight;
+        final double effectiveDistanceFactor = config.isSmallTextMode
+            ? config.isolationDistanceFactor * 2.0
+            : config.isolationDistanceFactor;
+        final maxAllowedDistance = effectiveDistanceFactor * medianHeight;
         if (minDistance > maxAllowedDistance) {
           rejected.add(
             RejectedLineInfo(
@@ -472,8 +542,9 @@ class OcrNoiseFilter {
       }
 
       // Aturan 5: Isi Karakter (Character Content) & Simbol
-      final alphaNumericCount =
-          _alphaNumericRegex.allMatches(nonWhitespace).length;
+      final alphaNumericCount = _alphaNumericRegex
+          .allMatches(nonWhitespace)
+          .length;
 
       // Buang baris yang hanya berisi simbol
       if (alphaNumericCount == 0) {
@@ -481,26 +552,31 @@ class OcrNoiseFilter {
           RejectedLineInfo(
             line: line,
             reason: NoiseRejectionReason.symbolOnly,
-            explanation: 'Baris hanya berisi karakter simbol atau non-alfanumerik.',
+            explanation:
+                'Baris hanya berisi karakter simbol atau non-alfanumerik.',
           ),
         );
         continue;
       }
 
       // Evaluasi rasio alfanumerik (pengecualian untuk kata pendek sah, angka, dan item daftar)
+      // Mode tulisan tangan melonggarkan batas rasio alfanumerik ke 30%
       final lowerTrimmed = trimmed.toLowerCase();
       final isShortValidWord = config.validShortWords.contains(lowerTrimmed);
       final isListItem = _listItemRegex.hasMatch(trimmed);
+      final double effectiveMinAlphaRatio = config.isHandwritingMode
+          ? 0.30
+          : config.minAlphaNumericRatio;
 
       if (!isShortValidWord && !isNumber && !isListItem) {
         final ratio = alphaNumericCount / nonWhitespace.length;
-        if (ratio < config.minAlphaNumericRatio) {
+        if (ratio < effectiveMinAlphaRatio) {
           rejected.add(
             RejectedLineInfo(
               line: line,
               reason: NoiseRejectionReason.lowAlphaNumericRatio,
               explanation:
-                  'Rasio alfanumerik ${(ratio * 100).toStringAsFixed(1)}% < batas minimal ${(config.minAlphaNumericRatio * 100).toStringAsFixed(0)}%.',
+                  'Rasio alfanumerik ${(ratio * 100).toStringAsFixed(1)}% < batas minimal ${(effectiveMinAlphaRatio * 100).toStringAsFixed(0)}%.',
             ),
           );
           continue;
@@ -546,8 +622,10 @@ class OcrNoiseFilter {
             double minDistance = double.infinity;
             for (final other in lines) {
               if (identical(line, other)) continue;
-              final d =
-                  _calculateRectDistance(line.boundingBox, other.boundingBox);
+              final d = _calculateRectDistance(
+                line.boundingBox,
+                other.boundingBox,
+              );
               if (d < minDistance) {
                 minDistance = d;
               }

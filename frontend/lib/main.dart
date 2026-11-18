@@ -1,19 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_theme.dart';
+import 'providers/display_preferences_provider.dart';
 import 'providers/history_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/settings_provider.dart';
-import 'providers/display_preferences_provider.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/ocr_service.dart';
 
 /// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  unawaited(OcrService.purgeOrphanedCache());
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

@@ -9,6 +9,8 @@ import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
 import 'ocr_noise_filter.dart';
+import 'ocr_preprocessor.dart';
+import 'ocr_quality_scorer.dart';
 import 'text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
@@ -69,10 +71,7 @@ class OcrService {
 
     // 1. Jalankan penyaring noise di background isolate
     final filterResult = await OcrNoiseFilter.filterWithCompute(
-      OcrNoiseFilterInput(
-        lines: allLines,
-        imageSize: imageSize,
-      ),
+      OcrNoiseFilterInput(lines: allLines, imageSize: imageSize),
     );
 
     // 2. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
@@ -143,24 +142,41 @@ class OcrService {
     );
   }
 
-  /// Mengekstrak teks lengkap beserta koordinat bounding box setiap elemen dari RAM (Uint8List).
-  Future<OcrResult> processImageWithCoordinates(Uint8List bytes) async {
-    if (_isDisposed) return OcrResult.empty;
-
-    File? tempFile;
+  /// Membersihkan sisa file cache sementara ocr_ephemeral_* saat aplikasi baru dimulai.
+  static Future<void> purgeOrphanedCache() async {
     try {
-      final imageSize = await ImageDimensionHelper.getImageSize(bytes);
-
       Directory tempDir;
       try {
         tempDir = await getTemporaryDirectory();
       } catch (_) {
         tempDir = Directory.systemTemp;
       }
+      if (!await tempDir.exists()) return;
+      final entities = tempDir.listSync();
+      for (final entity in entities) {
+        if (entity is File && entity.path.contains('ocr_ephemeral_')) {
+          try {
+            await entity.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('[OcrService] Gagal membersihkan cache yatim: $e');
+    }
+  }
+
+  /// Menjalankan satu putaran (pass) pengenalan teks ML Kit pada file sementara di disk.
+  Future<OcrResult> _recognizeSinglePass({
+    required Uint8List imageBytes,
+    required Size imageSize,
+    required Directory tempDir,
+  }) async {
+    File? tempFile;
+    try {
       final tempPath =
           '${tempDir.path}/ocr_ephemeral_${DateTime.now().microsecondsSinceEpoch}.jpg';
       tempFile = File(tempPath);
-      await tempFile.writeAsBytes(bytes, flush: true);
+      await tempFile.writeAsBytes(imageBytes, flush: true);
 
       final inputImage = InputImage.fromFilePath(tempPath);
       final RecognizedText recognizedText = await _textRecognizer.processImage(
@@ -171,9 +187,6 @@ class OcrService {
         recognizedText: recognizedText,
         imageSize: imageSize,
       );
-    } catch (e) {
-      debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
-      return OcrResult.empty;
     } finally {
       if (tempFile != null) {
         try {
@@ -185,22 +198,118 @@ class OcrService {
     }
   }
 
+  /// Mengekstrak teks lengkap beserta koordinat bounding box setiap elemen dari RAM (Uint8List).
+  /// Mendukung multi-pass preprocessing adaptif (Pass 1: Asli, Pass 2: Enhanced Contrast,
+  /// Pass 3: Otsu Binarization) dipadu OcrQualityScorer untuk memilih hasil terbaik.
+  Future<OcrResult> processImageWithCoordinates(
+    Uint8List bytes, {
+    bool enableMultiPass = true,
+  }) async {
+    if (_isDisposed) return OcrResult.empty;
+
+    try {
+      final imageSize = await ImageDimensionHelper.getImageSize(bytes);
+
+      Directory tempDir;
+      try {
+        tempDir = await getTemporaryDirectory();
+      } catch (_) {
+        tempDir = Directory.systemTemp;
+      }
+
+      // Pass 1: Citra asli
+      final pass1Result = await _recognizeSinglePass(
+        imageBytes: bytes,
+        imageSize: imageSize,
+        tempDir: tempDir,
+      );
+
+      if (!enableMultiPass) {
+        return pass1Result;
+      }
+
+      final double pass1Score = OcrQualityScorer.scoreLines(
+        pass1Result.rawLines,
+      );
+
+      // Kriteria kualitas cukup tanpa perlu pass kedua:
+      // Teks ditemukan, tidak ada peringatan kualitas rendah, dan skor token kuat.
+      const double sufficientScoreThreshold = 35.0;
+      if (pass1Score >= sufficientScoreThreshold &&
+          !pass1Result.hasLowQualityWarning &&
+          !pass1Result.allLinesFilteredOut &&
+          pass1Result.fullText.trim().isNotEmpty) {
+        return pass1Result;
+      }
+
+      // Pass 2: Grayscale + Enhanced Contrast
+      OcrResult bestResult = pass1Result;
+      double bestScore = pass1Score;
+
+      try {
+        final pass2Bytes = await OcrPreprocessor.enhanceContrast(
+          bytes,
+          contrast: 1.6,
+        );
+        final pass2Result = await _recognizeSinglePass(
+          imageBytes: pass2Bytes,
+          imageSize: imageSize,
+          tempDir: tempDir,
+        );
+        final double pass2Score = OcrQualityScorer.scoreLines(
+          pass2Result.rawLines,
+        );
+
+        if (pass2Score > bestScore) {
+          bestResult = pass2Result;
+          bestScore = pass2Score;
+        }
+
+        // Pass 3: Otsu Adaptive Binarization jika skor masih rendah atau belum ada teks
+        if (bestScore < sufficientScoreThreshold ||
+            bestResult.rawLines.isEmpty) {
+          try {
+            final pass3Bytes = await OcrPreprocessor.binarizeOtsu(bytes);
+            final pass3Result = await _recognizeSinglePass(
+              imageBytes: pass3Bytes,
+              imageSize: imageSize,
+              tempDir: tempDir,
+            );
+            final double pass3Score = OcrQualityScorer.scoreLines(
+              pass3Result.rawLines,
+            );
+
+            if (pass3Score > bestScore) {
+              bestResult = pass3Result;
+              bestScore = pass3Score;
+            }
+          } catch (e) {
+            debugPrint('[OcrService] Pass 3 Otsu gagal: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[OcrService] Multi-pass preprocessing gagal: $e');
+      }
+
+      return bestResult;
+    } catch (e) {
+      debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
+      return OcrResult.empty;
+    }
+  }
+
   /// Mengekstrak teks lengkap beserta koordinat bounding box dari file.
-  Future<OcrResult> processFileWithCoordinates(String filePath) async {
+  Future<OcrResult> processFileWithCoordinates(
+    String filePath, {
+    bool enableMultiPass = true,
+  }) async {
     if (_isDisposed) return OcrResult.empty;
 
     try {
       final bytes = await File(filePath).readAsBytes();
-      final imageSize = await ImageDimensionHelper.getImageSize(bytes);
-
-      final inputImage = InputImage.fromFilePath(filePath);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(
-        inputImage,
-      );
-
-      return await _buildOcrResult(
-        recognizedText: recognizedText,
-        imageSize: imageSize,
+      return await processImageWithCoordinates(
+        bytes,
+        enableMultiPass: enableMultiPass,
       );
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR file berkoordinat gagal: $e');

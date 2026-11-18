@@ -1,6 +1,9 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
+
 import '../models/text_formatter_models.dart';
+import 'reading_order_resolver.dart';
 
 /// Konfigurasi dan ambang batas aturan perapian teks OCR.
 class TextFormatterConfig {
@@ -30,23 +33,7 @@ class TextFormatterConfig {
   );
 
   /// Deteksi kata yang terpotong tanda hubung di akhir baris (misal: "revolu-").
-  static final RegExp trailingHyphenRegex = RegExp(
-    r'(\w+)-\s*$',
-  );
-}
-
-class _ColumnCluster {
-  double left;
-  double right;
-  final List<OcrLineData> lines;
-
-  _ColumnCluster({
-    required this.left,
-    required this.right,
-    required this.lines,
-  });
-
-  double get width => max(1.0, right - left);
+  static final RegExp trailingHyphenRegex = RegExp(r'(\w+)-\s*$');
 }
 
 /// Layanan murni untuk merapikan hasil OCR berbasis struktur spasial (bounding box) dan teks.
@@ -92,30 +79,19 @@ class TextFormatter {
     final double medianLineHeight = heights.length.isOdd
         ? heights[heights.length ~/ 2]
         : (heights[(heights.length ~/ 2) - 1] + heights[heights.length ~/ 2]) /
-            2.0;
+              2.0;
     final double safeMedianHeight = max(12.0, medianLineHeight);
 
-    // 3. Kelompokkan blok ke dalam kolom berdasarkan tumpang tindih sumbu x
-    final List<_ColumnCluster> columns = _clusterIntoColumns(data.blocks);
-
-    // 4. Urutkan kolom dari kiri ke kanan
-    columns.sort((a, b) => a.left.compareTo(b.left));
+    // 3. Pertahankan blok ML Kit sebagai unit baca. Resolver mengurutkan
+    // kolom dan blok, tetapi tidak pernah mencampurkan baris lintas blok.
+    final orderedBlocks = ReadingOrderResolver.resolve(data.blocks);
 
     final List<_RawParagraphAccumulator> rawParagraphs = [];
 
-    // 5. Proses dokumen kolom demi kolom (bukan melintang antar kolom)
-    for (final col in columns) {
-      // Urutkan baris di dalam kolom dari atas ke bawah (dan kiri ke kanan jika tinggi serupa)
-      col.lines.sort((a, b) {
-        final topDiff = (a.boundingBox.top - b.boundingBox.top);
-        if (topDiff.abs() < safeMedianHeight * 0.5) {
-          return a.boundingBox.left.compareTo(b.boundingBox.left);
-        }
-        return topDiff.compareTo(0);
-      });
-
-      _processColumnLines(
-        col: col,
+    // 4. Proses blok demi blok supaya kartu/paragraf terpisah tetap utuh.
+    for (final block in orderedBlocks) {
+      _processBlockLines(
+        block: block,
         safeMedianHeight: safeMedianHeight,
         outputParagraphs: rawParagraphs,
       );
@@ -129,16 +105,16 @@ class TextFormatter {
     return _buildFormattedResult(rawParagraphs);
   }
 
-  /// Memproses baris-baris dalam satu kolom dan membaginya ke dalam paragraf logis.
-  static void _processColumnLines({
-    required _ColumnCluster col,
+  /// Memproses baris-baris dalam satu blok dan membaginya ke dalam paragraf logis.
+  static void _processBlockLines({
+    required OcrBlockData block,
     required double safeMedianHeight,
     required List<_RawParagraphAccumulator> outputParagraphs,
   }) {
     _RawParagraphAccumulator? currentPara;
     OcrLineData? prevLine;
 
-    for (final rawLine in col.lines) {
+    for (final rawLine in block.lines) {
       final sanitizedText = _sanitizeLine(rawLine.text);
       if (sanitizedText.isEmpty) continue;
 
@@ -167,18 +143,20 @@ class TextFormatter {
           // Aturan 3: Baris berikutnya menjorok ke dalam (indentasi) > 1.0x tinggi baris
           final indentFromPrev =
               rawLine.boundingBox.left - prevLine.boundingBox.left;
-          final indentFromCol = rawLine.boundingBox.left - col.left;
+          final indentFromBlock =
+              rawLine.boundingBox.left - block.boundingBox.left;
           final isIndented =
               indentFromPrev >
                   (TextFormatterConfig.indentFactor * safeMedianHeight) ||
-              indentFromCol >
+              indentFromBlock >
                   (TextFormatterConfig.indentFactor * safeMedianHeight);
 
           // Aturan 4: Baris sebelumnya adalah penutup paragraf (lebar < 70% lebar kolom)
           final prevLineWidth = prevLine.boundingBox.width;
           final isPrevLineShort =
               prevLineWidth <
-              (col.width * TextFormatterConfig.paragraphEndWidthRatio);
+              (max(1.0, block.boundingBox.width) *
+                  TextFormatterConfig.paragraphEndWidthRatio);
 
           if (isLargeVerticalGap || isIndented || isPrevLineShort) {
             startNewParagraph = true;
@@ -202,51 +180,6 @@ class TextFormatter {
     if (currentPara != null && currentPara.hasContent) {
       outputParagraphs.add(currentPara);
     }
-  }
-
-  /// Mengelompokkan blok-blok teks ke dalam kolom-kolom spasial sumbu X.
-  static List<_ColumnCluster> _clusterIntoColumns(List<OcrBlockData> blocks) {
-    final List<_ColumnCluster> clusters = [];
-
-    final validBlocks =
-        blocks.where((b) => b.lines.isNotEmpty).toList()
-          ..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
-
-    for (final block in validBlocks) {
-      final bRect = block.boundingBox;
-      _ColumnCluster? matchedCol;
-
-      for (final col in clusters) {
-        final overlap = min(col.right, bRect.right) - max(col.left, bRect.left);
-        final minWidth = min(col.width, max(1.0, bRect.width));
-        if (overlap > minWidth * TextFormatterConfig.columnOverlapTolerance) {
-          matchedCol = col;
-          break;
-        }
-      }
-
-      if (matchedCol != null) {
-        matchedCol.left = min(matchedCol.left, bRect.left);
-        matchedCol.right = max(matchedCol.right, bRect.right);
-        for (final line in block.lines) {
-          if (line.text.trim().isNotEmpty) {
-            matchedCol.lines.add(line);
-          }
-        }
-      } else {
-        final colLines =
-            block.lines.where((l) => l.text.trim().isNotEmpty).toList();
-        clusters.add(
-          _ColumnCluster(
-            left: bRect.left,
-            right: bRect.right,
-            lines: colLines,
-          ),
-        );
-      }
-    }
-
-    return clusters;
   }
 
   /// Membersihkan noise batas dan normalisasi spasi.
@@ -281,7 +214,10 @@ class TextFormatter {
       final isListItem = TextFormatterConfig.listPrefixRegex.hasMatch(line);
       final isShort = line.length < 35;
 
-      if (currentPara == null || isListItem || currentPara.isListItem || isShort) {
+      if (currentPara == null ||
+          isListItem ||
+          currentPara.isListItem ||
+          isShort) {
         if (currentPara != null && currentPara.hasContent) {
           rawParagraphs.add(currentPara);
         }
@@ -324,7 +260,10 @@ class TextFormatter {
       final List<FormattedWord> paraWords = [];
 
       // Pecah paragraf menjadi kata-kata
-      final wordTokens = paraString.split(' ').where((w) => w.isNotEmpty).toList();
+      final wordTokens = paraString
+          .split(' ')
+          .where((w) => w.isNotEmpty)
+          .toList();
 
       for (int wIdx = 0; wIdx < wordTokens.length; wIdx++) {
         if (wIdx > 0) {
@@ -387,7 +326,9 @@ class _RawParagraphAccumulator {
     final hyphenMatch = TextFormatterConfig.trailingHyphenRegex.firstMatch(
       _lastAppendedLine,
     );
-    if (hyphenMatch != null && line.isNotEmpty && RegExp(r'^\w').hasMatch(line)) {
+    if (hyphenMatch != null &&
+        line.isNotEmpty &&
+        RegExp(r'^\w').hasMatch(line)) {
       // Hapus tanda hubung dari buffer dan sambung tanpa spasi
       final currentStr = _buffer.toString();
       final lastHyphenIndex = currentStr.lastIndexOf('-');

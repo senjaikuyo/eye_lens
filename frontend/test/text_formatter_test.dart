@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/services/text_formatter.dart';
@@ -61,40 +62,46 @@ void main() {
       );
     });
 
-    test('3. Memisahkan paragraf baru jika jarak vertikal > 0.8x tinggi baris', () {
-      // Tinggi baris 20. Jarak baris 1 ke baris 2 = 180 - 120 = 60 (> 0.8 * 20 = 16)
-      final doc = OcrDocumentData(
-        blocks: [
-          OcrBlockData(
-            text: 'Paragraf pembuka selesai.',
-            boundingBox: const Rect.fromLTWH(50, 100, 400, 20),
-            lines: [
-              OcrLineData(
-                text: 'Paragraf pembuka selesai.',
-                boundingBox: const Rect.fromLTWH(50, 100, 400, 20),
-              ),
-            ],
-          ),
-          OcrBlockData(
-            text: 'Paragraf kedua dimulai di sini.',
-            boundingBox: const Rect.fromLTWH(50, 180, 400, 20),
-            lines: [
-              OcrLineData(
-                text: 'Paragraf kedua dimulai di sini.',
-                boundingBox: const Rect.fromLTWH(50, 180, 400, 20),
-              ),
-            ],
-          ),
-        ],
-        rawText: 'Paragraf pembuka selesai.\nParagraf kedua dimulai di sini.',
-      );
+    test(
+      '3. Memisahkan paragraf baru jika jarak vertikal > 0.8x tinggi baris',
+      () {
+        // Tinggi baris 20. Jarak baris 1 ke baris 2 = 180 - 120 = 60 (> 0.8 * 20 = 16)
+        final doc = OcrDocumentData(
+          blocks: [
+            OcrBlockData(
+              text: 'Paragraf pembuka selesai.',
+              boundingBox: const Rect.fromLTWH(50, 100, 400, 20),
+              lines: [
+                OcrLineData(
+                  text: 'Paragraf pembuka selesai.',
+                  boundingBox: const Rect.fromLTWH(50, 100, 400, 20),
+                ),
+              ],
+            ),
+            OcrBlockData(
+              text: 'Paragraf kedua dimulai di sini.',
+              boundingBox: const Rect.fromLTWH(50, 180, 400, 20),
+              lines: [
+                OcrLineData(
+                  text: 'Paragraf kedua dimulai di sini.',
+                  boundingBox: const Rect.fromLTWH(50, 180, 400, 20),
+                ),
+              ],
+            ),
+          ],
+          rawText: 'Paragraf pembuka selesai.\nParagraf kedua dimulai di sini.',
+        );
 
-      final result = TextFormatter.format(doc);
-      expect(result.paragraphs.length, 2);
-      expect(result.fullText, 'Paragraf pembuka selesai.\n\nParagraf kedua dimulai di sini.');
-      expect(result.paragraphs[0].text, 'Paragraf pembuka selesai.');
-      expect(result.paragraphs[1].text, 'Paragraf kedua dimulai di sini.');
-    });
+        final result = TextFormatter.format(doc);
+        expect(result.paragraphs.length, 2);
+        expect(
+          result.fullText,
+          'Paragraf pembuka selesai.\n\nParagraf kedua dimulai di sini.',
+        );
+        expect(result.paragraphs[0].text, 'Paragraf pembuka selesai.');
+        expect(result.paragraphs[1].text, 'Paragraf kedua dimulai di sini.');
+      },
+    );
 
     test('4. Item daftar (angka, bullet) tetap berdiri sendiri satu baris per item', () {
       final doc = OcrDocumentData(
@@ -181,6 +188,50 @@ void main() {
       expect(lastPara.contains('Kolom Kanan'), true);
     });
 
+    test('5b. Blok kartu tidak dicampur barisnya dengan kartu sebelah', () {
+      final doc = OcrDocumentData(
+        blocks: [
+          OcrBlockData(
+            text: 'Kanan satu\\nKanan dua',
+            boundingBox: const Rect.fromLTWH(350, 100, 200, 60),
+            lines: const [
+              OcrLineData(
+                text: 'Kanan satu',
+                boundingBox: Rect.fromLTWH(350, 100, 200, 20),
+              ),
+              OcrLineData(
+                text: 'Kanan dua',
+                boundingBox: Rect.fromLTWH(350, 130, 200, 20),
+              ),
+            ],
+          ),
+          OcrBlockData(
+            text: 'Kiri satu\\nKiri dua',
+            boundingBox: const Rect.fromLTWH(50, 100, 200, 60),
+            lines: const [
+              OcrLineData(
+                text: 'Kiri satu',
+                boundingBox: Rect.fromLTWH(50, 100, 200, 20),
+              ),
+              OcrLineData(
+                text: 'Kiri dua',
+                boundingBox: Rect.fromLTWH(50, 130, 200, 20),
+              ),
+            ],
+          ),
+        ],
+        rawText: 'Kanan satu\\nKanan dua\\nKiri satu\\nKiri dua',
+      );
+
+      final result = TextFormatter.format(doc);
+      expect(result.fullText, contains('Kiri satu Kiri dua'));
+      expect(result.fullText, contains('Kanan satu Kanan dua'));
+      expect(
+        result.fullText.indexOf('Kiri satu'),
+        lessThan(result.fullText.indexOf('Kanan satu')),
+      );
+    });
+
     test('6. Sanitasi noise simbol di tepi baris teks OCR', () {
       final doc = OcrDocumentData(
         blocks: [
@@ -239,7 +290,11 @@ void main() {
 
       for (final para in result.paragraphs) {
         final extracted = fullText.substring(para.startIndex, para.endIndex);
-        expect(extracted, para.text, reason: 'Paragraph slice harus persis sama');
+        expect(
+          extracted,
+          para.text,
+          reason: 'Paragraph slice harus persis sama',
+        );
       }
     });
 

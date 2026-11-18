@@ -73,29 +73,29 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
           // 1. Live Camera Preview atau fallback latar belakang
           if (widget.cameraService.isInitialized &&
               widget.cameraService.controller != null)
-            SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width:
-                      widget
-                          .cameraService
-                          .controller!
-                          .value
-                          .previewSize
-                          ?.height ??
-                      widget.size.width,
-                  height:
-                      widget
-                          .cameraService
-                          .controller!
-                          .value
-                          .previewSize
-                          ?.width ??
-                      widget.size.height,
-                  child: CameraPreview(widget.cameraService.controller!),
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final previewSize =
+                    widget.cameraService.controller!.value.previewSize;
+                final isLandscape = widget.size.width > widget.size.height;
+                final double previewWidth = previewSize != null
+                    ? (isLandscape ? previewSize.width : previewSize.height)
+                    : widget.size.width;
+                final double previewHeight = previewSize != null
+                    ? (isLandscape ? previewSize.height : previewSize.width)
+                    : widget.size.height;
+
+                return SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: previewWidth,
+                      height: previewHeight,
+                      child: CameraPreview(widget.cameraService.controller!),
+                    ),
+                  ),
+                );
+              },
             )
           else
             const ColoredBox(color: Colors.black),
@@ -127,8 +127,8 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
               widget.errorMessage == null)
             Center(
               child: SizedBox(
-                width: widget.size.width * 0.78,
-                height: widget.size.width * 0.78,
+                width: math.min(widget.size.width, widget.size.height) * 0.78,
+                height: math.min(widget.size.width, widget.size.height) * 0.78,
                 child: CustomPaint(
                   painter: ScannerCornerPainter(
                     color: widget.isBlurry

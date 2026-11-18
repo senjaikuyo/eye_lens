@@ -32,10 +32,11 @@ class ImageDimensionHelper {
 
   /// Membaca lebar & tinggi langsung dari bit header tanpa decode raster.
   static Size? parseHeaderSize(Uint8List bytes) {
-    if (bytes.length < 24) return null;
+    if (bytes.length < 12) return null;
 
     // 1. Cek PNG: Signature 89 50 4E 47 0D 0A 1A 0A
-    if (bytes[0] == 0x89 &&
+    if (bytes.length >= 24 &&
+        bytes[0] == 0x89 &&
         bytes[1] == 0x50 &&
         bytes[2] == 0x4E &&
         bytes[3] == 0x47 &&
@@ -55,6 +56,8 @@ class ImageDimensionHelper {
     if (bytes[0] == 0xFF && bytes[1] == 0xD8) {
       int offset = 2;
       final int length = bytes.length;
+      int? orientation;
+      Size? rawSize;
 
       while (offset < length - 8) {
         if (bytes[offset] != 0xFF) {
@@ -75,15 +78,27 @@ class ImageDimensionHelper {
           break;
         }
 
+        if (offset + 1 >= length) break;
+        final int segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+        if (segmentLength < 2) break;
+
+        // Cek segmen APP1 (0xE1) untuk metadata EXIF Orientation
+        if (marker == 0xE1 &&
+            orientation == null &&
+            offset + segmentLength <= length) {
+          orientation = _parseExifOrientation(
+            bytes,
+            offset + 2,
+            segmentLength - 2,
+          );
+        }
+
         // Standar SOF markers (SOF0, SOF1, SOF2, dll.)
         final bool isSof =
             (marker >= 0xC0 && marker <= 0xC3) ||
             (marker >= 0xC5 && marker <= 0xC7) ||
             (marker >= 0xC9 && marker <= 0xCB) ||
             (marker >= 0xCD && marker <= 0xCF);
-
-        if (offset + 1 >= length) break;
-        final int segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
 
         if (isSof && offset + 7 < length) {
           // Format SOF:
@@ -93,10 +108,87 @@ class ImageDimensionHelper {
           // [5..6] image width (big-endian)
           final int height = (bytes[offset + 3] << 8) | bytes[offset + 4];
           final int width = (bytes[offset + 5] << 8) | bytes[offset + 6];
-          return Size(width.toDouble(), height.toDouble());
+          rawSize = Size(width.toDouble(), height.toDouble());
+          // Marker APP segmen selalu mendahului SOF dalam struktur JPEG standar
+          break;
         }
 
         offset += segmentLength;
+      }
+
+      if (rawSize != null) {
+        // Tag 5, 6, 7, 8: rotasi 90° atau 270° (lebar dan tinggi bertukar sumbu)
+        if (orientation != null && orientation >= 5 && orientation <= 8) {
+          return Size(rawSize.height, rawSize.width);
+        }
+        return rawSize;
+      }
+    }
+
+    return null;
+  }
+
+  /// Ekstraksi tag EXIF Orientation (0x0112) dari payload APP1 JPEG murni.
+  static int? _parseExifOrientation(Uint8List bytes, int offset, int length) {
+    if (length < 14) return null;
+
+    // Cek header 'Exif\0\0' (0x45, 0x78, 0x69, 0x66, 0x00, 0x00)
+    if (bytes[offset] != 0x45 ||
+        bytes[offset + 1] != 0x78 ||
+        bytes[offset + 2] != 0x69 ||
+        bytes[offset + 3] != 0x66 ||
+        bytes[offset + 4] != 0x00 ||
+        bytes[offset + 5] != 0x00) {
+      return null;
+    }
+
+    final int tiffStart = offset + 6;
+    final int tiffEnd = offset + length;
+    if (tiffStart + 8 > tiffEnd) return null;
+
+    final bool isLittleEndian;
+    if (bytes[tiffStart] == 0x49 && bytes[tiffStart + 1] == 0x49) {
+      isLittleEndian = true;
+    } else if (bytes[tiffStart] == 0x4D && bytes[tiffStart + 1] == 0x4D) {
+      isLittleEndian = false;
+    } else {
+      return null;
+    }
+
+    int read16(int p) {
+      if (p + 2 > tiffEnd) return 0;
+      return isLittleEndian
+          ? (bytes[p] | (bytes[p + 1] << 8))
+          : ((bytes[p] << 8) | bytes[p + 1]);
+    }
+
+    int read32(int p) {
+      if (p + 4 > tiffEnd) return 0;
+      return isLittleEndian
+          ? (bytes[p] |
+                (bytes[p + 1] << 8) |
+                (bytes[p + 2] << 16) |
+                (bytes[p + 3] << 24))
+          : ((bytes[p] << 24) |
+                (bytes[p + 1] << 16) |
+                (bytes[p + 2] << 8) |
+                bytes[p + 3]);
+    }
+
+    if (read16(tiffStart + 2) != 0x002A) return null;
+
+    final int ifd0Offset = read32(tiffStart + 4);
+    final int ifd0Start = tiffStart + ifd0Offset;
+    if (ifd0Start + 2 > tiffEnd) return null;
+
+    final int numEntries = read16(ifd0Start);
+    for (int i = 0; i < numEntries; i++) {
+      final int entryStart = ifd0Start + 2 + (i * 12);
+      if (entryStart + 12 > tiffEnd) break;
+
+      final int tag = read16(entryStart);
+      if (tag == 0x0112) {
+        return read16(entryStart + 8);
       }
     }
 

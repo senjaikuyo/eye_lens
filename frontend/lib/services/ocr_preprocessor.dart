@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
+
+import '../models/text_formatter_models.dart';
 
 /// Utilitas pemrosesan citra on-device untuk multi-pass OCR:
 /// - Mengatur kontras & grayscale via ColorFilter shader hardware (cepat, < 5 ms).
@@ -228,5 +231,130 @@ class OcrPreprocessor {
     binarizedImage.dispose();
 
     return pngData != null ? pngData.buffer.asUint8List() : imageBytes;
+  }
+
+  /// Memotong citra pada area ROI (Region of Interest) dan melakukan upscaling (pembesaran)
+  /// untuk meningkatkan densitas piksel teks kecil / padat (Issue c).
+  ///
+  /// Menjaga memori: Setiap ui.Image dan Canvas recorder segera dimusnahkan.
+  static Future<Uint8List> cropAndScaleRoi(
+    Uint8List imageBytes, {
+    required Rect cropRect,
+    double scale = 1.0,
+  }) async {
+    final ui.Image baseImage = await decodeImageFromList(imageBytes);
+    final int origWidth = baseImage.width;
+    final int origHeight = baseImage.height;
+
+    // Batasi cropRect agar tidak keluar dari dimensi citra asli
+    final double safeLeft = cropRect.left.clamp(0.0, origWidth.toDouble());
+    final double safeTop = cropRect.top.clamp(0.0, origHeight.toDouble());
+    final double safeRight =
+        cropRect.right.clamp(safeLeft, origWidth.toDouble());
+    final double safeBottom =
+        cropRect.bottom.clamp(safeTop, origHeight.toDouble());
+
+    final double cropW = math.max(1.0, safeRight - safeLeft);
+    final double cropH = math.max(1.0, safeBottom - safeTop);
+    final safeCropRect = Rect.fromLTWH(safeLeft, safeTop, cropW, cropH);
+
+    final int targetW = math.max(1, (cropW * scale).round());
+    final int targetH = math.max(1, (cropH * scale).round());
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+    );
+
+    final paint = Paint()..filterQuality = ui.FilterQuality.high;
+    canvas.drawImageRect(
+      baseImage,
+      safeCropRect,
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+      paint,
+    );
+    baseImage.dispose();
+
+    final picture = recorder.endRecording();
+    final processedImage = await picture.toImage(targetW, targetH);
+    picture.dispose();
+
+    final byteData = await processedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    processedImage.dispose();
+
+    return byteData != null ? byteData.buffer.asUint8List() : imageBytes;
+  }
+
+  /// Menghitung area pembatas gabungan (ROI) dari kumpulan baris teks dengan margin/padding tambahan.
+  static Rect? computeTextRoi(
+    List<OcrLineData> lines, {
+    required Size imageSize,
+    double paddingRatio = 0.15,
+  }) {
+    if (lines.isEmpty) return null;
+
+    double minLeft = double.infinity;
+    double minTop = double.infinity;
+    double maxRight = double.negativeInfinity;
+    double maxBottom = double.negativeInfinity;
+    int validCount = 0;
+
+    for (final line in lines) {
+      if (line.text.trim().isEmpty) continue;
+      final box = line.boundingBox;
+      if (box.left < minLeft) minLeft = box.left;
+      if (box.top < minTop) minTop = box.top;
+      if (box.right > maxRight) maxRight = box.right;
+      if (box.bottom > maxBottom) maxBottom = box.bottom;
+      validCount++;
+    }
+
+    if (validCount == 0 || minLeft >= maxRight || minTop >= maxBottom) {
+      return null;
+    }
+
+    final width = maxRight - minLeft;
+    final height = maxBottom - minTop;
+    final padX = width * paddingRatio;
+    final padY = height * paddingRatio;
+
+    final safeLeft = math.max(0.0, minLeft - padX);
+    final safeTop = math.max(0.0, minTop - padY);
+    final safeRight = math.min(imageSize.width, maxRight + padX);
+    final safeBottom = math.min(imageSize.height, maxBottom + padY);
+
+    return Rect.fromLTRB(safeLeft, safeTop, safeRight, safeBottom);
+  }
+
+  /// Menghitung area ROI tengah (central viewfinder reticle ~70%) saat teks belum terdeteksi.
+  static Rect computeCenterRoi(Size imageSize, {double ratio = 0.70}) {
+    final double effectiveRatio = ratio.clamp(0.1, 1.0);
+    final double roiW = math.max(1.0, imageSize.width * effectiveRatio);
+    final double roiH = math.max(1.0, imageSize.height * effectiveRatio);
+    final double left = (imageSize.width - roiW) / 2.0;
+    final double top = (imageSize.height - roiH) / 2.0;
+    return Rect.fromLTWH(left, top, roiW, roiH);
+  }
+
+  /// Memetakan kembali koordinat bounding box dari citra ROI (yang di-crop dan di-scale)
+  /// ke ruang koordinat citra asli secara presisi.
+  static Rect remapBoundingBox(
+    Rect box, {
+    required Offset cropOffset,
+    required double scale,
+  }) {
+    final double effectiveScale = scale > 0 ? scale : 1.0;
+    if (effectiveScale == 1.0 && cropOffset == Offset.zero) {
+      return box;
+    }
+    return Rect.fromLTWH(
+      cropOffset.dx + (box.left / effectiveScale),
+      cropOffset.dy + (box.top / effectiveScale),
+      box.width / effectiveScale,
+      box.height / effectiveScale,
+    );
   }
 }

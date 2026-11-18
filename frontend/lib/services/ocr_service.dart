@@ -35,6 +35,8 @@ class OcrService {
     required Size imageSize,
     OcrNoiseFilterConfig? noiseFilterConfig,
     OcrScanMode scanMode = OcrScanMode.document,
+    Offset cropOffset = Offset.zero,
+    double scale = 1.0,
   }) async {
     final List<OcrLineData> allLines = [];
     final List<Rect> originalBlockBounds = [];
@@ -42,7 +44,13 @@ class OcrService {
 
     for (int bIdx = 0; bIdx < recognizedText.blocks.length; bIdx++) {
       final block = recognizedText.blocks[bIdx];
-      originalBlockBounds.add(block.boundingBox);
+      originalBlockBounds.add(
+        OcrPreprocessor.remapBoundingBox(
+          block.boundingBox,
+          cropOffset: cropOffset,
+          scale: scale,
+        ),
+      );
       originalBlockTexts.add(block.text);
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
@@ -52,7 +60,11 @@ class OcrService {
               words.add(
                 OcrWordData(
                   text: elem.text,
-                  boundingBox: elem.boundingBox,
+                  boundingBox: OcrPreprocessor.remapBoundingBox(
+                    elem.boundingBox,
+                    cropOffset: cropOffset,
+                    scale: scale,
+                  ),
                   confidence: elem.confidence,
                 ),
               );
@@ -62,7 +74,11 @@ class OcrService {
           allLines.add(
             OcrLineData(
               text: line.text,
-              boundingBox: line.boundingBox,
+              boundingBox: OcrPreprocessor.remapBoundingBox(
+                line.boundingBox,
+                cropOffset: cropOffset,
+                scale: scale,
+              ),
               confidence: line.confidence,
               blockIndex: bIdx,
               elements: words,
@@ -192,6 +208,8 @@ class OcrService {
     required Directory tempDir,
     OcrScanMode scanMode = OcrScanMode.document,
     OcrNoiseFilterConfig? noiseFilterConfig,
+    Offset cropOffset = Offset.zero,
+    double scale = 1.0,
   }) async {
     File? tempFile;
     try {
@@ -210,6 +228,8 @@ class OcrService {
         imageSize: imageSize,
         scanMode: scanMode,
         noiseFilterConfig: noiseFilterConfig,
+        cropOffset: cropOffset,
+        scale: scale,
       );
     } finally {
       if (tempFile != null) {
@@ -223,7 +243,7 @@ class OcrService {
   }
 
   /// Mengekstrak teks lengkap beserta koordinat bounding box setiap elemen dari RAM (Uint8List).
-  /// Mendukung multi-pass preprocessing adaptif (Pass 1: Asli, Pass 2: Enhanced Contrast,
+  /// Mendukung multi-pass preprocessing adaptif (Pass 1: Asli, Pass 2: Enhanced Contrast / Smart Crop,
   /// Pass 3: Otsu Binarization) dipadu OcrQualityScorer untuk memilih hasil terbaik.
   Future<OcrResult> processImageWithCoordinates(
     Uint8List bytes, {
@@ -266,66 +286,183 @@ class OcrService {
       if (pass1Score >= sufficientScoreThreshold &&
           !pass1Result.hasLowQualityWarning &&
           !pass1Result.allLinesFilteredOut &&
-          pass1Result.fullText.trim().isNotEmpty) {
+          pass1Result.fullText.trim().isNotEmpty &&
+          scanMode != OcrScanMode.smallText) {
         return pass1Result;
       }
 
-      // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast, Mode lainnya -> Grayscale + Contrast
       OcrResult bestResult = pass1Result;
       double bestScore = pass1Score;
 
       try {
-        final Uint8List pass2Bytes;
-        if (scanMode == OcrScanMode.screenText) {
-          pass2Bytes = await OcrPreprocessor.preprocessScreenText(
-            bytes,
-            blurSigma: 0.8,
-            contrast: 1.5,
+        if (scanMode == OcrScanMode.smallText) {
+          // --- Alur Khusus Mode Teks Kecil / Teliti (Issue c) ---
+          // 1. Coba smart crop ROI dari baris teks yang sudah terdeteksi di Pass 1
+          final textRoi = OcrPreprocessor.computeTextRoi(
+            bestResult.rawLines,
+            imageSize: imageSize,
           );
-        } else {
-          pass2Bytes = await OcrPreprocessor.enhanceContrast(
-            bytes,
-            contrast: 1.6,
-          );
-        }
-        final pass2Result = await _recognizeSinglePass(
-          imageBytes: pass2Bytes,
-          imageSize: imageSize,
-          tempDir: tempDir,
-          scanMode: scanMode,
-          noiseFilterConfig: noiseFilterConfig,
-        );
-        final double pass2Score = OcrQualityScorer.scoreLines(
-          pass2Result.rawLines,
-        );
 
-        if (pass2Score > bestScore) {
-          bestResult = pass2Result;
-          bestScore = pass2Score;
-        }
+          final Rect targetRoi = textRoi ??
+              OcrPreprocessor.computeCenterRoi(imageSize, ratio: 0.70);
 
-        // Pass 3: Otsu Adaptive Binarization jika skor masih rendah atau belum ada teks
-        if (bestScore < sufficientScoreThreshold ||
-            bestResult.rawLines.isEmpty) {
           try {
-            final pass3Bytes = await OcrPreprocessor.binarizeOtsu(bytes);
-            final pass3Result = await _recognizeSinglePass(
-              imageBytes: pass3Bytes,
+            const double roiScale = 2.0;
+            final roiBytes = await OcrPreprocessor.cropAndScaleRoi(
+              bytes,
+              cropRect: targetRoi,
+              scale: roiScale,
+            );
+            final enhancedRoiBytes = await OcrPreprocessor.enhanceContrast(
+              roiBytes,
+              contrast: 1.5,
+            );
+            final roiResult = await _recognizeSinglePass(
+              imageBytes: enhancedRoiBytes,
               imageSize: imageSize,
               tempDir: tempDir,
               scanMode: scanMode,
               noiseFilterConfig: noiseFilterConfig,
+              cropOffset: targetRoi.topLeft,
+              scale: roiScale,
             );
-            final double pass3Score = OcrQualityScorer.scoreLines(
-              pass3Result.rawLines,
+            final double roiScore = OcrQualityScorer.scoreLines(
+              roiResult.rawLines,
             );
 
-            if (pass3Score > bestScore) {
-              bestResult = pass3Result;
-              bestScore = pass3Score;
+            if (roiScore > bestScore ||
+                (bestResult.rawLines.isEmpty && roiResult.rawLines.isNotEmpty)) {
+              bestResult = roiResult;
+              bestScore = roiScore;
             }
           } catch (e) {
-            debugPrint('[OcrService] Pass 3 Otsu gagal: $e');
+            debugPrint('[OcrService] SmallText ROI pass gagal: $e');
+          }
+
+          // Jika skor masih rendah atau belum ada teks, coba Otsu binarization
+          if (bestScore < sufficientScoreThreshold ||
+              bestResult.rawLines.isEmpty) {
+            try {
+              final otsuBytes = await OcrPreprocessor.binarizeOtsu(bytes);
+              final otsuResult = await _recognizeSinglePass(
+                imageBytes: otsuBytes,
+                imageSize: imageSize,
+                tempDir: tempDir,
+                scanMode: scanMode,
+                noiseFilterConfig: noiseFilterConfig,
+              );
+              final double otsuScore = OcrQualityScorer.scoreLines(
+                otsuResult.rawLines,
+              );
+
+              if (otsuScore > bestScore) {
+                bestResult = otsuResult;
+                bestScore = otsuScore;
+              }
+            } catch (e) {
+              debugPrint('[OcrService] SmallText Otsu fallback gagal: $e');
+            }
+          }
+        } else {
+          // --- Alur Mode Dokumen, Layar, & Tulis Tangan ---
+          // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast, Mode lainnya -> Grayscale + Contrast
+          final Uint8List pass2Bytes;
+          if (scanMode == OcrScanMode.screenText) {
+            pass2Bytes = await OcrPreprocessor.preprocessScreenText(
+              bytes,
+              blurSigma: 0.8,
+              contrast: 1.5,
+            );
+          } else {
+            pass2Bytes = await OcrPreprocessor.enhanceContrast(
+              bytes,
+              contrast: 1.6,
+            );
+          }
+          final pass2Result = await _recognizeSinglePass(
+            imageBytes: pass2Bytes,
+            imageSize: imageSize,
+            tempDir: tempDir,
+            scanMode: scanMode,
+            noiseFilterConfig: noiseFilterConfig,
+          );
+          final double pass2Score = OcrQualityScorer.scoreLines(
+            pass2Result.rawLines,
+          );
+
+          if (pass2Score > bestScore) {
+            bestResult = pass2Result;
+            bestScore = pass2Score;
+          }
+
+          // Pass 3: Otsu Adaptive Binarization jika skor masih rendah atau belum ada teks
+          if (bestScore < sufficientScoreThreshold ||
+              bestResult.rawLines.isEmpty) {
+            try {
+              final pass3Bytes = await OcrPreprocessor.binarizeOtsu(bytes);
+              final pass3Result = await _recognizeSinglePass(
+                imageBytes: pass3Bytes,
+                imageSize: imageSize,
+                tempDir: tempDir,
+                scanMode: scanMode,
+                noiseFilterConfig: noiseFilterConfig,
+              );
+              final double pass3Score = OcrQualityScorer.scoreLines(
+                pass3Result.rawLines,
+              );
+
+              if (pass3Score > bestScore) {
+                bestResult = pass3Result;
+                bestScore = pass3Score;
+              }
+            } catch (e) {
+              debugPrint('[OcrService] Pass 3 Otsu gagal: $e');
+            }
+          }
+
+          // Smart crop ROI fallback jika teks terkonsentrasi di area kecil dan skor belum memadai
+          if (bestScore < sufficientScoreThreshold &&
+              bestResult.rawLines.isNotEmpty) {
+            try {
+              final textRoi = OcrPreprocessor.computeTextRoi(
+                bestResult.rawLines,
+                imageSize: imageSize,
+              );
+              if (textRoi != null) {
+                final double roiArea = textRoi.width * textRoi.height;
+                final double totalArea = imageSize.width * imageSize.height;
+                if (roiArea < totalArea * 0.65) {
+                  const double roiScale = 1.5;
+                  final croppedBytes = await OcrPreprocessor.cropAndScaleRoi(
+                    bytes,
+                    cropRect: textRoi,
+                    scale: roiScale,
+                  );
+                  final enhancedRoi = await OcrPreprocessor.enhanceContrast(
+                    croppedBytes,
+                    contrast: 1.4,
+                  );
+                  final smartCropResult = await _recognizeSinglePass(
+                    imageBytes: enhancedRoi,
+                    imageSize: imageSize,
+                    tempDir: tempDir,
+                    scanMode: scanMode,
+                    noiseFilterConfig: noiseFilterConfig,
+                    cropOffset: textRoi.topLeft,
+                    scale: roiScale,
+                  );
+                  final double smartScore = OcrQualityScorer.scoreLines(
+                    smartCropResult.rawLines,
+                  );
+                  if (smartScore > bestScore) {
+                    bestResult = smartCropResult;
+                    bestScore = smartScore;
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('[OcrService] Smart crop fallback gagal: $e');
+            }
           }
         }
       } catch (e) {

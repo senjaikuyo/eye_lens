@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/services/ocr_preprocessor.dart';
 import 'package:eye_lens/services/ocr_service.dart';
 import 'package:flutter/material.dart';
@@ -183,6 +184,104 @@ void main() {
       expect(decoded.width, equals(120));
       expect(decoded.height, equals(90));
       decoded.dispose();
+    });
+
+    test('6. cropAndScaleRoi memotong dan memperbesar citra ke dimensi target secara akurat', () async {
+      final inputBytes = await createSampleImageBytes(width: 100, height: 100);
+      const cropRect = Rect.fromLTWH(20, 20, 40, 30);
+      final croppedBytes = await OcrPreprocessor.cropAndScaleRoi(
+        inputBytes,
+        cropRect: cropRect,
+        scale: 2.0,
+      );
+
+      expect(croppedBytes.isNotEmpty, isTrue);
+      final ui.Image decoded = await decodeImageFromList(croppedBytes);
+      expect(decoded.width, equals(80)); // 40 * 2.0
+      expect(decoded.height, equals(60)); // 30 * 2.0
+      decoded.dispose();
+    });
+
+    test('7. cropAndScaleRoi menangani cropRect yang melampaui batas citra dengan aman', () async {
+      final inputBytes = await createSampleImageBytes(width: 100, height: 100);
+      const overflowRect = Rect.fromLTWH(-20, -20, 150, 150);
+      final croppedBytes = await OcrPreprocessor.cropAndScaleRoi(
+        inputBytes,
+        cropRect: overflowRect,
+        scale: 1.0,
+      );
+
+      expect(croppedBytes.isNotEmpty, isTrue);
+      final ui.Image decoded = await decodeImageFromList(croppedBytes);
+      expect(decoded.width, equals(100));
+      expect(decoded.height, equals(100));
+      decoded.dispose();
+    });
+
+    test('8. computeTextRoi menghitung pembatas gabungan dengan padding yang benar', () {
+      final lines = [
+        const OcrLineData(
+          text: 'Baris Pertama',
+          boundingBox: Rect.fromLTWH(100, 200, 200, 30),
+          confidence: 0.9,
+          blockIndex: 0,
+        ),
+        const OcrLineData(
+          text: 'Baris Kedua',
+          boundingBox: Rect.fromLTWH(120, 250, 250, 40),
+          confidence: 0.85,
+          blockIndex: 0,
+        ),
+      ];
+
+      final roi = OcrPreprocessor.computeTextRoi(
+        lines,
+        imageSize: const Size(1000, 1000),
+        paddingRatio: 0.1,
+      );
+
+      expect(roi, isNotNull);
+      // MinLeft: 100, MaxRight: 370 (120+250). Lebar: 270. padX: 27
+      expect(roi!.left, closeTo(73.0, 0.1));
+      expect(roi.right, closeTo(397.0, 0.1));
+      // MinTop: 200, MaxBottom: 290 (250+40). Tinggi: 90. padY: 9
+      expect(roi.top, closeTo(191.0, 0.1));
+      expect(roi.bottom, closeTo(299.0, 0.1));
+    });
+
+    test('9. computeCenterRoi menghitung retikel tengah secara presisi', () {
+      const imageSize = Size(1000, 800);
+      final centerRoi = OcrPreprocessor.computeCenterRoi(imageSize, ratio: 0.70);
+
+      expect(centerRoi.width, equals(700.0));
+      expect(centerRoi.height, equals(560.0));
+      expect(centerRoi.left, equals(150.0)); // (1000 - 700) / 2
+      expect(centerRoi.top, equals(120.0)); // (800 - 560) / 2
+    });
+
+    test('10. remapBoundingBox memetakan koordinat cropped & scaled ROI ke koordinat asli', () {
+      const cropOffset = Offset(200, 300);
+      const scale = 2.0;
+      const boxInCropped = Rect.fromLTWH(100, 200, 200, 50);
+
+      final remapped = OcrPreprocessor.remapBoundingBox(
+        boxInCropped,
+        cropOffset: cropOffset,
+        scale: scale,
+      );
+
+      expect(remapped.left, equals(250.0)); // 200 + (100 / 2)
+      expect(remapped.top, equals(400.0)); // 300 + (200 / 2)
+      expect(remapped.width, equals(100.0)); // 200 / 2
+      expect(remapped.height, equals(25.0)); // 50 / 2
+
+      // Identity check
+      final identity = OcrPreprocessor.remapBoundingBox(
+        boxInCropped,
+        cropOffset: Offset.zero,
+        scale: 1.0,
+      );
+      expect(identity, equals(boxInCropped));
     });
   });
 }

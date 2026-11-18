@@ -482,8 +482,9 @@ class _ScanningScreenState extends State<ScanningScreen>
             strings: strings,
           ),
 
-          // 2b. Petunjuk Singkat Khusus Mode Layar (Issue e)
-          if (_currentScanMode == OcrScanMode.screenText)
+          // 2b. Petunjuk Singkat Khusus Mode Layar / Teliti (Issue e & c)
+          if (_currentScanMode == OcrScanMode.screenText ||
+              _currentScanMode == OcrScanMode.smallText)
             Positioned(
               top: topPadding + 66,
               left: 20,
@@ -520,7 +521,9 @@ class _ScanningScreenState extends State<ScanningScreen>
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          strings.modeScreenTip,
+                          _currentScanMode == OcrScanMode.screenText
+                              ? strings.modeScreenTip
+                              : strings.modeSmallTextTip,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Colors.white,

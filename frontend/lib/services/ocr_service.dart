@@ -14,6 +14,7 @@ import 'ocr_noise_filter.dart';
 import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
 import 'ocr_orientation_resolver.dart';
+import 'vertical_text_detector.dart';
 import 'text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
@@ -347,11 +348,17 @@ class OcrService {
       final double pass1Score = OcrOrientationResolver.score(
         pass1Result.rawLines,
       );
+      final verticalCandidate = await compute(
+        VerticalTextDetector.hasStrongCandidate,
+        pass1Result.rawLines,
+      );
+      inputMetrics['verticalCandidate'] = verticalCandidate;
 
       // Kriteria kualitas cukup tanpa perlu pass kedua:
       // Teks ditemukan, tidak ada peringatan kualitas rendah, dan skor token kuat.
       const double sufficientScoreThreshold = 35.0;
       if (OcrOrientationResolver.sufficient(pass1Result) &&
+          !verticalCandidate &&
           !OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) &&
           scanMode != OcrScanMode.smallText) {
         return _attachDiagnostics(
@@ -369,8 +376,15 @@ class OcrService {
       // K5: bounded, sequential retries, always from the same original photo.
       // Missing angle never blocks recovery; 0 degrees is a valid angle.
       if (!OcrOrientationResolver.sufficient(pass1Result) ||
-          OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result)) {
-        for (final degrees in OcrOrientationResolver.retryAngles(imageSize)) {
+          OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) ||
+          verticalCandidate) {
+        // K6 evidence permits 90/270 even in portrait. Share the K5 retry
+        // budget: never repeat angles or exceed three additional attempts.
+        final retries = verticalCandidate
+            ? const [180, 90, 270]
+            : OcrOrientationResolver.retryAngles(imageSize);
+        var verticalResolved = !verticalCandidate;
+        for (final degrees in retries) {
           if (_isDisposed) break;
           final timer = Stopwatch()..start();
           try {
@@ -384,7 +398,9 @@ class OcrService {
               tempDir: tempDir,
               scanMode: scanMode,
               noiseFilterConfig: noiseFilterConfig,
-              passName: 'rotation_$degrees',
+              passName: verticalCandidate && degrees != 180
+                  ? 'vertical_rotation_$degrees'
+                  : 'rotation_$degrees',
               passRecords: passRecords,
               passStopwatch: timer,
               rotationDegrees: degrees,
@@ -406,15 +422,22 @@ class OcrService {
                 degrees,
               );
               bestScore = score;
+              verticalResolved = !await compute(
+                VerticalTextDetector.hasStrongCandidate,
+                candidate.rawLines,
+              );
             }
-            if (OcrOrientationResolver.sufficient(bestResult)) break;
+            if (verticalResolved &&
+                OcrOrientationResolver.sufficient(bestResult)) {
+              break;
+            }
           } catch (e) {
             debugPrint(
               '[OcrService] Rotation $degrees failed: ${e.runtimeType}',
             );
           }
         }
-        if (OcrOrientationResolver.sufficient(bestResult)) {
+        if (verticalResolved && OcrOrientationResolver.sufficient(bestResult)) {
           return _attachDiagnostics(
             diagnostics: diagnostics,
             result: bestResult,

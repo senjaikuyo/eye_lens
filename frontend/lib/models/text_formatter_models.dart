@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 
 /// DTO untuk satu kata terformat lengkap dengan indeks karakter pada teks akhir.
@@ -42,7 +43,8 @@ class FormattedParagraph {
   });
 
   @override
-  String toString() => 'FormattedParagraph($index, $startIndex-$endIndex: $text)';
+  String toString() =>
+      'FormattedParagraph($index, $startIndex-$endIndex: $text)';
 }
 
 /// DTO hasil keluaran pemformatan teks lengkap.
@@ -113,6 +115,9 @@ class OcrLineData {
   final String text;
   final Rect boundingBox;
   final double? confidence;
+
+  /// ML Kit angle in the coordinate space of the submitted image; iOS null.
+  final double? angle;
   final int blockIndex;
   final List<OcrWordData> elements;
 
@@ -120,6 +125,7 @@ class OcrLineData {
     required this.text,
     required this.boundingBox,
     this.confidence,
+    this.angle,
     this.blockIndex = 0,
     this.elements = const [],
   });

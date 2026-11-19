@@ -147,6 +147,9 @@ class OcrPassRecord {
   final LineHeightStats lineHeights;
   final String? note;
   final int doubtfulLines;
+  final List<double?> angles;
+  final int rotationDegrees;
+  final Size? submittedImageSize;
 
   const OcrPassRecord({
     required this.name,
@@ -159,6 +162,9 @@ class OcrPassRecord {
     required this.lineHeights,
     this.note,
     this.doubtfulLines = 0,
+    this.angles = const [],
+    this.rotationDegrees = 0,
+    this.submittedImageSize,
   });
 
   Map<String, Object?> toJson() => {
@@ -169,6 +175,19 @@ class OcrPassRecord {
     'acceptedLines': acceptedLines,
     'rejectedLines': rejectedLines,
     'doubtfulLines': doubtfulLines,
+    'rotationDegrees': rotationDegrees,
+    'submittedImageSize': submittedImageSize == null
+        ? null
+        : {
+            'width': submittedImageSize!.width,
+            'height': submittedImageSize!.height,
+          },
+    'angles': {
+      'values': angles,
+      'null': angles.where((a) => a == null).length,
+      'zero': angles.where((a) => a == 0).length,
+      'normal': angles.where((a) => a != null && a != 0).length,
+    },
     'confidence': confidence.toJson(),
     'lineHeights': lineHeights.toJson(),
     if (note != null) 'note': note,

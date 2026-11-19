@@ -14,6 +14,41 @@ import '../models/text_formatter_models.dart';
 class OcrPreprocessor {
   const OcrPreprocessor._();
 
+  /// Quarter-turn fallback only. Original JPEG remains untouched for pass 1.
+  static Future<Uint8List> rotate(Uint8List bytes, int degrees) async {
+    if (![90, 180, 270].contains(degrees)) {
+      throw ArgumentError.value(degrees, 'degrees');
+    }
+    final base = await decodeImageFromList(bytes);
+    ui.Picture? picture;
+    ui.Image? rotated;
+    try {
+      final width = degrees == 180 ? base.width : base.height;
+      final height = degrees == 180 ? base.height : base.width;
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      switch (degrees) {
+        case 90:
+          canvas.translate(width.toDouble(), 0);
+        case 180:
+          canvas.translate(width.toDouble(), height.toDouble());
+        case 270:
+          canvas.translate(0, height.toDouble());
+      }
+      canvas.rotate(degrees * math.pi / 180);
+      canvas.drawImage(base, ui.Offset.zero, ui.Paint());
+      picture = recorder.endRecording();
+      rotated = await picture.toImage(width, height);
+      final data = await rotated.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) throw StateError('Cannot encode rotated image');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } finally {
+      rotated?.dispose();
+      picture?.dispose();
+      base.dispose();
+    }
+  }
+
   /// Meningkatkan kontras dan mengonversi ke grayscale menggunakan matrix ColorFilter.
   static Future<Uint8List> enhanceContrast(
     Uint8List imageBytes, {
@@ -164,10 +199,26 @@ class OcrPreprocessor {
 
     final contrastPaint = Paint()
       ..colorFilter = ui.ColorFilter.matrix([
-        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
-        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
-        0.2126 * c, 0.7152 * c, 0.0722 * c, 0, offset,
-        0, 0, 0, 1, 0,
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0.2126 * c,
+        0.7152 * c,
+        0.0722 * c,
+        0,
+        offset,
+        0,
+        0,
+        0,
+        1,
+        0,
       ]);
 
     canvas.drawImage(baseImage, Offset.zero, contrastPaint);
@@ -327,10 +378,14 @@ class OcrPreprocessor {
     // Batasi cropRect agar tidak keluar dari dimensi citra asli
     final double safeLeft = cropRect.left.clamp(0.0, origWidth.toDouble());
     final double safeTop = cropRect.top.clamp(0.0, origHeight.toDouble());
-    final double safeRight =
-        cropRect.right.clamp(safeLeft, origWidth.toDouble());
-    final double safeBottom =
-        cropRect.bottom.clamp(safeTop, origHeight.toDouble());
+    final double safeRight = cropRect.right.clamp(
+      safeLeft,
+      origWidth.toDouble(),
+    );
+    final double safeBottom = cropRect.bottom.clamp(
+      safeTop,
+      origHeight.toDouble(),
+    );
 
     final double cropW = math.max(1.0, safeRight - safeLeft);
     final double cropH = math.max(1.0, safeBottom - safeTop);

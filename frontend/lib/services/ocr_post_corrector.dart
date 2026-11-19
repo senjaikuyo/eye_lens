@@ -94,6 +94,7 @@ class OcrPostCorrector {
                 text: correctLine(l.text, scanMode: scanMode),
                 boundingBox: l.boundingBox,
                 confidence: l.confidence,
+                angle: l.angle,
                 blockIndex: l.blockIndex,
                 elements: l.elements,
               ),
@@ -113,6 +114,7 @@ class OcrPostCorrector {
           text: correctedText,
           boundingBox: line.boundingBox,
           confidence: line.confidence,
+          angle: line.angle,
           blockIndex: line.blockIndex,
           elements: line.elements,
         );
@@ -299,8 +301,8 @@ class OcrPostCorrector {
             final cased = isAllUpper
                 ? cand.toUpperCase()
                 : (isCapitalized
-                    ? cand[0].toUpperCase() + cand.substring(1)
-                    : cand);
+                      ? cand[0].toUpperCase() + cand.substring(1)
+                      : cand);
             return prefix + cased + suffix;
           }
         }
@@ -310,8 +312,8 @@ class OcrPostCorrector {
             final cased = isAllUpper
                 ? cand.toUpperCase()
                 : (isCapitalized
-                    ? cand[0].toUpperCase() + cand.substring(1)
-                    : cand);
+                      ? cand[0].toUpperCase() + cand.substring(1)
+                      : cand);
             return prefix + cased + suffix;
           }
         }

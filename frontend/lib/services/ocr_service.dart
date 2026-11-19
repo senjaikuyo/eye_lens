@@ -13,7 +13,7 @@ import 'image_blur_detector.dart';
 import 'ocr_noise_filter.dart';
 import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
-import 'ocr_quality_scorer.dart';
+import 'ocr_orientation_resolver.dart';
 import 'text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
@@ -80,6 +80,7 @@ class OcrService {
                 scale: scale,
               ),
               confidence: line.confidence,
+              angle: line.angle,
               blockIndex: bIdx,
               elements: words,
             ),
@@ -213,6 +214,7 @@ class OcrService {
     String? passName,
     List<OcrPassRecord>? passRecords,
     Stopwatch? passStopwatch,
+    int rotationDegrees = 0,
   }) async {
     File? tempFile;
     final localStopwatch = passStopwatch ?? Stopwatch();
@@ -243,7 +245,7 @@ class OcrService {
           OcrPassRecord(
             name: passName ?? 'pass',
             durationMs: localStopwatch.elapsedMilliseconds,
-            qualityScore: OcrQualityScorer.scoreLines(result.rawLines),
+            qualityScore: OcrOrientationResolver.score(result.rawLines),
             rawLines: result.rawLinesCount,
             acceptedLines:
                 result.rawLines.length -
@@ -253,6 +255,11 @@ class OcrService {
             confidence: ConfidenceStats.fromLines(result.rawLines),
             lineHeights: LineHeightStats.fromLines(result.rawLines),
             doubtfulLines: result.doubtfulLines.length,
+            angles: result.rawLines.map((l) => l.angle).toList(),
+            rotationDegrees: rotationDegrees,
+            submittedImageSize: await ImageDimensionHelper.getImageSize(
+              imageBytes,
+            ),
           ),
         );
       }
@@ -326,7 +333,8 @@ class OcrService {
       );
 
       // K0 A/B flag: lewati seluruh pass tambahan lama bila dimatikan.
-      if (!enableMultiPass || !DebugOcrConfig.enableLegacyPreprocessing) {
+      if (!enableMultiPass ||
+          (kDebugMode && !DebugOcrConfig.enableLegacyPreprocessing)) {
         return _attachDiagnostics(
           diagnostics: diagnostics,
           result: pass1Result,
@@ -336,17 +344,15 @@ class OcrService {
         );
       }
 
-      final double pass1Score = OcrQualityScorer.scoreLines(
+      final double pass1Score = OcrOrientationResolver.score(
         pass1Result.rawLines,
       );
 
       // Kriteria kualitas cukup tanpa perlu pass kedua:
       // Teks ditemukan, tidak ada peringatan kualitas rendah, dan skor token kuat.
       const double sufficientScoreThreshold = 35.0;
-      if (pass1Score >= sufficientScoreThreshold &&
-          !pass1Result.hasLowQualityWarning &&
-          !pass1Result.allLinesFilteredOut &&
-          pass1Result.fullText.trim().isNotEmpty &&
+      if (OcrOrientationResolver.sufficient(pass1Result) &&
+          !OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) &&
           scanMode != OcrScanMode.smallText) {
         return _attachDiagnostics(
           diagnostics: diagnostics,
@@ -359,6 +365,65 @@ class OcrService {
 
       OcrResult bestResult = pass1Result;
       double bestScore = pass1Score;
+
+      // K5: bounded, sequential retries, always from the same original photo.
+      // Missing angle never blocks recovery; 0 degrees is a valid angle.
+      if (!OcrOrientationResolver.sufficient(pass1Result) ||
+          OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result)) {
+        for (final degrees in OcrOrientationResolver.retryAngles(imageSize)) {
+          if (_isDisposed) break;
+          final timer = Stopwatch()..start();
+          try {
+            final rotated = await OcrPreprocessor.rotate(bytes, degrees);
+            final rotatedSize = degrees == 180
+                ? imageSize
+                : Size(imageSize.height, imageSize.width);
+            final candidate = await _recognizeSinglePass(
+              imageBytes: rotated,
+              imageSize: rotatedSize,
+              tempDir: tempDir,
+              scanMode: scanMode,
+              noiseFilterConfig: noiseFilterConfig,
+              passName: 'rotation_$degrees',
+              passRecords: passRecords,
+              passStopwatch: timer,
+              rotationDegrees: degrees,
+            );
+            final score = OcrOrientationResolver.score(candidate.rawLines);
+            if ((score > bestScore ||
+                    (score == bestScore &&
+                        OcrOrientationResolver.angleSuggestsUpsideDown(
+                          bestResult,
+                        ) &&
+                        !OcrOrientationResolver.angleSuggestsUpsideDown(
+                          candidate,
+                        ))) &&
+                (!candidate.allLinesFilteredOut ||
+                    bestResult.allLinesFilteredOut)) {
+              bestResult = OcrOrientationResolver.mapResult(
+                candidate,
+                imageSize,
+                degrees,
+              );
+              bestScore = score;
+            }
+            if (OcrOrientationResolver.sufficient(bestResult)) break;
+          } catch (e) {
+            debugPrint(
+              '[OcrService] Rotation $degrees failed: ${e.runtimeType}',
+            );
+          }
+        }
+        if (OcrOrientationResolver.sufficient(bestResult)) {
+          return _attachDiagnostics(
+            diagnostics: diagnostics,
+            result: bestResult,
+            imageSize: imageSize,
+            passRecords: passRecords,
+            bytes: bytes,
+          );
+        }
+      }
 
       try {
         if (scanMode == OcrScanMode.smallText) {
@@ -393,7 +458,7 @@ class OcrService {
               cropOffset: targetRoi.topLeft,
               scale: roiScale,
             );
-            final double roiScore = OcrQualityScorer.scoreLines(
+            final double roiScore = OcrOrientationResolver.score(
               roiResult.rawLines,
             );
 
@@ -419,7 +484,7 @@ class OcrService {
                 scanMode: scanMode,
                 noiseFilterConfig: noiseFilterConfig,
               );
-              final double otsuScore = OcrQualityScorer.scoreLines(
+              final double otsuScore = OcrOrientationResolver.score(
                 otsuResult.rawLines,
               );
 
@@ -462,7 +527,7 @@ class OcrService {
             scanMode: scanMode,
             noiseFilterConfig: noiseFilterConfig,
           );
-          final double pass2Score = OcrQualityScorer.scoreLines(
+          final double pass2Score = OcrOrientationResolver.score(
             pass2Result.rawLines,
           );
 
@@ -483,7 +548,7 @@ class OcrService {
                 scanMode: scanMode,
                 noiseFilterConfig: noiseFilterConfig,
               );
-              final double pass3Score = OcrQualityScorer.scoreLines(
+              final double pass3Score = OcrOrientationResolver.score(
                 pass3Result.rawLines,
               );
 
@@ -527,7 +592,7 @@ class OcrService {
                     cropOffset: textRoi.topLeft,
                     scale: roiScale,
                   );
-                  final double smartScore = OcrQualityScorer.scoreLines(
+                  final double smartScore = OcrOrientationResolver.score(
                     smartCropResult.rawLines,
                   );
                   if (smartScore > bestScore) {

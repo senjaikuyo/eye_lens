@@ -9,7 +9,7 @@ import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/core/services/image_cache_cleanup.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/providers/history_provider.dart';
-import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 
 export 'package:eye_lens/app/routes/app_routes.dart' show routeObserver;

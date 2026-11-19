@@ -1,4 +1,4 @@
-class PengaturanModel {
+class SettingsModel {
   final int id;
   final String tema;
   final int ukuranTeks;
@@ -10,7 +10,7 @@ class PengaturanModel {
   final String bahasaAplikasi;
   final String terakhirDiperbarui;
 
-  const PengaturanModel({
+  const SettingsModel({
     this.id = 1,
     this.tema = 'sistem',
     this.ukuranTeks = 18,
@@ -40,8 +40,8 @@ class PengaturanModel {
     };
   }
 
-  factory PengaturanModel.fromMap(Map<String, dynamic> map) {
-    return PengaturanModel(
+  factory SettingsModel.fromMap(Map<String, dynamic> map) {
+    return SettingsModel(
       id: map['id'] as int? ?? 1,
       tema: map['tema'] as String? ?? 'sistem',
       ukuranTeks: map['ukuran_teks'] as int? ?? 18,
@@ -57,8 +57,8 @@ class PengaturanModel {
     );
   }
 
-  factory PengaturanModel.defaults() {
-    return PengaturanModel(
+  factory SettingsModel.defaults() {
+    return SettingsModel(
       id: 1,
       tema: 'sistem',
       ukuranTeks: 18,
@@ -72,7 +72,7 @@ class PengaturanModel {
     );
   }
 
-  PengaturanModel copyWith({
+  SettingsModel copyWith({
     String? tema,
     int? ukuranTeks,
     String? warnaKursor,
@@ -83,7 +83,7 @@ class PengaturanModel {
     String? bahasaAplikasi,
     String? terakhirDiperbarui,
   }) {
-    return PengaturanModel(
+    return SettingsModel(
       id: 1,
       tema: tema ?? this.tema,
       ukuranTeks: ukuranTeks ?? this.ukuranTeks,

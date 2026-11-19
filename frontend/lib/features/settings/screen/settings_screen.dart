@@ -4,17 +4,17 @@ import 'package:provider/provider.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
-import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/services/auth/auth_service.dart';
-import 'package:eye_lens/screens/settings/change_password_screen.dart';
-import 'package:eye_lens/screens/settings/faq_screen.dart';
-import 'package:eye_lens/screens/settings/widgets/language_selector_tile.dart';
-import 'package:eye_lens/screens/settings/widgets/logout_dialog.dart';
-import 'package:eye_lens/screens/settings/widgets/settings_email_tile.dart';
-import 'package:eye_lens/screens/settings/widgets/settings_list_tile.dart';
-import 'package:eye_lens/screens/settings/widgets/settings_logout_tile.dart';
-import 'package:eye_lens/screens/settings/widgets/theme_selector_tile.dart';
+import 'package:eye_lens/features/settings/screen/change_password_screen.dart';
+import 'package:eye_lens/features/settings/screen/faq_screen.dart';
+import 'package:eye_lens/features/settings/screen/widgets/language_selector_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/logout_dialog.dart';
+import 'package:eye_lens/features/settings/screen/widgets/settings_email_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/settings_list_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/settings_logout_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/theme_selector_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

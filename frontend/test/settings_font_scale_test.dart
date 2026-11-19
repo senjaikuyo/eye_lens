@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
-import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/screens/settings/settings_screen.dart';
+import 'package:eye_lens/features/settings/screen/settings_screen.dart';
 
 Widget createTestSettingsApp({required double textScaleFactor}) {
   return MultiProvider(

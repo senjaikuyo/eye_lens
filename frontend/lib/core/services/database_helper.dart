@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'package:eye_lens/models/pengaturan_model.dart';
+import 'package:eye_lens/features/settings/models/settings_model.dart';
 import 'package:eye_lens/models/riwayat_model.dart';
 
 class DatabaseHelper {
@@ -248,12 +248,12 @@ class DatabaseHelper {
 
   // --- Typed Model Helpers ---
 
-  Future<PengaturanModel> getPengaturanModel() async {
+  Future<SettingsModel> getPengaturanModel() async {
     final map = await getPengaturan();
-    return PengaturanModel.fromMap(map);
+    return SettingsModel.fromMap(map);
   }
 
-  Future<int> updatePengaturanModel(PengaturanModel model) async {
+  Future<int> updatePengaturanModel(SettingsModel model) async {
     return await updatePengaturan(model.toMap());
   }
 

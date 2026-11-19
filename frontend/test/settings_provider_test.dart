@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eye_lens/core/constants/app_constants.dart';
-import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 
 void main() {
   group('SettingsProvider Unit Tests', () {

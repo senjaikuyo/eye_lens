@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
+import 'ocr_diagnostic_collector.dart';
 import 'ocr_noise_filter.dart';
 import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
@@ -210,8 +211,13 @@ class OcrService {
     OcrNoiseFilterConfig? noiseFilterConfig,
     Offset cropOffset = Offset.zero,
     double scale = 1.0,
+    String? passName,
+    List<OcrPassRecord>? passRecords,
+    Stopwatch? passStopwatch,
   }) async {
     File? tempFile;
+    final localStopwatch = passStopwatch ?? Stopwatch();
+    if (!localStopwatch.isRunning) localStopwatch.start();
     try {
       final tempPath =
           '${tempDir.path}/ocr_ephemeral_${DateTime.now().microsecondsSinceEpoch}.jpg';
@@ -223,7 +229,7 @@ class OcrService {
         inputImage,
       );
 
-      return await _buildOcrResult(
+      final result = await _buildOcrResult(
         recognizedText: recognizedText,
         imageSize: imageSize,
         scanMode: scanMode,
@@ -231,6 +237,24 @@ class OcrService {
         cropOffset: cropOffset,
         scale: scale,
       );
+
+      if (passRecords != null) {
+        localStopwatch.stop();
+        passRecords.add(
+          OcrPassRecord(
+            name: passName ?? 'pass',
+            durationMs: localStopwatch.elapsedMilliseconds,
+            qualityScore: OcrQualityScorer.scoreLines(result.rawLines),
+            rawLines: result.rawLinesCount,
+            acceptedLines: result.rawLines.length - result.rejectedLines.length,
+            rejectedLines: result.rejectedLines.length,
+            confidence: ConfidenceStats.fromLines(result.rawLines),
+            lineHeights: LineHeightStats.fromLines(result.rawLines),
+          ),
+        );
+      }
+
+      return result;
     } finally {
       if (tempFile != null) {
         try {
@@ -263,17 +287,36 @@ class OcrService {
         tempDir = Directory.systemTemp;
       }
 
-      // Pass 1: Citra asli
+      // K0: Siapkan pengumpul diagnostik. Nonaktif di release.
+      final diagnostics = OcrDiagnosticCollector.create(
+        photoBytes: bytes,
+        photoPixelSize: imageSize,
+        cameraPreset: 'unknown',
+        exifOrientation: ImageDimensionHelper.getExifOrientation(bytes),
+        deviceOrientation: null,
+      );
+      final List<OcrPassRecord> passRecords = [];
+
+      // Pass 1: Citra asli (tanpa preprocessing apa pun)
       final pass1Result = await _recognizeSinglePass(
         imageBytes: bytes,
         imageSize: imageSize,
         tempDir: tempDir,
         scanMode: scanMode,
         noiseFilterConfig: noiseFilterConfig,
+        passName: 'pass1_original',
+        passRecords: passRecords,
       );
 
-      if (!enableMultiPass) {
-        return pass1Result;
+      // K0 A/B flag: lewati seluruh pass tambahan lama bila dimatikan.
+      if (!enableMultiPass || !DebugOcrConfig.enableLegacyPreprocessing) {
+        return _attachDiagnostics(
+          diagnostics: diagnostics,
+          result: pass1Result,
+          imageSize: imageSize,
+          passRecords: passRecords,
+          bytes: bytes,
+        );
       }
 
       final double pass1Score = OcrQualityScorer.scoreLines(
@@ -288,7 +331,13 @@ class OcrService {
           !pass1Result.allLinesFilteredOut &&
           pass1Result.fullText.trim().isNotEmpty &&
           scanMode != OcrScanMode.smallText) {
-        return pass1Result;
+        return _attachDiagnostics(
+          diagnostics: diagnostics,
+          result: pass1Result,
+          imageSize: imageSize,
+          passRecords: passRecords,
+          bytes: bytes,
+        );
       }
 
       OcrResult bestResult = pass1Result;
@@ -477,11 +526,52 @@ class OcrService {
         debugPrint('[OcrService] Multi-pass preprocessing gagal: $e');
       }
 
-      return bestResult;
+      return _attachDiagnostics(
+        diagnostics: diagnostics,
+        result: bestResult,
+        imageSize: imageSize,
+        passRecords: passRecords,
+        bytes: bytes,
+      );
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
       return OcrResult.empty;
     }
+  }
+
+  /// Menyusun laporan diagnostik (K0) untuk satu foto dan melampirkannya
+  /// ke [OcrResult] via [OcrResult.diagnosticJson].
+  OcrResult _attachDiagnostics({
+    required OcrDiagnosticCollector diagnostics,
+    required OcrResult result,
+    required Size imageSize,
+    required List<OcrPassRecord> passRecords,
+    required Uint8List bytes,
+  }) {
+    if (!diagnostics.isActive) return result;
+
+    final report = diagnostics.finalize(
+      imageSentToMlKit: imageSize,
+      passes: passRecords,
+      rejectedLines: result.rejectedLines
+          .map(
+            (r) => rejectedLineToJson(
+              line: r.line,
+              reason: r.reason.name,
+              explanation: r.explanation,
+            ),
+          )
+          .toList(),
+      rawText: result.rawLines.map((l) => l.text).join('\n'),
+      filteredText: result.documentData?.rawText ?? '',
+      formattedText: result.fullText,
+      totalDurationMs: passRecords.fold<int>(
+        0,
+        (sum, p) => sum + p.durationMs,
+      ),
+    );
+    if (report == null) return result;
+    return result.copyWith(diagnosticJson: report.toJsonString());
   }
 
   /// Mengekstrak teks lengkap beserta koordinat bounding box dari file.

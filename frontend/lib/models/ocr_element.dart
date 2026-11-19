@@ -30,6 +30,9 @@ class OcrResult {
   final int rawLinesCount;
   final List<OcrLineData> rawLines;
 
+  /// Laporan diagnostik K0 dalam format JSON. Hanya terisi pada build debug.
+  final String? diagnosticJson;
+
   const OcrResult({
     required this.fullText,
     required this.elements,
@@ -42,7 +45,26 @@ class OcrResult {
     this.allLinesFilteredOut = false,
     this.rawLinesCount = 0,
     this.rawLines = const [],
+    this.diagnosticJson,
   });
+
+  /// Menyalin hasil OCR dengan laporan diagnostik opsional.
+  OcrResult copyWith({String? diagnosticJson}) {
+    return OcrResult(
+      fullText: fullText,
+      elements: elements,
+      imageSize: imageSize,
+      documentData: documentData,
+      formattedResult: formattedResult,
+      rejectedLines: rejectedLines,
+      fallbackUsed: fallbackUsed,
+      hasLowQualityWarning: hasLowQualityWarning,
+      allLinesFilteredOut: allLinesFilteredOut,
+      rawLinesCount: rawLinesCount,
+      rawLines: rawLines,
+      diagnosticJson: diagnosticJson ?? this.diagnosticJson,
+    );
+  }
 
   static const OcrResult empty = OcrResult(
     fullText: '',

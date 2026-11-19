@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -310,6 +312,9 @@ class _ScanningScreenState extends State<ScanningScreen>
                 ),
               ),
             );
+
+            // K0: tampilkan tombol salin log diagnostik (hanya build debug).
+            _maybeShowDiagnosticSnackBar(ocrResult);
           }
         }
       } catch (e) {
@@ -407,6 +412,9 @@ class _ScanningScreenState extends State<ScanningScreen>
             ),
           ),
         );
+
+        // K0: tampilkan tombol salin log diagnostik (hanya build debug).
+        _maybeShowDiagnosticSnackBar(ocrResult);
       }
     } catch (e) {
       debugPrint('[ScanningScreen] Ambil gambar galeri gagal: $e');
@@ -430,6 +438,106 @@ class _ScanningScreenState extends State<ScanningScreen>
           _isProcessingOcr = false;
         });
       }
+    }
+  }
+
+  /// K0: Menampilkan aksi "Salin log (JSON)" setelah pemindaian pada build
+  /// debug. Dua pilihan: dengan teks atau tanpa teks. Tidak tampil di release.
+  void _maybeShowDiagnosticSnackBar(OcrResult ocrResult) {
+    final json = ocrResult.diagnosticJson;
+    if (json == null || !kDebugMode || !mounted) return;
+
+    final strings = AppStrings.of(context, listen: false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 10),
+        content: Text(
+          strings.isIndonesian
+              ? 'Log diagnostik OCR siap.'
+              : 'OCR diagnostic log is ready.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        action: SnackBarAction(
+          label: strings.isIndonesian ? 'Salin log' : 'Copy log',
+          onPressed: () => _showDiagnosticCopySheet(json),
+        ),
+      ),
+    );
+  }
+
+  /// K0: Lembar pilihan salin log dengan/tanpa isi teks.
+  Future<void> _showDiagnosticCopySheet(String withTextJson) async {
+    if (!mounted) return;
+    final strings = AppStrings.of(context, listen: false);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.copy_all_outlined),
+                title: Text(
+                  strings.isIndonesian
+                      ? 'Salin log + teks'
+                      : 'Copy log with text',
+                ),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: withTextJson));
+                  if (sheetContext.mounted) Navigator.pop(sheetContext);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: Text(
+                  strings.isIndonesian
+                      ? 'Salin log tanpa teks'
+                      : 'Copy log without text',
+                ),
+                subtitle: Text(
+                  strings.isIndonesian
+                      ? 'Hanya metrik, isi teks disensor'
+                      : 'Metrics only, text content redacted',
+                ),
+                onTap: () async {
+                  final sanitized = _stripTextFromDiagnosticJson(withTextJson);
+                  await Clipboard.setData(ClipboardData(text: sanitized));
+                  if (sheetContext.mounted) Navigator.pop(sheetContext);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Menghapus isi teks dari JSON diagnostik (mempertahankan panjangnya).
+  String _stripTextFromDiagnosticJson(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+      final texts = decoded['texts'];
+      if (texts is Map) {
+        decoded['texts'] = {
+          'rawLength': (texts['raw'] as String?)?.length ?? 0,
+          'filteredLength': (texts['filtered'] as String?)?.length ?? 0,
+          'formattedLength': (texts['formatted'] as String?)?.length ?? 0,
+        };
+      }
+      final rejected = decoded['rejectedLines'];
+      if (rejected is List) {
+        for (final item in rejected) {
+          if (item is Map) {
+            item['text'] = '<disembunyikan>';
+          }
+        }
+      }
+      return const JsonEncoder.withIndent('  ').convert(decoded);
+    } catch (e) {
+      debugPrint('[ScanningScreen] Gagal menyensor log diagnostik: $e');
+      return jsonString;
     }
   }
 

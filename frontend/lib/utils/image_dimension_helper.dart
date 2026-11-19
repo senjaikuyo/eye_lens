@@ -128,6 +128,50 @@ class ImageDimensionHelper {
     return null;
   }
 
+  /// Mengambil nilai tag EXIF Orientation (1..8) dari JPEG, atau `null` bila
+  /// tidak ada. Dipakai diagnostik K0 untuk membandingkan dengan orientasi
+  /// perangkat; bukan sumber kebenaran orientasi tunggal.
+  static int? getExifOrientation(Uint8List bytes) {
+    if (bytes.length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8) return null;
+
+    int offset = 2;
+    final int length = bytes.length;
+    while (offset < length - 8) {
+      if (bytes[offset] != 0xFF) {
+        offset++;
+        continue;
+      }
+      while (offset < length && bytes[offset] == 0xFF) {
+        offset++;
+      }
+      if (offset >= length) break;
+      final int marker = bytes[offset++];
+      if (marker == 0xDA || marker == 0xD9) break;
+      if (offset + 1 >= length) break;
+      final int segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+      if (segmentLength < 2) break;
+
+      if (marker == 0xE1 && offset + segmentLength <= length) {
+        final orientation = _parseExifOrientation(
+          bytes,
+          offset + 2,
+          segmentLength - 2,
+        );
+        if (orientation != null) return orientation;
+      }
+
+      final bool isSof =
+          (marker >= 0xC0 && marker <= 0xC3) ||
+          (marker >= 0xC5 && marker <= 0xC7) ||
+          (marker >= 0xC9 && marker <= 0xCB) ||
+          (marker >= 0xCD && marker <= 0xCF);
+      if (isSof) break;
+
+      offset += segmentLength;
+    }
+    return null;
+  }
+
   /// Ekstraksi tag EXIF Orientation (0x0112) dari payload APP1 JPEG murni.
   static int? _parseExifOrientation(Uint8List bytes, int offset, int length) {
     if (length < 14) return null;

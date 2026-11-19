@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/ocr_dictionary.dart';
-import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 
 /// Deterministic orientation policy; no EXIF normalization or arbitrary deskew.
 class OcrOrientationResolver {

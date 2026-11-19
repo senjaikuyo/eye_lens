@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/reading_order_resolver.dart';
+import 'package:eye_lens/features/ocr/reading_order/reading_order_resolver.dart';
 import 'package:eye_lens/services/text_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
 

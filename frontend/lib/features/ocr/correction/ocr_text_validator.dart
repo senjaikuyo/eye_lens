@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 
 /// Alasan mengapa sebuah hasil ekstraksi OCR diklasifikasikan sebagai kondisi tanpa teks.
 enum NoTextReason {

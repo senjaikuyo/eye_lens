@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/ocr_noise_filter.dart';
-import 'package:eye_lens/services/ocr_text_validator.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 import 'package:eye_lens/services/text_formatter.dart';
 
 /// Posisi titik pegangan (handle) untuk mengubah ukuran bingkai seleksi.

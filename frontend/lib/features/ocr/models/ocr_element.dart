@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Representasi elemen teks dengan posisi koordinat pada citra asli.

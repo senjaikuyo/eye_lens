@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/services/auto_play_helper.dart';
 import 'package:eye_lens/services/lens_selection_helper.dart';
-import 'package:eye_lens/services/ocr_text_validator.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 
 void main() {
   group('AutoPlayHelper Unit Tests', () {

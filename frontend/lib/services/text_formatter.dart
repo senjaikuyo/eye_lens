@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/ocr_post_corrector.dart';
-import 'package:eye_lens/services/reading_order_resolver.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_post_corrector.dart';
+import 'package:eye_lens/features/ocr/reading_order/reading_order_resolver.dart';
 
 /// Konfigurasi dan ambang batas aturan perapian teks OCR.
 class TextFormatterConfig {

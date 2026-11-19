@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/vertical_text_detector.dart';
+import 'package:eye_lens/features/ocr/reading_order/vertical_text_detector.dart';
 
 void main() {
   List<OcrLineData> stack(String text) => List.generate(

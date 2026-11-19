@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/ocr_preprocessor.dart';
-import 'package:eye_lens/services/ocr_service.dart';
+import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
+import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,6 +1,6 @@
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/ocr_dictionary.dart';
-import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 
 /// Layanan post-processing OCR untuk mengoreksi karakter ambigu (confusable characters)
 /// seperti '0'/'O', '1'/'I'/'l'/'|', '5'/'S', '8'/'B', '2'/'Z', '4'/'A', '3'/'E'.

@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/providers/settings_provider.dart';

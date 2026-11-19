@@ -11,8 +11,8 @@ import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/screens/scan/scanning_screen.dart';
 import 'package:eye_lens/screens/scan/widgets/no_text_alert_banner.dart';
 import 'package:eye_lens/screens/speech/speech_screen.dart';
-import 'package:eye_lens/services/ocr_service.dart';
-import 'package:eye_lens/services/ocr_text_validator.dart';
+import 'package:eye_lens/features/ocr/services/ocr_service.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

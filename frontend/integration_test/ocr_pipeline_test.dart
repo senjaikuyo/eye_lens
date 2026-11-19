@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:eye_lens/services/ocr_service.dart';
-import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/services/ocr_service.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

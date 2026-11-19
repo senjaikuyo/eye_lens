@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/providers/history_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
@@ -13,7 +13,7 @@ import 'package:eye_lens/screens/speech/speech_screen.dart';
 import 'package:eye_lens/screens/speech/widgets/highlighted_text_view.dart';
 import 'package:eye_lens/screens/speech/widgets/ocr_image_overlay.dart';
 import 'package:eye_lens/screens/speech/widgets/speech_mode_toggle_button.dart';
-import 'package:eye_lens/services/ocr_service.dart';
+import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

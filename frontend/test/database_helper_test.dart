@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:eye_lens/services/database_helper.dart';
+import 'package:eye_lens/core/services/database_helper.dart';
 import 'package:eye_lens/providers/history_provider.dart';
 
 void main() {
@@ -13,17 +13,22 @@ void main() {
     final dbHelper = DatabaseHelper.instance;
     await dbHelper.clearAllRiwayat();
     final db = await dbHelper.database;
-    await db.update('tbl_pengaturan', {
-      'tema': 'sistem',
-      'ukuran_teks': 18,
-      'warna_kursor': '#FACC15',
-      'kontras': 'normal',
-      'otomatis_putar': 1,
-      'kecepatan_suara': 1.0,
-      'bahasa_suara': 'id-ID',
-      'bahasa_aplikasi': 'id',
-      'terakhir_diperbarui': DateTime.now().toIso8601String(),
-    }, where: 'id = ?', whereArgs: [1]);
+    await db.update(
+      'tbl_pengaturan',
+      {
+        'tema': 'sistem',
+        'ukuran_teks': 18,
+        'warna_kursor': '#FACC15',
+        'kontras': 'normal',
+        'otomatis_putar': 1,
+        'kecepatan_suara': 1.0,
+        'bahasa_suara': 'id-ID',
+        'bahasa_aplikasi': 'id',
+        'terakhir_diperbarui': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [1],
+    );
   });
 
   tearDownAll(() async {
@@ -31,54 +36,60 @@ void main() {
   });
 
   group('DatabaseHelper SQLite Unit Tests', () {
-    test('1. Insert dan get riwayat bekerja sesuai urutan waktu terbaru', () async {
-      final dbHelper = DatabaseHelper.instance;
+    test(
+      '1. Insert dan get riwayat bekerja sesuai urutan waktu terbaru',
+      () async {
+        final dbHelper = DatabaseHelper.instance;
 
-      final id1 = await dbHelper.insertRiwayat(
-        judul: 'Pindai Pertama',
-        isiTeks: 'Ini adalah isi dokumen kesatu.',
-        jumlahKata: 5,
-        sumber: 'kamera',
-        waktu: DateTime(2026, 1, 1, 10, 0),
-      );
-
-      final id2 = await dbHelper.insertRiwayat(
-        judul: 'Pindai Kedua',
-        isiTeks: 'Ini adalah isi dokumen kedua lebih baru.',
-        jumlahKata: 7,
-        sumber: 'galeri',
-        waktu: DateTime(2026, 1, 1, 12, 0),
-      );
-
-      final list = await dbHelper.getRiwayatModelList();
-      expect(list.length, 2);
-      expect(list.first.idRiwayat, id2);
-      expect(list.first.judul, 'Pindai Kedua');
-      expect(list.last.idRiwayat, id1);
-      expect(list.last.sumber, 'kamera');
-    });
-
-    test('2. Trigger trg_limit_riwayat_50 membatasi riwayat maksimal 50 entri', () async {
-      final dbHelper = DatabaseHelper.instance;
-
-      for (int i = 1; i <= 55; i++) {
-        await dbHelper.insertRiwayat(
-          judul: 'Dokumen $i',
-          isiTeks: 'Teks dokumen ke-$i',
-          jumlahKata: 3,
+        final id1 = await dbHelper.insertRiwayat(
+          judul: 'Pindai Pertama',
+          isiTeks: 'Ini adalah isi dokumen kesatu.',
+          jumlahKata: 5,
           sumber: 'kamera',
-          waktu: DateTime(2026, 1, 1, 0, i),
+          waktu: DateTime(2026, 1, 1, 10, 0),
         );
-      }
 
-      final count = await dbHelper.getRiwayatCount();
-      expect(count, 50);
+        final id2 = await dbHelper.insertRiwayat(
+          judul: 'Pindai Kedua',
+          isiTeks: 'Ini adalah isi dokumen kedua lebih baru.',
+          jumlahKata: 7,
+          sumber: 'galeri',
+          waktu: DateTime(2026, 1, 1, 12, 0),
+        );
 
-      final list = await dbHelper.getRiwayatModelList();
-      expect(list.length, 50);
-      expect(list.first.judul, 'Dokumen 55');
-      expect(list.last.judul, 'Dokumen 6');
-    });
+        final list = await dbHelper.getRiwayatModelList();
+        expect(list.length, 2);
+        expect(list.first.idRiwayat, id2);
+        expect(list.first.judul, 'Pindai Kedua');
+        expect(list.last.idRiwayat, id1);
+        expect(list.last.sumber, 'kamera');
+      },
+    );
+
+    test(
+      '2. Trigger trg_limit_riwayat_50 membatasi riwayat maksimal 50 entri',
+      () async {
+        final dbHelper = DatabaseHelper.instance;
+
+        for (int i = 1; i <= 55; i++) {
+          await dbHelper.insertRiwayat(
+            judul: 'Dokumen $i',
+            isiTeks: 'Teks dokumen ke-$i',
+            jumlahKata: 3,
+            sumber: 'kamera',
+            waktu: DateTime(2026, 1, 1, 0, i),
+          );
+        }
+
+        final count = await dbHelper.getRiwayatCount();
+        expect(count, 50);
+
+        final list = await dbHelper.getRiwayatModelList();
+        expect(list.length, 50);
+        expect(list.first.judul, 'Dokumen 55');
+        expect(list.last.judul, 'Dokumen 6');
+      },
+    );
 
     test('3. Hapus riwayat tunggal dan bersihkan seluruh riwayat', () async {
       final dbHelper = DatabaseHelper.instance;
@@ -149,10 +160,7 @@ void main() {
       expect(initial['id'], 1);
       expect(initial['tema'], 'sistem');
 
-      await dbHelper.updatePengaturan({
-        'tema': 'gelap',
-        'ukuran_teks': 24,
-      });
+      await dbHelper.updatePengaturan({'tema': 'gelap', 'ukuran_teks': 24});
 
       final updated = await dbHelper.getPengaturan();
       expect(updated['tema'], 'gelap');
@@ -178,20 +186,23 @@ void main() {
       expect(provider.errorMessage, isNull);
     });
 
-    test('2. Menghapus riwayat mengupdate state items di memori provider', () async {
-      final provider = HistoryProvider();
-      await provider.loadRiwayat();
+    test(
+      '2. Menghapus riwayat mengupdate state items di memori provider',
+      () async {
+        final provider = HistoryProvider();
+        await provider.loadRiwayat();
 
-      final saved = await provider.addRiwayat(
-        text: 'Teks hapus provider',
-        sumber: 'kamera',
-      );
-      expect(provider.items.length, 1);
+        final saved = await provider.addRiwayat(
+          text: 'Teks hapus provider',
+          sumber: 'kamera',
+        );
+        expect(provider.items.length, 1);
 
-      final success = await provider.deleteRiwayat(saved!.idRiwayat!);
-      expect(success, isTrue);
-      expect(provider.items.isEmpty, isTrue);
-    });
+        final success = await provider.deleteRiwayat(saved!.idRiwayat!);
+        expect(success, isTrue);
+        expect(provider.items.isEmpty, isTrue);
+      },
+    );
 
     test('3. Menghapus semua riwayat mengosongkan state provider', () async {
       final provider = HistoryProvider();

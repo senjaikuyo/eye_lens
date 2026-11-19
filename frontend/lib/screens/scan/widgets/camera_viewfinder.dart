@@ -3,11 +3,11 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../services/camera_service.dart';
-import '../../../services/camera_input_policy.dart';
-import '../../../services/lens_selection_helper.dart';
-import '../../../widgets/scanner_corner_painter.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/services/camera_service.dart';
+import 'package:eye_lens/services/camera_input_policy.dart';
+import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/widgets/scanner_corner_painter.dart';
 
 class CameraViewfinder extends StatefulWidget {
   final CameraService cameraService;

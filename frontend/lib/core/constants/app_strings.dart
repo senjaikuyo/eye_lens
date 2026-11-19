@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/language_provider.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
 
 class AppStrings {
   final bool isIndonesian;

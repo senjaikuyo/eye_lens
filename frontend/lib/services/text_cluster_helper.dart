@@ -1,6 +1,7 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import '../models/text_formatter_models.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Model representasi kelompok teks (paragraph / text cluster) pada citra.
 @immutable
@@ -27,8 +28,8 @@ class _UnionFind {
   final List<int> _rank;
 
   _UnionFind(int size)
-      : _parent = List<int>.generate(size, (i) => i),
-        _rank = List<int>.filled(size, 0);
+    : _parent = List<int>.generate(size, (i) => i),
+      _rank = List<int>.filled(size, 0);
 
   int find(int i) {
     if (_parent[i] == i) return i;
@@ -84,11 +85,12 @@ class TextClusterHelper {
     }
 
     // 1. Hitung tinggi median baris (H)
-    final heights = filteredLines
-        .map((line) => line.boundingBox.height)
-        .where((h) => h > 0)
-        .toList()
-      ..sort();
+    final heights =
+        filteredLines
+            .map((line) => line.boundingBox.height)
+            .where((h) => h > 0)
+            .toList()
+          ..sort();
 
     if (heights.isEmpty) return const [];
 
@@ -180,10 +182,14 @@ class TextClusterHelper {
       // Tambahkan padding dan batasi ke dimensi citra
       final paddedLeft = (minLeft - clusterPadding).clamp(0.0, imageSize.width);
       final paddedTop = (minTop - clusterPadding).clamp(0.0, imageSize.height);
-      final paddedRight =
-          (maxRight + clusterPadding).clamp(0.0, imageSize.width);
-      final paddedBottom =
-          (maxBottom + clusterPadding).clamp(0.0, imageSize.height);
+      final paddedRight = (maxRight + clusterPadding).clamp(
+        0.0,
+        imageSize.width,
+      );
+      final paddedBottom = (maxBottom + clusterPadding).clamp(
+        0.0,
+        imageSize.height,
+      );
 
       final boundingBox = Rect.fromLTRB(
         min(paddedLeft, paddedRight),
@@ -201,12 +207,14 @@ class TextClusterHelper {
 
       final double score = totalArea * centerFactor;
 
-      clusters.add(TextCluster(
-        id: clusterId++,
-        boundingBox: boundingBox,
-        lines: linesInGroup,
-        score: score,
-      ));
+      clusters.add(
+        TextCluster(
+          id: clusterId++,
+          boundingBox: boundingBox,
+          lines: linesInGroup,
+          score: score,
+        ),
+      );
     }
 
     // 5. Urutkan kelompok berdasarkan skor tertinggi. Jika seri, pilih yang paling dekat ke tengah.
@@ -246,9 +254,11 @@ class TextClusterHelper {
       final areaA = a.boundingBox.width * a.boundingBox.height;
       final areaB = b.boundingBox.width * b.boundingBox.height;
 
-      final aInsideB = b.boundingBox.contains(a.boundingBox.topLeft) &&
+      final aInsideB =
+          b.boundingBox.contains(a.boundingBox.topLeft) &&
           b.boundingBox.contains(a.boundingBox.bottomRight);
-      final bInsideA = a.boundingBox.contains(b.boundingBox.topLeft) &&
+      final bInsideA =
+          a.boundingBox.contains(b.boundingBox.topLeft) &&
           a.boundingBox.contains(b.boundingBox.bottomRight);
 
       if (aInsideB && !bInsideA) return -1;
@@ -290,10 +300,14 @@ class TextClusterHelper {
     }
 
     // Cek apakah kotak kelompok sudah sama dengan bingkai aktif dalam batas toleransi
-    final isSameRect = (cluster.boundingBox.left - activeFrameRect.left).abs() <= tolerancePx &&
+    final isSameRect =
+        (cluster.boundingBox.left - activeFrameRect.left).abs() <=
+            tolerancePx &&
         (cluster.boundingBox.top - activeFrameRect.top).abs() <= tolerancePx &&
-        (cluster.boundingBox.right - activeFrameRect.right).abs() <= tolerancePx &&
-        (cluster.boundingBox.bottom - activeFrameRect.bottom).abs() <= tolerancePx;
+        (cluster.boundingBox.right - activeFrameRect.right).abs() <=
+            tolerancePx &&
+        (cluster.boundingBox.bottom - activeFrameRect.bottom).abs() <=
+            tolerancePx;
 
     if (isSameRect) {
       return TapDecision(

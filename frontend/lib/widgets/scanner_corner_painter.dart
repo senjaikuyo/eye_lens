@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../services/lens_selection_helper.dart';
+import 'package:eye_lens/services/lens_selection_helper.dart';
 
 /// Painter bersama untuk menggambar 4 sudut berbentuk huruf L melengkung putih khas Google Lens.
 /// Digunakan secara identik pada viewfinder kamera pemindai (ScanningScreen) dan overlay citra (SpeechScreen).
@@ -33,10 +33,7 @@ class ScannerCornerPainter extends CustomPainter {
       cornerLength,
       math.min(rect.width, rect.height) * 0.45,
     );
-    final effectiveRadius = math.min(
-      cornerRadius,
-      effectiveCornerLength * 0.8,
-    );
+    final effectiveRadius = math.min(cornerRadius, effectiveCornerLength * 0.8);
 
     // 1. Sudut Kiri Atas (Top-Left)
     final tlPath = Path()

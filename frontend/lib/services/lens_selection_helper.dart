@@ -1,10 +1,11 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 
-import '../models/text_formatter_models.dart';
-import 'ocr_noise_filter.dart';
-import 'ocr_text_validator.dart';
-import 'text_formatter.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/services/ocr_text_validator.dart';
+import 'package:eye_lens/services/text_formatter.dart';
 
 /// Posisi titik pegangan (handle) untuk mengubah ukuran bingkai seleksi.
 enum LensHandlePosition {
@@ -106,10 +107,14 @@ class LensSelectionHelper {
     final double maxLeft = max(0.0, originalImageSize.width - frameWidth);
     final double maxTop = max(0.0, originalImageSize.height - frameHeight);
 
-    final double newLeft =
-        (currentImageRect.left + deltaImageX).clamp(0.0, maxLeft);
-    final double newTop =
-        (currentImageRect.top + deltaImageY).clamp(0.0, maxTop);
+    final double newLeft = (currentImageRect.left + deltaImageX).clamp(
+      0.0,
+      maxLeft,
+    );
+    final double newTop = (currentImageRect.top + deltaImageY).clamp(
+      0.0,
+      maxTop,
+    );
 
     return Rect.fromLTWH(newLeft, newTop, frameWidth, frameHeight);
   }
@@ -586,7 +591,9 @@ class LensSelectionHelper {
     required Size originalImageSize,
     OcrNoiseFilterConfig filterConfig = const OcrNoiseFilterConfig(),
   }) {
-    if (rawLines.isEmpty || imageCropRect.width <= 0 || imageCropRect.height <= 0) {
+    if (rawLines.isEmpty ||
+        imageCropRect.width <= 0 ||
+        imageCropRect.height <= 0) {
       return LensSelectionResult.empty;
     }
 
@@ -601,7 +608,9 @@ class LensSelectionHelper {
 
         if (selectedWords.isNotEmpty) {
           // Urutkan kata dari kiri ke kanan
-          selectedWords.sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
+          selectedWords.sort(
+            (a, b) => a.boundingBox.left.compareTo(b.boundingBox.left),
+          );
 
           // Hitung gabungan bounding box baris baru
           double minL = selectedWords.first.boundingBox.left;

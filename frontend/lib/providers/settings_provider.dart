@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/app_constants.dart';
+import 'package:eye_lens/core/constants/app_constants.dart';
 
 /// Provider untuk mengelola preferensi umum aplikasi seperti putar otomatis suara.
 class SettingsProvider extends ChangeNotifier {

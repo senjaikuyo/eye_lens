@@ -7,8 +7,8 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:eye_lens/providers/display_preferences_provider.dart';
-import 'package:eye_lens/providers/language_provider.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/screens/auth/forgot_password_screen.dart';
 import 'package:eye_lens/screens/auth/login_screen.dart';
 import 'package:eye_lens/services/auth/auth_service.dart';

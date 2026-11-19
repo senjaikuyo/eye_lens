@@ -4,7 +4,7 @@ import 'dart:ui' show Offset;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 
-import 'camera_lifecycle_manager.dart';
+import 'package:eye_lens/services/camera_lifecycle_manager.dart';
 
 /// Service untuk mengelola siklus hidup kamera gawai:
 /// - Inisialisasi kamera belakang dengan resolusi optimal (1080p).

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/app_colors.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
 
 class OtpInputRow extends StatefulWidget {
   final int length;

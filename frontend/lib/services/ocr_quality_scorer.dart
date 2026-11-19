@@ -1,4 +1,4 @@
-import '../models/text_formatter_models.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Skor deterministik untuk membandingkan hasil OCR dari pass yang berbeda.
 /// Skor ini bukan confidence ML Kit dan tidak boleh ditampilkan sebagai akurasi.

@@ -5,28 +5,28 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../models/ocr_element.dart';
-import '../../models/text_formatter_models.dart';
-import '../../providers/language_provider.dart';
-import '../../providers/settings_provider.dart';
-import '../../providers/display_preferences_provider.dart';
-import '../../services/auto_play_helper.dart';
-import '../../services/lens_selection_controller.dart';
-import '../../services/lens_selection_helper.dart';
-import '../../services/tts_service.dart';
-import '../../widgets/feedback_dialog.dart';
-import '../scan/widgets/no_text_alert_banner.dart';
-import '../settings/faq_screen.dart';
-import '../settings/settings_screen.dart';
-import 'widgets/appearance_sheet.dart';
-import 'widgets/audio_player_bar.dart';
-import 'widgets/highlighted_text_view.dart';
-import 'widgets/language_sheet.dart';
-import 'widgets/ocr_image_overlay.dart';
-import 'widgets/speech_mode_toggle_button.dart';
-import 'widgets/speech_top_action_bar.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
+import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/services/auto_play_helper.dart';
+import 'package:eye_lens/services/lens_selection_controller.dart';
+import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/services/tts_service.dart';
+import 'package:eye_lens/core/widgets/feedback_dialog.dart';
+import 'package:eye_lens/screens/scan/widgets/no_text_alert_banner.dart';
+import 'package:eye_lens/screens/settings/faq_screen.dart';
+import 'package:eye_lens/screens/settings/settings_screen.dart';
+import 'package:eye_lens/screens/speech/widgets/appearance_sheet.dart';
+import 'package:eye_lens/screens/speech/widgets/audio_player_bar.dart';
+import 'package:eye_lens/screens/speech/widgets/highlighted_text_view.dart';
+import 'package:eye_lens/screens/speech/widgets/language_sheet.dart';
+import 'package:eye_lens/screens/speech/widgets/ocr_image_overlay.dart';
+import 'package:eye_lens/screens/speech/widgets/speech_mode_toggle_button.dart';
+import 'package:eye_lens/screens/speech/widgets/speech_top_action_bar.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
@@ -113,10 +113,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     }
   }
 
-  void _triggerNoTextAlert({
-    required String title,
-    required String message,
-  }) {
+  void _triggerNoTextAlert({required String title, required String message}) {
     _dismissNoTextAlert();
     _ttsService.stop();
     _isPlayingNotifier.value = false;
@@ -182,7 +179,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void initState() {
     super.initState();
     _lensSelectionController = LensSelectionController();
-    _fontSize = Provider.of<DisplayPreferencesProvider>(context, listen: false).fontSize;
+    _fontSize = Provider.of<DisplayPreferencesProvider>(
+      context,
+      listen: false,
+    ).fontSize;
     _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 

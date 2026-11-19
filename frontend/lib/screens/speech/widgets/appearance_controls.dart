@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../providers/display_preferences_provider.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
 
 class AppearanceBoxContainer extends StatelessWidget {
   final Widget child;
@@ -53,7 +53,9 @@ class CursorColorTile extends StatelessWidget {
   });
 
   String _getColorName(Color color) {
-    if (color == DisplayPreferencesProvider.highlightColors[0]) return 'Orange (Default)';
+    if (color == DisplayPreferencesProvider.highlightColors[0]) {
+      return 'Orange (Default)';
+    }
     if (color == DisplayPreferencesProvider.highlightColors[1]) return 'Blue';
     if (color == DisplayPreferencesProvider.highlightColors[2]) return 'Red';
     if (color == DisplayPreferencesProvider.highlightColors[3]) return 'Green';

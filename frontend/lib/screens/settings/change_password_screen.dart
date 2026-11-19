@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../widgets/custom_auth_field.dart';
-import '../../widgets/eyelash_icon.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/widgets/custom_auth_field.dart';
+import 'package:eye_lens/core/widgets/eyelash_icon.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});

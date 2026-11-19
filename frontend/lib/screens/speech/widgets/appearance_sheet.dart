@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../core/app_strings.dart';
-import '../../../providers/display_preferences_provider.dart';
-import 'appearance_controls.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/screens/speech/widgets/appearance_controls.dart';
 
 class AppearanceBottomSheet {
   static Future<void> show(

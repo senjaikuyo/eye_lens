@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:eye_lens/core/app_strings.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/models/ocr_element.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/services/ocr_noise_filter.dart';
@@ -51,11 +51,15 @@ void main() {
       // Verifikasi penambahan kalimat "Gambar kurang jelas"
       expect(
         result.getAlertMessage(indoStrings),
-        equals('Gambar kurang jelas. Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'),
+        equals(
+          'Gambar kurang jelas. Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.',
+        ),
       );
       expect(
         result.getAlertMessage(engStrings),
-        equals('Image is unclear. No text found. Point the camera at text and try again.'),
+        equals(
+          'Image is unclear. No text found. Point the camera at text and try again.',
+        ),
       );
     });
 
@@ -69,7 +73,10 @@ void main() {
       );
       expect(singleCharResult.hasText, isFalse);
       expect(singleCharResult.alphanumericCount, equals(1));
-      expect(singleCharResult.reason, equals(NoTextReason.insufficientAlphanumeric));
+      expect(
+        singleCharResult.reason,
+        equals(NoTextReason.insufficientAlphanumeric),
+      );
       expect(
         singleCharResult.getAlertMessage(indoStrings),
         equals('Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'),
@@ -84,7 +91,10 @@ void main() {
       );
       expect(symbolResult.hasText, isFalse);
       expect(symbolResult.alphanumericCount, equals(0));
-      expect(symbolResult.reason, equals(NoTextReason.insufficientAlphanumeric));
+      expect(
+        symbolResult.reason,
+        equals(NoTextReason.insufficientAlphanumeric),
+      );
 
       // Kasus C: Baris awalnya banyak lalu tersaring hingga tersisa kurang dari 2 karakter
       final filteredDownResult = OcrTextValidator.evaluate(
@@ -102,21 +112,24 @@ void main() {
       );
     });
 
-    test('4. Kondisi teks normal (>= 2 alfanumerik) menghasilkan hasText true', () {
-      final normalResult = OcrTextValidator.evaluate(
-        rawOcrText: 'Pengumuman Penting',
-        rawLinesCount: 1,
-        filteredText: 'Pengumuman Penting',
-        acceptedLinesCount: 1,
-      );
+    test(
+      '4. Kondisi teks normal (>= 2 alfanumerik) menghasilkan hasText true',
+      () {
+        final normalResult = OcrTextValidator.evaluate(
+          rawOcrText: 'Pengumuman Penting',
+          rawLinesCount: 1,
+          filteredText: 'Pengumuman Penting',
+          acceptedLinesCount: 1,
+        );
 
-      expect(normalResult.hasText, isTrue);
-      expect(normalResult.reason, equals(NoTextReason.none));
-      expect(normalResult.alphanumericCount, greaterThanOrEqualTo(2));
-      expect(normalResult.text, equals('Pengumuman Penting'));
-      expect(normalResult.getAlertMessage(indoStrings), isEmpty);
-      expect(normalResult.getAlertMessage(engStrings), isEmpty);
-    });
+        expect(normalResult.hasText, isTrue);
+        expect(normalResult.reason, equals(NoTextReason.none));
+        expect(normalResult.alphanumericCount, greaterThanOrEqualTo(2));
+        expect(normalResult.text, equals('Pengumuman Penting'));
+        expect(normalResult.getAlertMessage(indoStrings), isEmpty);
+        expect(normalResult.getAlertMessage(engStrings), isEmpty);
+      },
+    );
 
     test('5. Validasi langsung dari objek OcrResult', () {
       // 5a. OcrResult kosong
@@ -144,7 +157,10 @@ void main() {
       final filteredCheck = OcrTextValidator.validateResult(filteredOcr);
       expect(filteredCheck.hasText, isFalse);
       expect(filteredCheck.reason, equals(NoTextReason.allLinesFiltered));
-      expect(filteredCheck.getAlertMessage(indoStrings), contains('Gambar kurang jelas'));
+      expect(
+        filteredCheck.getAlertMessage(indoStrings),
+        contains('Gambar kurang jelas'),
+      );
 
       // 5c. OcrResult normal dengan teks valid
       const validElement = OcrElement(
@@ -172,7 +188,10 @@ void main() {
         acceptedLinesCount: 0,
       );
 
-      expect(emptyResult.getAlertTitle(indoStrings), equals('Teks tidak ditemukan'));
+      expect(
+        emptyResult.getAlertTitle(indoStrings),
+        equals('Teks tidak ditemukan'),
+      );
       expect(emptyResult.getAlertTitle(engStrings), equals('No text found'));
       expect(
         emptyResult.getAlertInstruction(indoStrings),
@@ -191,8 +210,14 @@ void main() {
         allLinesFiltered: true,
       );
 
-      expect(filteredResult.getAlertTitle(indoStrings), equals('Gambar kurang jelas'));
-      expect(filteredResult.getAlertTitle(engStrings), equals('Image is unclear'));
+      expect(
+        filteredResult.getAlertTitle(indoStrings),
+        equals('Gambar kurang jelas'),
+      );
+      expect(
+        filteredResult.getAlertTitle(engStrings),
+        equals('Image is unclear'),
+      );
       expect(
         filteredResult.getAlertInstruction(indoStrings),
         equals('Arahkan kamera ke teks dan coba lagi.'),

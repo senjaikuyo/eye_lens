@@ -6,68 +6,70 @@ import 'package:eye_lens/services/camera_service.dart';
 
 void main() {
   group('Camera Viewfinder & Controls Lifecycle UI Tests', () {
-    testWidgets('1. Menampilkan indikator loading saat kamera sedang starting', (
-      tester,
-    ) async {
-      final cameraService = CameraService();
+    testWidgets(
+      '1. Menampilkan indikator loading saat kamera sedang starting',
+      (tester) async {
+        final cameraService = CameraService();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CameraViewfinder(
-              cameraService: cameraService,
-              currentZoom: 1.0,
-              onZoomChanged: (_) {},
-              isBlurry: false,
-              size: const Size(400, 800),
-              isInitializing: true,
-              initializingText: 'Menyiapkan kamera...',
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: CameraViewfinder(
+                cameraService: cameraService,
+                currentZoom: 1.0,
+                onZoomChanged: (_) {},
+                isBlurry: false,
+                size: const Size(400, 800),
+                isInitializing: true,
+                initializingText: 'Menyiapkan kamera...',
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Menyiapkan kamera...'), findsOneWidget);
-    });
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Menyiapkan kamera...'), findsOneWidget);
+      },
+    );
 
-    testWidgets('2. Menampilkan pesan error dan tombol coba lagi saat kamera gagal', (
-      tester,
-    ) async {
-      final cameraService = CameraService();
-      bool retried = false;
+    testWidgets(
+      '2. Menampilkan pesan error dan tombol coba lagi saat kamera gagal',
+      (tester) async {
+        final cameraService = CameraService();
+        bool retried = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CameraViewfinder(
-              cameraService: cameraService,
-              currentZoom: 1.0,
-              onZoomChanged: (_) {},
-              isBlurry: false,
-              size: const Size(400, 800),
-              isInitializing: false,
-              errorMessage:
-                  'Kamera gagal diinisialisasi. Pastikan izin kamera aktif.',
-              retryText: 'Coba Lagi',
-              onRetry: () {
-                retried = true;
-              },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: CameraViewfinder(
+                cameraService: cameraService,
+                currentZoom: 1.0,
+                onZoomChanged: (_) {},
+                isBlurry: false,
+                size: const Size(400, 800),
+                isInitializing: false,
+                errorMessage:
+                    'Kamera gagal diinisialisasi. Pastikan izin kamera aktif.',
+                retryText: 'Coba Lagi',
+                onRetry: () {
+                  retried = true;
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        find.text('Kamera gagal diinisialisasi. Pastikan izin kamera aktif.'),
-        findsOneWidget,
-      );
-      expect(find.text('Coba Lagi'), findsOneWidget);
+        expect(
+          find.text('Kamera gagal diinisialisasi. Pastikan izin kamera aktif.'),
+          findsOneWidget,
+        );
+        expect(find.text('Coba Lagi'), findsOneWidget);
 
-      await tester.tap(find.text('Coba Lagi'));
-      await tester.pump();
-      expect(retried, isTrue);
-    });
+        await tester.tap(find.text('Coba Lagi'));
+        await tester.pump();
+        expect(retried, isTrue);
+      },
+    );
 
     testWidgets('3. Tombol rana kamera dinonaktifkan saat isReady false', (
       tester,

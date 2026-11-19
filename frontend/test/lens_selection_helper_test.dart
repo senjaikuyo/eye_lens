@@ -140,38 +140,41 @@ void main() {
       expect(expandedNeg.top, equals(0.0));
     });
 
-    test('5. kMinFrameSize 64 dp ditegakkan sesuai skala transformasi zoom', () {
-      final zoom1x = Matrix4.identity();
-      final zoom3x = Matrix4.diagonal3Values(3.0, 3.0, 1.0);
+    test(
+      '5. kMinFrameSize 64 dp ditegakkan sesuai skala transformasi zoom',
+      () {
+        final zoom1x = Matrix4.identity();
+        final zoom3x = Matrix4.diagonal3Values(3.0, 3.0, 1.0);
 
-      const initialImageRect = Rect.fromLTRB(200, 200, 600, 600);
+        const initialImageRect = Rect.fromLTRB(200, 200, 600, 600);
 
-      // Pada zoom 1x: skala total = 0.5 (contain). 64 dp di layar = 64 / 0.5 = 128 px di citra.
-      final shrunk1x = LensSelectionHelper.resizeImageFrame(
-        currentImageRect: initialImageRect,
-        handle: LensHandlePosition.bottomRight,
-        deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
-        transformMatrix: zoom1x,
-        viewportSize: viewportSize,
-        originalImageSize: originalImageSize,
-        minFrameSizeDp: 64.0,
-      );
-      expect(shrunk1x.width, closeTo(128.0, 0.1));
-      expect(shrunk1x.height, closeTo(128.0, 0.1));
+        // Pada zoom 1x: skala total = 0.5 (contain). 64 dp di layar = 64 / 0.5 = 128 px di citra.
+        final shrunk1x = LensSelectionHelper.resizeImageFrame(
+          currentImageRect: initialImageRect,
+          handle: LensHandlePosition.bottomRight,
+          deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
+          transformMatrix: zoom1x,
+          viewportSize: viewportSize,
+          originalImageSize: originalImageSize,
+          minFrameSizeDp: 64.0,
+        );
+        expect(shrunk1x.width, closeTo(128.0, 0.1));
+        expect(shrunk1x.height, closeTo(128.0, 0.1));
 
-      // Pada zoom 3x: skala total = 0.5 * 3 = 1.5. 64 dp di layar = 64 / 1.5 = 42.67 px di citra.
-      final shrunk3x = LensSelectionHelper.resizeImageFrame(
-        currentImageRect: initialImageRect,
-        handle: LensHandlePosition.bottomRight,
-        deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
-        transformMatrix: zoom3x,
-        viewportSize: viewportSize,
-        originalImageSize: originalImageSize,
-        minFrameSizeDp: 64.0,
-      );
-      expect(shrunk3x.width, closeTo(64.0 / 1.5, 0.1));
-      expect(shrunk3x.height, closeTo(64.0 / 1.5, 0.1));
-    });
+        // Pada zoom 3x: skala total = 0.5 * 3 = 1.5. 64 dp di layar = 64 / 1.5 = 42.67 px di citra.
+        final shrunk3x = LensSelectionHelper.resizeImageFrame(
+          currentImageRect: initialImageRect,
+          handle: LensHandlePosition.bottomRight,
+          deltaScreen: const Offset(-800, -800), // coba ciutkan sekecil mungkin
+          transformMatrix: zoom3x,
+          viewportSize: viewportSize,
+          originalImageSize: originalImageSize,
+          minFrameSizeDp: 64.0,
+        );
+        expect(shrunk3x.width, closeTo(64.0 / 1.5, 0.1));
+        expect(shrunk3x.height, closeTo(64.0 / 1.5, 0.1));
+      },
+    );
 
     test('6. Pemilihan kata: kata di dalam, di luar, dan di tepi bingkai', () {
       final line1 = OcrLineData(

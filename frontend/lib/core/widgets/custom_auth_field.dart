@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/app_colors.dart';
-import '../providers/display_preferences_provider.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
 
 class CustomAuthField extends StatelessWidget {
   final String label;

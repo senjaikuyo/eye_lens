@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import '../core/app_strings.dart';
-import '../models/ocr_element.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/models/ocr_element.dart';
 
 /// Alasan mengapa sebuah hasil ekstraksi OCR diklasifikasikan sebagai kondisi tanpa teks.
 enum NoTextReason {
@@ -103,8 +103,8 @@ class OcrTextValidator {
     }
 
     // 2. Periksa apakah seluruh baris terbuang oleh OcrNoiseFilter
-    final isAllFiltered = allLinesFiltered ||
-        (rawLinesCount > 0 && acceptedLinesCount == 0);
+    final isAllFiltered =
+        allLinesFiltered || (rawLinesCount > 0 && acceptedLinesCount == 0);
     if (isAllFiltered) {
       return const OcrTextValidationResult(
         hasText: false,
@@ -118,7 +118,8 @@ class OcrTextValidator {
     final alphaCount = countAlphanumeric(filteredText);
     if (alphaCount < 2) {
       // Jika awalnya ada baris yang tersaring sehingga yang tersisa kurang dari 2 huruf/angka
-      final wasFilteredDown = acceptedLinesCount < rawLinesCount || allLinesFiltered;
+      final wasFilteredDown =
+          acceptedLinesCount < rawLinesCount || allLinesFiltered;
       return OcrTextValidationResult(
         hasText: false,
         reason: wasFilteredDown
@@ -147,15 +148,16 @@ class OcrTextValidator {
     final rawText = (result.fullText.isNotEmpty || result.elements.isNotEmpty)
         ? result.fullText
         : (result.rejectedLines.isNotEmpty
-            ? result.rejectedLines.map((r) => r.line.text).join('\n')
-            : '');
+              ? result.rejectedLines.map((r) => r.line.text).join('\n')
+              : '');
 
     return evaluate(
       rawOcrText: rawText,
       rawLinesCount: rawCount,
       filteredText: result.fullText,
       acceptedLinesCount: result.elements.length,
-      allLinesFiltered: result.allLinesFilteredOut ||
+      allLinesFiltered:
+          result.allLinesFilteredOut ||
           (rawCount > 0 && result.elements.isEmpty),
     );
   }

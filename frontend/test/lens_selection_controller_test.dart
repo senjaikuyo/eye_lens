@@ -38,7 +38,10 @@ void main() {
       final controller = LensSelectionController();
       controller.resetToFullImage(const Size(1080, 1920));
 
-      expect(controller.imageCropRect, equals(const Rect.fromLTWH(0, 0, 1080, 1920)));
+      expect(
+        controller.imageCropRect,
+        equals(const Rect.fromLTWH(0, 0, 1080, 1920)),
+      );
       expect(controller.isManual, isFalse);
       expect(controller.transformMatrix, equals(Matrix4.identity()));
 

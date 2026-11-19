@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../providers/language_provider.dart';
-import '../../providers/settings_provider.dart';
-import '../../providers/display_preferences_provider.dart';
-import '../../services/auth/auth_service.dart';
-import 'change_password_screen.dart';
-import 'faq_screen.dart';
-import 'widgets/language_selector_tile.dart';
-import 'widgets/logout_dialog.dart';
-import 'widgets/settings_email_tile.dart';
-import 'widgets/settings_list_tile.dart';
-import 'widgets/settings_logout_tile.dart';
-import 'widgets/theme_selector_tile.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
+import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/screens/settings/change_password_screen.dart';
+import 'package:eye_lens/screens/settings/faq_screen.dart';
+import 'package:eye_lens/screens/settings/widgets/language_selector_tile.dart';
+import 'package:eye_lens/screens/settings/widgets/logout_dialog.dart';
+import 'package:eye_lens/screens/settings/widgets/settings_email_tile.dart';
+import 'package:eye_lens/screens/settings/widgets/settings_list_tile.dart';
+import 'package:eye_lens/screens/settings/widgets/settings_logout_tile.dart';
+import 'package:eye_lens/screens/settings/widgets/theme_selector_tile.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -176,7 +176,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: autoPlayAudio,
                         activeThumbColor: isDark ? Colors.white : Colors.black,
                         onChanged: (val) {
-                          context.read<SettingsProvider>().setAutoPlayAudio(val);
+                          context.read<SettingsProvider>().setAutoPlayAudio(
+                            val,
+                          );
                         },
                       ),
                     ),

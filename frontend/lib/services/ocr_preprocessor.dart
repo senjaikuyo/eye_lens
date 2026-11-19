@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
-import '../models/text_formatter_models.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Utilitas pemrosesan citra on-device untuk multi-pass OCR:
 /// - Mengatur kontras & grayscale via ColorFilter shader hardware (cepat, < 5 ms).

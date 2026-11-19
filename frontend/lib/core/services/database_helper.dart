@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../models/pengaturan_model.dart';
-import '../models/riwayat_model.dart';
+import 'package:eye_lens/models/pengaturan_model.dart';
+import 'package:eye_lens/models/riwayat_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();

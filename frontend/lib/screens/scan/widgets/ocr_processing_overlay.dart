@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_strings.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
 
 class OcrProcessingOverlay extends StatelessWidget {
   final AppStrings strings;

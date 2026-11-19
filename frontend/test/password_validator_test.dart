@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/core/password_validator.dart';
+import 'package:eye_lens/core/utils/password_validator.dart';
 
 void main() {
   group('PasswordValidator Tests', () {
@@ -31,8 +31,14 @@ void main() {
     test('calculateStrength mengembalikan nilai proporsional', () {
       expect(PasswordValidator.calculateStrength(''), 0.0);
       expect(PasswordValidator.calculateStrength('abc'), lessThan(0.3));
-      expect(PasswordValidator.calculateStrength('Abcdefg1'), inInclusiveRange(0.4, 0.7));
-      expect(PasswordValidator.calculateStrength('SangatKuat123!@#'), greaterThanOrEqualTo(0.8));
+      expect(
+        PasswordValidator.calculateStrength('Abcdefg1'),
+        inInclusiveRange(0.4, 0.7),
+      );
+      expect(
+        PasswordValidator.calculateStrength('SangatKuat123!@#'),
+        greaterThanOrEqualTo(0.8),
+      );
     });
   });
 }

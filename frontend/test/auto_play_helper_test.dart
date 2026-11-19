@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/services/auto_play_helper.dart';
 import 'package:eye_lens/services/lens_selection_helper.dart';
@@ -86,14 +87,17 @@ void main() {
       expect(decision, equals(AutoPlayDecision.prepareOnly));
     });
 
-    test('7. Zoom dan pan (zoomPan) dengan sakelar aktif hanya menyiapkan teks', () {
-      final decision = AutoPlayHelper.shouldAutoPlay(
-        trigger: FrameChangeTrigger.zoomPan,
-        autoPlayEnabled: true,
-        selectionResult: validResult,
-      );
-      expect(decision, equals(AutoPlayDecision.prepareOnly));
-    });
+    test(
+      '7. Zoom dan pan (zoomPan) dengan sakelar aktif hanya menyiapkan teks',
+      () {
+        final decision = AutoPlayHelper.shouldAutoPlay(
+          trigger: FrameChangeTrigger.zoomPan,
+          autoPlayEnabled: true,
+          selectionResult: validResult,
+        );
+        expect(decision, equals(AutoPlayDecision.prepareOnly));
+      },
+    );
 
     test('8. Ketuk kelompok saat tidak ada teks valid memicu alert teks tidak ditemukan (alertNoText)', () {
       final decision = AutoPlayHelper.shouldAutoPlay(

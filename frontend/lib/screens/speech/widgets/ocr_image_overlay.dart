@@ -5,15 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/app_strings.dart';
-import '../../../models/ocr_element.dart';
-import '../../../models/text_formatter_models.dart';
-import '../../../services/auto_play_helper.dart';
-import '../../../services/lens_selection_controller.dart';
-import '../../../services/lens_selection_helper.dart';
-import '../../../services/ocr_noise_filter.dart';
-import '../../../services/text_cluster_helper.dart';
-import '../../../widgets/scanner_corner_painter.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/models/ocr_element.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/services/auto_play_helper.dart';
+import 'package:eye_lens/services/lens_selection_controller.dart';
+import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/services/text_cluster_helper.dart';
+import 'package:eye_lens/widgets/scanner_corner_painter.dart';
 
 /// Menentukan apakah overlay visual debug OCR (kotak hijau/merah) diaktifkan.
 /// Default bernilai false: citra tampil bersih ala Google Lens tanpa kotak pada teks.
@@ -75,8 +75,9 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   Animation<Rect?>? _switchAnimation;
 
   /// Posisi bingkai seleksi dalam koordinat piksel citra asli [0, width] x [0, height].
-  final ValueNotifier<Rect> _imageCropRectNotifier =
-      ValueNotifier<Rect>(Rect.zero);
+  final ValueNotifier<Rect> _imageCropRectNotifier = ValueNotifier<Rect>(
+    Rect.zero,
+  );
 
   List<TextCluster> _clusters = const [];
   Size _viewportSize = Size.zero;
@@ -125,10 +126,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     List<OcrLineData> linesToUse = widget.rawLines;
     if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
       linesToUse = widget.elements.map((e) {
-        return OcrLineData(
-          text: e.text,
-          boundingBox: e.boundingBox,
-        );
+        return OcrLineData(text: e.text, boundingBox: e.boundingBox);
       }).toList();
     }
 
@@ -196,13 +194,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 
   void _scheduleSelectionCompute() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(
-      TextClusterHelper.selectionDebounceDuration,
-      () {
-        if (!mounted) return;
-        _computeAndNotifySelection();
-      },
-    );
+    _debounceTimer = Timer(TextClusterHelper.selectionDebounceDuration, () {
+      if (!mounted) return;
+      _computeAndNotifySelection();
+    });
   }
 
   void _computeAndNotifySelection() {
@@ -220,22 +215,18 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
     }
 
     final ctrl = widget.controller;
-    if (ctrl != null && !ctrl.shouldRecompute(imageCropRect) && ctrl.cachedResult != null) {
+    if (ctrl != null &&
+        !ctrl.shouldRecompute(imageCropRect) &&
+        ctrl.cachedResult != null) {
       // Lewati komputasi ulang jika bingkai tidak berubah sejak teks terakhir disiapkan
-      widget.onSelectionComputed?.call(
-        ctrl.cachedResult!,
-        _latestTrigger,
-      );
+      widget.onSelectionComputed?.call(ctrl.cachedResult!, _latestTrigger);
       return;
     }
 
     List<OcrLineData> linesToUse = widget.rawLines;
     if (linesToUse.isEmpty && widget.elements.isNotEmpty) {
       linesToUse = widget.elements.map((e) {
-        return OcrLineData(
-          text: e.text,
-          boundingBox: e.boundingBox,
-        );
+        return OcrLineData(text: e.text, boundingBox: e.boundingBox);
       }).toList();
     }
 
@@ -308,15 +299,13 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
         ? targetBoundingBox
         : _imageCropRectNotifier.value;
 
-    _switchAnimation = RectTween(
-      begin: startRect,
-      end: targetBoundingBox,
-    ).animate(
-      CurvedAnimation(
-        parent: _switchAnimationController,
-        curve: Curves.easeInOutCubic,
-      ),
-    );
+    _switchAnimation = RectTween(begin: startRect, end: targetBoundingBox)
+        .animate(
+          CurvedAnimation(
+            parent: _switchAnimationController,
+            curve: Curves.easeInOutCubic,
+          ),
+        );
 
     widget.controller?.animateToCluster(targetBoundingBox);
     _switchAnimationController.forward(from: 0.0);
@@ -408,7 +397,9 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             final ctrl = widget.controller;
-            if (ctrl != null && ctrl.isInitialized && ctrl.imageCropRect != Rect.zero) {
+            if (ctrl != null &&
+                ctrl.isInitialized &&
+                ctrl.imageCropRect != Rect.zero) {
               _imageCropRectNotifier.value = ctrl.imageCropRect;
             } else if (_imageCropRectNotifier.value == Rect.zero &&
                 _clusters.isNotEmpty) {
@@ -468,11 +459,11 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 
                 final screenFrameRect =
                     LensSelectionHelper.imageToScreenCoordinates(
-                  imageRect: imageCropRect,
-                  transformMatrix: _transformationController.value,
-                  viewportSize: _viewportSize,
-                  originalImageSize: widget.imageSize,
-                );
+                      imageRect: imageCropRect,
+                      transformMatrix: _transformationController.value,
+                      viewportSize: _viewportSize,
+                      originalImageSize: widget.imageSize,
+                    );
 
                 if (screenFrameRect.width <= 0 || screenFrameRect.height <= 0) {
                   return const SizedBox.shrink();
@@ -532,8 +523,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                               originalImageSize: widget.imageSize,
                             );
                             _imageCropRectNotifier.value = newRect;
-                            widget.controller
-                                ?.setCropRect(newRect, isManual: true);
+                            widget.controller?.setCropRect(
+                              newRect,
+                              isManual: true,
+                            );
                             _scheduleSelectionCompute();
                           },
                           onPanEnd: (details) {
@@ -617,29 +610,30 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                     // Jika bingkai sudah berstatus Full image 1x, sembunyikan tombol agar tidak menutupi konten atas.
                     Builder(
                       builder: (context) {
-                        final bool isFullImage = (imageCropRect.width >=
-                                    widget.imageSize.width - 4.0) &&
-                                (imageCropRect.height >=
-                                    widget.imageSize.height - 4.0) &&
-                                _transformationController.value.isIdentity();
+                        final bool isFullImage =
+                            (imageCropRect.width >=
+                                widget.imageSize.width - 4.0) &&
+                            (imageCropRect.height >=
+                                widget.imageSize.height - 4.0) &&
+                            _transformationController.value.isIdentity();
                         if (isFullImage) {
                           return const SizedBox.shrink();
                         }
 
-                        final bool hasSpaceBelow = (screenFrameRect.bottom +
-                                60) <
+                        final bool hasSpaceBelow =
+                            (screenFrameRect.bottom + 60) <
                             (_viewportSize.height - 110);
                         final bool hasSpaceAbove = screenFrameRect.top > 60;
                         final double buttonTop = hasSpaceBelow
                             ? screenFrameRect.bottom + 12
                             : (hasSpaceAbove
-                                ? screenFrameRect.top - 54
-                                : max(16.0, _viewportSize.height - 100));
+                                  ? screenFrameRect.top - 54
+                                  : max(16.0, _viewportSize.height - 100));
                         final double buttonLeft =
                             (screenFrameRect.center.dx - 70).clamp(
-                          16.0,
-                          max(16.0, _viewportSize.width - 156),
-                        );
+                              16.0,
+                              max(16.0, _viewportSize.width - 156),
+                            );
 
                         return Positioned(
                           top: buttonTop,
@@ -719,9 +713,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                   ),
                   child: Text(
                     'Debug OCR: ${widget.elements.length} lolos | ${widget.rejectedLines.length} dibuang',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: Colors.white,
-                    ),
+                    style: textTheme.labelSmall?.copyWith(color: Colors.white),
                   ),
                 ),
               ),
@@ -737,9 +729,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 class _GoogleLensFramePainter extends CustomPainter {
   final Rect frameRect;
 
-  const _GoogleLensFramePainter({
-    required this.frameRect,
-  });
+  const _GoogleLensFramePainter({required this.frameRect});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -753,10 +743,12 @@ class _GoogleLensFramePainter extends CustomPainter {
     final fullPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
     final framePath = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        frameRect,
-        const Radius.circular(LensSelectionHelper.lensCornerRadius),
-      ));
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          frameRect,
+          const Radius.circular(LensSelectionHelper.lensCornerRadius),
+        ),
+      );
 
     final cutOutPath = Path.combine(
       PathOperation.difference,

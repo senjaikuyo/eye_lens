@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../core/app_strings.dart';
-import '../../../widgets/feedback_dialog.dart';
-import '../../history/history_screen.dart';
-import '../../settings/faq_screen.dart';
-import '../../settings/settings_screen.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/widgets/feedback_dialog.dart';
+import 'package:eye_lens/screens/history/history_screen.dart';
+import 'package:eye_lens/screens/settings/faq_screen.dart';
+import 'package:eye_lens/screens/settings/settings_screen.dart';
 
 class ScanTopBar extends StatelessWidget {
   final double topPadding;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../models/riwayat_model.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/models/riwayat_model.dart';
 
 class HistoryTile extends StatelessWidget {
   final RiwayatModel item;

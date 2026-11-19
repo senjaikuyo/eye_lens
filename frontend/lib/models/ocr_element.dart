@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import '../services/ocr_noise_filter.dart';
-import 'text_formatter_models.dart';
+import 'package:eye_lens/services/ocr_noise_filter.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Representasi elemen teks dengan posisi koordinat pada citra asli.
 class OcrElement {

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../models/riwayat_model.dart';
-import '../../providers/history_provider.dart';
-import '../../providers/display_preferences_provider.dart';
-import '../speech/speech_screen.dart';
-import 'widgets/history_delete_dialog.dart';
-import 'widgets/history_empty_state.dart';
-import 'widgets/history_tile.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/models/riwayat_model.dart';
+import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/screens/speech/speech_screen.dart';
+import 'package:eye_lens/screens/history/widgets/history_delete_dialog.dart';
+import 'package:eye_lens/screens/history/widgets/history_empty_state.dart';
+import 'package:eye_lens/screens/history/widgets/history_tile.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

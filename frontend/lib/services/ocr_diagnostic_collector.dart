@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../models/text_formatter_models.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Flag konfigurasi khusus DEBUG untuk mengaktifkan/mematikan fitur pipeline
 /// lama saat pengujian A/B di perangkat. Tidak pernah ditampilkan sebagai

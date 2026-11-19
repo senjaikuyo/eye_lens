@@ -2,14 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eye_lens/main.dart';
-import 'package:eye_lens/providers/language_provider.dart';
-import 'package:eye_lens/providers/display_preferences_provider.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('App starts with splash screen and animates',
-      (WidgetTester tester) async {
+  testWidgets('App starts with splash screen and animates', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(

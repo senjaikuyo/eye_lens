@@ -28,10 +28,7 @@ class ZoomRuler extends StatelessWidget {
         final double accelFactor = (1.0 + (absDy * 0.06)).clamp(1.0, 2.8);
         final double effectiveDelta = dy * baseRate * accelFactor;
 
-        final newZoom = (currentZoom - effectiveDelta).clamp(
-          minZoom,
-          maxZoom,
-        );
+        final newZoom = (currentZoom - effectiveDelta).clamp(minZoom, maxZoom);
         onZoomChanged?.call(newZoom);
       },
       child: Container(
@@ -83,7 +80,8 @@ class _RulerPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final activePaint = Paint()
-      ..color = const Color(0xFFFACC15) // Kuning aksen
+      ..color =
+          const Color(0xFFFACC15) // Kuning aksen
       ..strokeWidth = 2.4
       ..strokeCap = StrokeCap.round;
 
@@ -104,8 +102,9 @@ class _RulerPainter extends CustomPainter {
 
     // Active marker garis kuning berdasarkan zoom (minZoom s.d maxZoom)
     final range = maxZoom - minZoom;
-    final progress =
-        range > 0 ? ((zoom - minZoom) / range).clamp(0.0, 1.0) : 0.0;
+    final progress = range > 0
+        ? ((zoom - minZoom) / range).clamp(0.0, 1.0)
+        : 0.0;
     final markerY = size.height - (progress * size.height);
 
     canvas.drawLine(

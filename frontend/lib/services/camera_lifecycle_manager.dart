@@ -1,14 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 /// Status siklus hidup kamera.
-enum CameraStatus {
-  idle,
-  starting,
-  ready,
-  stopping,
-  error,
-}
+enum CameraStatus { idle, starting, ready, stopping, error }
 
 /// Tipe fungsi async untuk menjalankan inisialisasi / start hardware kamera.
 typedef CameraStartAction = Future<bool> Function();
@@ -28,10 +23,7 @@ class CameraLifecycleManager extends ChangeNotifier {
   // Queue serial untuk eksekusi terurut start/stop
   Future<dynamic> _queue = Future.value();
 
-  CameraLifecycleManager({
-    required this._onStart,
-    required this._onStop,
-  });
+  CameraLifecycleManager({required this._onStart, required this._onStop});
 
   CameraStatus get status => _status;
   bool get isReady => _status == CameraStatus.ready;

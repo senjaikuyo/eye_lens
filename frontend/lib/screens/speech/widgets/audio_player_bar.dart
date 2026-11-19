@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
 
 class AudioPlayerBar extends StatelessWidget {
   final bool isTextView;

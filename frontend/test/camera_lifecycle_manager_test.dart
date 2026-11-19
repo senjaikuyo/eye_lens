@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/services/camera_lifecycle_manager.dart';
 
@@ -41,40 +42,46 @@ void main() {
       expect(stopCount, 1);
     });
 
-    test('2. stop() saat belum start (status idle) tidak memicu onStop', () async {
-      int stopCount = 0;
-      final manager = CameraLifecycleManager(
-        onStart: () async => true,
-        onStop: () async {
-          stopCount++;
-        },
-      );
+    test(
+      '2. stop() saat belum start (status idle) tidak memicu onStop',
+      () async {
+        int stopCount = 0;
+        final manager = CameraLifecycleManager(
+          onStart: () async => true,
+          onStop: () async {
+            stopCount++;
+          },
+        );
 
-      await manager.stop();
-      expect(manager.status, CameraStatus.idle);
-      expect(stopCount, 0);
-    });
+        await manager.stop();
+        expect(manager.status, CameraStatus.idle);
+        expect(stopCount, 0);
+      },
+    );
 
-    test('3. start() dua kali berturut-turut tidak mengeksekusi onStart ganda', () async {
-      int startCount = 0;
-      final manager = CameraLifecycleManager(
-        onStart: () async {
-          startCount++;
-          await Future.delayed(const Duration(milliseconds: 30));
-          return true;
-        },
-        onStop: () async {},
-      );
+    test(
+      '3. start() dua kali berturut-turut tidak mengeksekusi onStart ganda',
+      () async {
+        int startCount = 0;
+        final manager = CameraLifecycleManager(
+          onStart: () async {
+            startCount++;
+            await Future.delayed(const Duration(milliseconds: 30));
+            return true;
+          },
+          onStop: () async {},
+        );
 
-      final f1 = manager.start();
-      final f2 = manager.start();
+        final f1 = manager.start();
+        final f2 = manager.start();
 
-      final results = await Future.wait([f1, f2]);
-      expect(results[0], isTrue);
-      expect(results[1], isTrue);
-      expect(startCount, 1);
-      expect(manager.isReady, isTrue);
-    });
+        final results = await Future.wait([f1, f2]);
+        expect(results[0], isTrue);
+        expect(results[1], isTrue);
+        expect(startCount, 1);
+        expect(manager.isReady, isTrue);
+      },
+    );
 
     test('4. stop() dipanggil saat start() sedang berjalan langsung menghentikan kamera', () async {
       int startCount = 0;

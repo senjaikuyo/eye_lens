@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../models/text_formatter_models.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
 
 /// Komponen visualisasi teks bacaan yang otomatis menyorot kata/paragraf aktif
 /// dan melakukan auto-scroll halus mengikuti posisi bacaan yang sedang aktif.
@@ -98,7 +98,10 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
       _fallbackLines = [raw.isNotEmpty ? raw : 'yesterday\ntoday\ntomorrow'];
     }
 
-    _fallbackLineKeys = List.generate(_fallbackLines.length, (_) => GlobalKey());
+    _fallbackLineKeys = List.generate(
+      _fallbackLines.length,
+      (_) => GlobalKey(),
+    );
     _lastActiveLineIndex = -1;
   }
 
@@ -228,7 +231,8 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
                 if (wIdx > 0) const TextSpan(text: ' '),
                 _buildWordSpan(
                   word: paragraph.words[wIdx],
-                  isActive: widget.cursorColorEnabled &&
+                  isActive:
+                      widget.cursorColorEnabled &&
                       isActiveParagraph &&
                       activeChar >= paragraph.words[wIdx].startIndex &&
                       activeChar <= paragraph.words[wIdx].endIndex,
@@ -296,8 +300,8 @@ class _HighlightedTextViewState extends State<HighlightedTextView> {
   Widget _buildFallbackLinesView() {
     final activeIndex = _fallbackLines.isNotEmpty
         ? (widget.progress * _fallbackLines.length)
-            .clamp(0, _fallbackLines.length - 1)
-            .toInt()
+              .clamp(0, _fallbackLines.length - 1)
+              .toInt()
         : 0;
 
     return Column(

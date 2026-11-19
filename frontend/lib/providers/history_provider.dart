@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/riwayat_model.dart';
-import '../services/database_helper.dart';
+import 'package:eye_lens/models/riwayat_model.dart';
+import 'package:eye_lens/core/services/database_helper.dart';
 
 class HistoryProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;

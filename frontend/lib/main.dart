@@ -4,22 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'core/app_theme.dart';
-import 'providers/display_preferences_provider.dart';
-import 'providers/history_provider.dart';
-import 'providers/language_provider.dart';
-import 'providers/settings_provider.dart';
-import 'screens/splash/splash_screen.dart';
-import 'services/ocr_service.dart';
-import 'services/image_cache_cleanup.dart';
+import 'package:eye_lens/app/app.dart';
+import 'package:eye_lens/core/services/display_preferences_provider.dart';
+import 'package:eye_lens/core/services/image_cache_cleanup.dart';
+import 'package:eye_lens/core/services/language_provider.dart';
+import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/providers/settings_provider.dart';
+import 'package:eye_lens/services/ocr_service.dart';
 
-/// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
-final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+export 'package:eye_lens/app/routes/app_routes.dart' show routeObserver;
+export 'package:eye_lens/app/app.dart' show EyeLensApp;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  unawaited(OcrService.purgeOrphanedCache());
-  await ImageCacheCleanup.purgeOrphans();
+  unawaited(_runStartupCleanup());
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -39,37 +37,15 @@ Future<void> main() async {
   );
 }
 
-class EyeLensApp extends StatelessWidget {
-  const EyeLensApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<DisplayPreferencesProvider>();
-    final languageProvider = context.watch<LanguageProvider>();
-
-    return MaterialApp(
-      title: 'Eye Lens',
-      debugShowCheckedModeBanner: false,
-      locale: languageProvider.locale,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeProvider.themeMode,
-      navigatorObservers: [routeObserver],
-      builder: (context, child) {
-        // Mendukung pembesar sistem ponsel (Big Font) hingga 2.5x (250%)
-        // dengan batas minimum 1.0x agar layout tetap proporsional dan tidak overflow
-        final mediaQuery = MediaQuery.of(context);
-        return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: mediaQuery.textScaler.clamp(
-              minScaleFactor: 1.0,
-              maxScaleFactor: 2.5,
-            ),
-          ),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-      home: const SplashScreen(),
-    );
+Future<void> _runStartupCleanup() async {
+  try {
+    await OcrService.purgeOrphanedCache();
+  } catch (e) {
+    debugPrint('OCR cache cleanup error: $e');
+  }
+  try {
+    await ImageCacheCleanup.purgeOrphans();
+  } catch (e) {
+    debugPrint('Image cache cleanup error: $e');
   }
 }

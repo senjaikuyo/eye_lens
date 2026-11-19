@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-import '../models/text_formatter_models.dart';
-import 'text_formatter.dart';
+import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/services/text_formatter.dart';
 
 enum TtsState { playing, stopped, paused }
 

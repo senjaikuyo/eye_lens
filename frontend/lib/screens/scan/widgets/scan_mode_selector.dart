@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../core/app_strings.dart';
-import '../../../services/ocr_noise_filter.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/services/ocr_noise_filter.dart';
 
 /// Widget pemilih mode pemindaian OCR manual yang dapat diakses (WCAG AA).
 /// Menempatkan 4 mode: Dokumen, Teliti (Teks Kecil), Layar, dan Tulis Tangan.

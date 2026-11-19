@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../services/auth/auth_service.dart';
-import '../../widgets/custom_auth_field.dart';
-import '../../widgets/eyelash_icon.dart';
-import '../home/home_screen.dart';
-import 'forgot_password_screen.dart';
-import 'register_screen.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/core/widgets/custom_auth_field.dart';
+import 'package:eye_lens/core/widgets/eyelash_icon.dart';
+import 'package:eye_lens/screens/home/home_screen.dart';
+import 'package:eye_lens/screens/auth/forgot_password_screen.dart';
+import 'package:eye_lens/screens/auth/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -161,7 +161,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Server diarahkan ke: ${AuthService.baseUrl}'),
+                        content: Text(
+                          'Server diarahkan ke: ${AuthService.baseUrl}',
+                        ),
                       ),
                     );
                   }
@@ -302,13 +304,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: isDark ? Colors.white : AppColors.black,
+                                  color: isDark
+                                      ? Colors.white
+                                      : AppColors.black,
                                 ),
                               )
                             : Text(
                                 strings.login,
                                 style: TextStyle(
-                                  color: isDark ? Colors.white : AppColors.black,
+                                  color: isDark
+                                      ? Colors.white
+                                      : AppColors.black,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),

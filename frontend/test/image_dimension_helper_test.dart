@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:eye_lens/utils/image_dimension_helper.dart';
+import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List buildJpeg({

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../core/app_colors.dart';
-import '../../core/app_strings.dart';
-import '../../core/password_validator.dart';
-import '../../services/auth/auth_service.dart';
-import '../../widgets/custom_auth_field.dart';
-import '../../widgets/eyelash_icon.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/utils/password_validator.dart';
+import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/core/widgets/custom_auth_field.dart';
+import 'package:eye_lens/core/widgets/eyelash_icon.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -268,7 +268,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: _isLoading ? null : () => _onRegisterPressed(strings),
+                    onTap: _isLoading
+                        ? null
+                        : () => _onRegisterPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       width: 140,
@@ -287,13 +289,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: isDark ? Colors.white : AppColors.black,
+                                  color: isDark
+                                      ? Colors.white
+                                      : AppColors.black,
                                 ),
                               )
                             : Text(
                                 strings.register,
                                 style: TextStyle(
-                                  color: isDark ? Colors.white : AppColors.black,
+                                  color: isDark
+                                      ? Colors.white
+                                      : AppColors.black,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),

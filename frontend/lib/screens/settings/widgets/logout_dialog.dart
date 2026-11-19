@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/app_colors.dart';
-import '../../../core/app_strings.dart';
-import '../../../services/auth/auth_service.dart';
-import '../../auth/login_screen.dart';
+import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/screens/auth/login_screen.dart';
 
 class LogoutDialog {
   static void show(

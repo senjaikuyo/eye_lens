@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/screens/scan/widgets/camera_viewfinder.dart';
-import 'package:eye_lens/screens/scan/widgets/scan_bottom_bar.dart';
-import 'package:eye_lens/services/camera_service.dart';
+import 'package:eye_lens/features/camera/screen/widgets/camera_viewfinder.dart';
+import 'package:eye_lens/features/camera/screen/widgets/scan_bottom_bar.dart';
+import 'package:eye_lens/features/camera/logic/camera_service.dart';
 
 void main() {
   group('Camera Viewfinder & Controls Lifecycle UI Tests', () {

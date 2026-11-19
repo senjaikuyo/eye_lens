@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
-import 'package:eye_lens/services/camera_input_policy.dart';
+import 'package:eye_lens/features/camera/logic/camera_input_policy.dart';
 
 /// Native bounded thumbnail decode, followed by grayscale/Laplacian in compute.
 /// Measurements only: no uncalibrated blur/darkness thresholds or warnings.

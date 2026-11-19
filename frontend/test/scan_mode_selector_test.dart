@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
-import 'package:eye_lens/screens/scan/widgets/scan_mode_selector.dart';
+import 'package:eye_lens/features/camera/screen/widgets/scan_mode_selector.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 
 void main() {

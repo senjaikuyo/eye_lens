@@ -10,7 +10,7 @@ import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
 import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/features/ocr/services/ocr_diagnostic_collector.dart';
-import 'package:eye_lens/services/image_blur_detector.dart';
+import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_post_corrector.dart';

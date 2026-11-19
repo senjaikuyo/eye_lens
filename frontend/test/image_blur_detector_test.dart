@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/services/image_blur_detector.dart';
+import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

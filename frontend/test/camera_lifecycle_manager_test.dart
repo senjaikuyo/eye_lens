@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/services/camera_lifecycle_manager.dart';
+import 'package:eye_lens/features/camera/logic/camera_lifecycle_manager.dart';
 
 void main() {
   group('CameraLifecycleManager Unit Tests', () {

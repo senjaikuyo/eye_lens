@@ -17,7 +17,7 @@ import 'package:eye_lens/services/lens_selection_controller.dart';
 import 'package:eye_lens/services/lens_selection_helper.dart';
 import 'package:eye_lens/services/tts_service.dart';
 import 'package:eye_lens/core/widgets/feedback_dialog.dart';
-import 'package:eye_lens/screens/scan/widgets/no_text_alert_banner.dart';
+import 'package:eye_lens/features/camera/screen/widgets/no_text_alert_banner.dart';
 import 'package:eye_lens/screens/settings/faq_screen.dart';
 import 'package:eye_lens/screens/settings/settings_screen.dart';
 import 'package:eye_lens/screens/speech/widgets/appearance_sheet.dart';

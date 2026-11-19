@@ -13,7 +13,7 @@ import 'package:eye_lens/services/lens_selection_controller.dart';
 import 'package:eye_lens/services/lens_selection_helper.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/reading_order/text_cluster_helper.dart';
-import 'package:eye_lens/widgets/scanner_corner_painter.dart';
+import 'package:eye_lens/features/camera/screen/widgets/scanner_corner_painter.dart';
 
 /// Menentukan apakah overlay visual debug OCR (kotak hijau/merah) diaktifkan.
 /// Default bernilai false: citra tampil bersih ala Google Lens tanpa kotak pada teks.

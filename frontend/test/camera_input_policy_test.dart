@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eye_lens/services/camera_input_policy.dart';
+import 'package:eye_lens/features/camera/logic/camera_input_policy.dart';
 import 'package:eye_lens/core/services/image_cache_cleanup.dart';
 
 void main() {

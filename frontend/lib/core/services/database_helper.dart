@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'package:eye_lens/features/settings/models/settings_model.dart';
-import 'package:eye_lens/features/history/models/history_model.dart';
+import 'package:eye_lens/core/models/settings_model.dart';
+import 'package:eye_lens/core/models/history_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/features/history/models/history_model.dart';
+import 'package:eye_lens/core/models/history_model.dart';
 import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/speech/screen/speech_screen.dart';

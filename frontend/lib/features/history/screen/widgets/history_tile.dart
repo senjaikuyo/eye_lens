@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
-import 'package:eye_lens/features/history/models/history_model.dart';
+import 'package:eye_lens/core/models/history_model.dart';
 
 class HistoryTile extends StatelessWidget {
   final HistoryModel item;

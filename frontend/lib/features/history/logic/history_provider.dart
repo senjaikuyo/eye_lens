@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:eye_lens/features/history/models/history_model.dart';
+import 'package:eye_lens/core/models/history_model.dart';
 import 'package:eye_lens/core/services/database_helper.dart';
 
 class HistoryProvider extends ChangeNotifier {

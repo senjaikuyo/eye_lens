@@ -1,4 +1,4 @@
-class RiwayatModel {
+class HistoryModel {
   final int? idRiwayat;
   final String judul;
   final String isiTeks;
@@ -7,7 +7,7 @@ class RiwayatModel {
   final String waktu; // Format ISO8601 string
   final int statusSinkron; // 0: belum sinkron, 1: tersinkron
 
-  const RiwayatModel({
+  const HistoryModel({
     this.idRiwayat,
     required this.judul,
     required this.isiTeks,
@@ -50,8 +50,8 @@ class RiwayatModel {
     return map;
   }
 
-  factory RiwayatModel.fromMap(Map<String, dynamic> map) {
-    return RiwayatModel(
+  factory HistoryModel.fromMap(Map<String, dynamic> map) {
+    return HistoryModel(
       idRiwayat: map['id_riwayat'] as int?,
       judul: map['judul'] as String? ?? '',
       isiTeks: map['isi_teks'] as String? ?? '',
@@ -62,7 +62,7 @@ class RiwayatModel {
     );
   }
 
-  RiwayatModel copyWith({
+  HistoryModel copyWith({
     int? idRiwayat,
     String? judul,
     String? isiTeks,
@@ -71,7 +71,7 @@ class RiwayatModel {
     String? waktu,
     int? statusSinkron,
   }) {
-    return RiwayatModel(
+    return HistoryModel(
       idRiwayat: idRiwayat ?? this.idRiwayat,
       judul: judul ?? this.judul,
       isiTeks: isiTeks ?? this.isiTeks,

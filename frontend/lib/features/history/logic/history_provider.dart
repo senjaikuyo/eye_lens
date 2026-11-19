@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:eye_lens/models/riwayat_model.dart';
+import 'package:eye_lens/features/history/models/history_model.dart';
 import 'package:eye_lens/core/services/database_helper.dart';
 
 class HistoryProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
-  List<RiwayatModel> _items = [];
+  List<HistoryModel> _items = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  List<RiwayatModel> get items => List.unmodifiable(_items);
+  List<HistoryModel> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
   bool get isEmpty => _items.isEmpty;
   String? get errorMessage => _errorMessage;
@@ -41,7 +41,7 @@ class HistoryProvider extends ChangeNotifier {
     }
   }
 
-  Future<RiwayatModel?> addRiwayat({
+  Future<HistoryModel?> addRiwayat({
     required String text,
     required String sumber,
     String? customTitle,
@@ -67,7 +67,7 @@ class HistoryProvider extends ChangeNotifier {
         .length;
     final waktu = DateTime.now().toIso8601String();
 
-    final model = RiwayatModel(
+    final model = HistoryModel(
       judul: title,
       isiTeks: cleanText,
       jumlahKata: wordCount,

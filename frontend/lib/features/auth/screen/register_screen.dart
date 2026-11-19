@@ -2,41 +2,61 @@ import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/core/utils/password_validator.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/core/widgets/custom_auth_field.dart';
 import 'package:eye_lens/core/widgets/eyelash_icon.dart';
-import 'package:eye_lens/screens/home/home_screen.dart';
-import 'package:eye_lens/screens/auth/forgot_password_screen.dart';
-import 'package:eye_lens/screens/auth/register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
+  String? _confirmPasswordError;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   bool _validate(AppStrings strings) {
     bool isValid = true;
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (name.isEmpty) {
+      setState(() {
+        _nameError = strings.nameRequired;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _nameError = null;
+      });
+    }
 
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
@@ -55,9 +75,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordError = strings.passwordRequired;
       });
       isValid = false;
-    } else if (password.length < 6) {
+    } else if (!PasswordValidator.isComplex(password)) {
       setState(() {
-        _passwordError = strings.passwordTooShort;
+        _passwordError = strings.passwordComplexityRequirements;
       });
       isValid = false;
     } else {
@@ -66,10 +86,26 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
 
+    if (confirmPassword.isEmpty) {
+      setState(() {
+        _confirmPasswordError = strings.passwordRequired;
+      });
+      isValid = false;
+    } else if (confirmPassword != password) {
+      setState(() {
+        _confirmPasswordError = strings.passwordsDoNotMatch;
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _confirmPasswordError = null;
+      });
+    }
+
     return isValid;
   }
 
-  Future<void> _onLoginPressed(AppStrings strings) async {
+  Future<void> _onRegisterPressed(AppStrings strings) async {
     if (!_validate(strings) || _isLoading) return;
 
     setState(() {
@@ -77,14 +113,21 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authService.login(
+      await _authService.register(
+        name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        passwordConfirmation: _confirmPasswordController.text,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.registerSuccess),
+          backgroundColor: AppColors.black,
+          duration: const Duration(seconds: 2),
+        ),
       );
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,79 +145,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _onForgotPasswordTap() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
-    );
-  }
-
-  void _onRegisterTap() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
-  }
-
-  void _showServerConfigDialog() async {
-    final currentUrl = await AuthService.getBaseUrl();
-    if (!mounted) return;
-    final controller = TextEditingController(text: currentUrl);
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          title: const Text('Atur Alamat Server'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Masukkan alamat IP/domain backend Laravel (contoh: http://192.168.1.10:8000/api)',
-                style: TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Server URL',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final input = controller.text.trim();
-                if (input.isNotEmpty) {
-                  await AuthService.setBaseUrl(input);
-                  if (ctx.mounted) {
-                    Navigator.of(ctx).pop();
-                  }
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Server diarahkan ke: ${AuthService.baseUrl}',
-                        ),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
+  void _onLoginTap() {
+    Navigator.of(context).pop();
   }
 
   @override
@@ -190,15 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.settings_ethernet, size: 22),
-                  tooltip: 'Konfigurasi Server',
-                  onPressed: _showServerConfigDialog,
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 50),
               Center(
                 child: Image.asset(
                   'assets/images/logo.png',
@@ -208,6 +172,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 48),
+              CustomAuthField(
+                label: strings.name,
+                controller: _nameController,
+                keyboardType: TextInputType.name,
+                errorText: _nameError,
+                onChanged: (_) {
+                  if (_nameError != null) {
+                    setState(() {
+                      _nameError = null;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 18),
               CustomAuthField(
                 label: strings.email,
                 controller: _emailController,
@@ -243,41 +221,46 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
               ),
+              const SizedBox(height: 18),
+              CustomAuthField(
+                label: strings.confirmPassword,
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                errorText: _confirmPasswordError,
+                onChanged: (_) {
+                  if (_confirmPasswordError != null) {
+                    setState(() {
+                      _confirmPasswordError = null;
+                    });
+                  }
+                },
+                suffixIcon: EyelashIcon(
+                  isObscured: _obscureConfirmPassword,
+                  onTap: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                ),
+              ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: _onForgotPasswordTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Text(
-                        strings.forgotPasswordQuestion,
-                        style: const TextStyle(
-                          color: AppColors.linkBlue,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: _onLoginTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      strings.alreadyHaveAccount,
+                      style: const TextStyle(
+                        color: AppColors.linkBlue,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _onRegisterTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Text(
-                        strings.haventRegistered,
-                        style: const TextStyle(
-                          color: AppColors.linkBlue,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 36),
               Center(
@@ -285,7 +268,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
-                    onTap: _isLoading ? null : () => _onLoginPressed(strings),
+                    onTap: _isLoading
+                        ? null
+                        : () => _onRegisterPressed(strings),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       width: 140,
@@ -310,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               )
                             : Text(
-                                strings.login,
+                                strings.register,
                                 style: TextStyle(
                                   color: isDark
                                       ? Colors.white

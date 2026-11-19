@@ -4,7 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'package:eye_lens/features/settings/models/settings_model.dart';
-import 'package:eye_lens/models/riwayat_model.dart';
+import 'package:eye_lens/features/history/models/history_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -257,19 +257,19 @@ class DatabaseHelper {
     return await updatePengaturan(model.toMap());
   }
 
-  Future<int> insertRiwayatModel(RiwayatModel model) async {
+  Future<int> insertRiwayatModel(HistoryModel model) async {
     final db = await database;
     return await db.insert('tbl_riwayat', model.toMap());
   }
 
-  Future<List<RiwayatModel>> getRiwayatModelList({int limit = 50}) async {
+  Future<List<HistoryModel>> getRiwayatModelList({int limit = 50}) async {
     final list = await getRiwayatList(limit: limit);
-    return list.map((map) => RiwayatModel.fromMap(map)).toList();
+    return list.map((map) => HistoryModel.fromMap(map)).toList();
   }
 
-  Future<RiwayatModel?> getRiwayatModelById(int id) async {
+  Future<HistoryModel?> getRiwayatModelById(int id) async {
     final map = await getRiwayatById(id);
-    return map != null ? RiwayatModel.fromMap(map) : null;
+    return map != null ? HistoryModel.fromMap(map) : null;
   }
 
   Future<void> close() async {

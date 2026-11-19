@@ -6,7 +6,7 @@ import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/features/settings/screen/change_password_screen.dart';
 import 'package:eye_lens/features/settings/screen/faq_screen.dart';
 import 'package:eye_lens/features/settings/screen/widgets/language_selector_tile.dart';

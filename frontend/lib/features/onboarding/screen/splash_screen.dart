@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
-import 'package:eye_lens/screens/onboarding/onboarding_screen.dart';
+import 'package:eye_lens/features/onboarding/screen/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

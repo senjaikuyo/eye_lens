@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:eye_lens/core/services/database_helper.dart';
-import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/features/history/logic/history_provider.dart';
 
 void main() {
   setUpAll(() {

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

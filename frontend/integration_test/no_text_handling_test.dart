@@ -5,7 +5,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/camera/screen/scanning_screen.dart';

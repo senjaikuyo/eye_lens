@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/utils/password_validator.dart';
-import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/core/widgets/custom_auth_field.dart';
 import 'package:eye_lens/core/widgets/eyelash_icon.dart';
-import 'package:eye_lens/screens/auth/login_screen.dart';
-import 'package:eye_lens/screens/auth/widgets/otp_input_row.dart';
+import 'package:eye_lens/features/auth/screen/login_screen.dart';
+import 'package:eye_lens/features/auth/screen/widgets/otp_input_row.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthService? authService;

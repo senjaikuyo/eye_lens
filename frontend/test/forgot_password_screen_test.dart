@@ -9,9 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
-import 'package:eye_lens/screens/auth/forgot_password_screen.dart';
-import 'package:eye_lens/screens/auth/login_screen.dart';
-import 'package:eye_lens/services/auth/auth_service.dart';
+import 'package:eye_lens/features/auth/screen/forgot_password_screen.dart';
+import 'package:eye_lens/features/auth/screen/login_screen.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

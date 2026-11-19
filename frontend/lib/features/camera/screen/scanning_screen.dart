@@ -12,7 +12,7 @@ import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/main.dart';
 import 'package:eye_lens/features/ocr/models/ocr_element.dart';
-import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/camera/logic/camera_lifecycle_manager.dart';
 import 'package:eye_lens/features/camera/logic/camera_service.dart';

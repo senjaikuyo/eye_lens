@@ -3,13 +3,13 @@ import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/models/riwayat_model.dart';
-import 'package:eye_lens/providers/history_provider.dart';
+import 'package:eye_lens/features/history/models/history_model.dart';
+import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/speech/screen/speech_screen.dart';
-import 'package:eye_lens/screens/history/widgets/history_delete_dialog.dart';
-import 'package:eye_lens/screens/history/widgets/history_empty_state.dart';
-import 'package:eye_lens/screens/history/widgets/history_tile.dart';
+import 'package:eye_lens/features/history/screen/widgets/history_delete_dialog.dart';
+import 'package:eye_lens/features/history/screen/widgets/history_empty_state.dart';
+import 'package:eye_lens/features/history/screen/widgets/history_tile.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -30,7 +30,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _handleDeleteSingle(
-    RiwayatModel item,
+    HistoryModel item,
     AppStrings strings,
     bool isDark,
   ) async {

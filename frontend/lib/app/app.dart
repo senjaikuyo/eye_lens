@@ -5,7 +5,7 @@ import 'package:eye_lens/app/routes/app_routes.dart';
 import 'package:eye_lens/app/theme/app_theme.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
-import 'package:eye_lens/screens/splash/splash_screen.dart';
+import 'package:eye_lens/features/onboarding/screen/splash_screen.dart';
 
 class EyeLensApp extends StatelessWidget {
   const EyeLensApp({super.key});

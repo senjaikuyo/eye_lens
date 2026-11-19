@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
-import 'package:eye_lens/models/riwayat_model.dart';
+import 'package:eye_lens/features/history/models/history_model.dart';
 
 class HistoryTile extends StatelessWidget {
-  final RiwayatModel item;
+  final HistoryModel item;
   final bool isDark;
   final bool isHighContrast;
   final VoidCallback onTap;

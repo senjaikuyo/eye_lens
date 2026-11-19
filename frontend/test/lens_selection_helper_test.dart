@@ -1,5 +1,5 @@
 import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

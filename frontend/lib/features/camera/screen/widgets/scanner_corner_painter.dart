@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 
 /// Painter bersama untuk menggambar 4 sudut berbentuk huruf L melengkung putih khas Google Lens.
 /// Digunakan secara identik pada viewfinder kamera pemindai (ScanningScreen) dan overlay citra (SpeechScreen).

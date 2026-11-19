@@ -22,7 +22,7 @@ import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
 import 'package:eye_lens/core/services/image_cache_cleanup.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 import 'package:eye_lens/services/tts_service.dart';
-import 'package:eye_lens/widgets/zoom_ruler.dart';
+import 'package:eye_lens/features/image_area/screen/zoom_ruler.dart';
 import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/screens/speech/speech_screen.dart';
 import 'package:eye_lens/features/camera/screen/widgets/blur_warning_banner.dart';
@@ -31,7 +31,7 @@ import 'package:eye_lens/features/camera/screen/widgets/no_text_alert_banner.dar
 import 'package:eye_lens/features/camera/screen/widgets/ocr_processing_overlay.dart';
 import 'package:eye_lens/features/camera/screen/widgets/scan_bottom_bar.dart';
 import 'package:eye_lens/features/camera/screen/widgets/scan_top_bar.dart';
-import 'package:eye_lens/screens/scan/widgets/zoom_pill_indicator.dart';
+import 'package:eye_lens/features/image_area/screen/zoom_pill_indicator.dart';
 
 class ScanningScreen extends StatefulWidget {
   const ScanningScreen({super.key});

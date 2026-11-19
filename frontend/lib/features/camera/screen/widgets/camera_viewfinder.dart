@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/features/camera/logic/camera_service.dart';
 import 'package:eye_lens/features/camera/logic/camera_input_policy.dart';
-import 'package:eye_lens/services/lens_selection_helper.dart';
+import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 import 'package:eye_lens/features/camera/screen/widgets/scanner_corner_painter.dart';
 
 class CameraViewfinder extends StatefulWidget {

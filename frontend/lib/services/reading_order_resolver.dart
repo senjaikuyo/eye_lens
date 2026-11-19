@@ -6,7 +6,9 @@ import '../models/text_formatter_models.dart';
 /// ML Kit yang berbeda. Untuk tata letak multi-kolom, satu kolom diselesaikan
 /// dahulu sebelum berpindah ke kolom di sebelah kanan.
 class ReadingOrderResolver {
-  static const double _columnOverlapTolerance = 0.2;
+  static const double _minimumGutterWidthRatio = 0.1;
+  static const double _minimumVerticalOverlapRatio = 0.25;
+  static const int _minimumLinesPerColumn = 2;
 
   /// Mengembalikan salinan blok dalam urutan baca, dengan baris tiap blok
   /// terurut atas-ke-bawah dan kiri-ke-kanan pada baseline yang sama.
@@ -18,6 +20,14 @@ class ReadingOrderResolver {
       return validBlocks.map(_withOrderedLines).toList(growable: false);
     }
 
+    // Start with strict top/left fallback. Isolated offset cards do not prove
+    // columns; require a real gutter and repeated, vertically overlapping text.
+    int compareBlocks(OcrBlockData a, OcrBlockData b) {
+      final top = a.boundingBox.top.compareTo(b.boundingBox.top);
+      return top != 0 ? top : a.boundingBox.left.compareTo(b.boundingBox.left);
+    }
+
+    final fallback = [...validBlocks]..sort(compareBlocks);
     final columns = <_Column>[];
     final byLeft = [...validBlocks]
       ..sort((a, b) => a.boundingBox.left.compareTo(b.boundingBox.left));
@@ -28,11 +38,8 @@ class ReadingOrderResolver {
         final overlap =
             min(column.right, block.boundingBox.right) -
             max(column.left, block.boundingBox.left);
-        final smallerWidth = min(
-          max(1.0, column.right - column.left),
-          max(1.0, block.boundingBox.width),
-        );
-        if (overlap > smallerWidth * _columnOverlapTolerance) {
+        // Any horizontal overlap removes evidence for a separating gutter.
+        if (overlap > 0) {
           match = column;
           break;
         }
@@ -46,14 +53,41 @@ class ReadingOrderResolver {
     }
 
     columns.sort((a, b) => a.left.compareTo(b.left));
+    bool supported = columns.length >= 2;
+    var repeatedColumn = false;
+    for (var i = 0; i < columns.length; i++) {
+      final column = columns[i];
+      final lineCount = column.blocks.fold<int>(
+        0,
+        (n, b) => n + b.lines.length,
+      );
+      if (lineCount >= _minimumLinesPerColumn) repeatedColumn = true;
+      if (i == 0) continue;
+      final previous = columns[i - 1];
+      final gap = column.left - previous.right;
+      final smallerWidth = min(
+        column.right - column.left,
+        previous.right - previous.left,
+      );
+      final overlap =
+          min(column.bottom, previous.bottom) - max(column.top, previous.top);
+      final smallerHeight = min(
+        column.bottom - column.top,
+        previous.bottom - previous.top,
+      );
+      if (smallerWidth <= 0 ||
+          smallerHeight <= 0 ||
+          gap < smallerWidth * _minimumGutterWidthRatio ||
+          overlap < smallerHeight * _minimumVerticalOverlapRatio) {
+        supported = false;
+      }
+    }
+    if (!supported || !repeatedColumn) {
+      return List.unmodifiable(fallback.map(_withOrderedLines));
+    }
     final ordered = <OcrBlockData>[];
     for (final column in columns) {
-      column.blocks.sort((a, b) {
-        final top = a.boundingBox.top.compareTo(b.boundingBox.top);
-        return top != 0
-            ? top
-            : a.boundingBox.left.compareTo(b.boundingBox.left);
-      });
+      column.blocks.sort(compareBlocks);
       ordered.addAll(column.blocks.map(_withOrderedLines));
     }
     return List.unmodifiable(ordered);
@@ -61,35 +95,14 @@ class ReadingOrderResolver {
 
   static OcrBlockData _withOrderedLines(OcrBlockData block) {
     final lines = [...block.lines];
-    final medianHeight = _medianHeight(lines);
     lines.sort((a, b) {
-      final topDifference = a.boundingBox.top - b.boundingBox.top;
-      if (topDifference.abs() < medianHeight * 0.5) {
-        return a.boundingBox.left.compareTo(b.boundingBox.left);
-      }
-      return topDifference.compareTo(0);
+      final top = a.boundingBox.top.compareTo(b.boundingBox.top);
+      return top != 0 ? top : a.boundingBox.left.compareTo(b.boundingBox.left);
     });
     return OcrBlockData(
       text: block.text,
       boundingBox: block.boundingBox,
       lines: List.unmodifiable(lines),
-    );
-  }
-
-  static double _medianHeight(List<OcrLineData> lines) {
-    final heights =
-        lines
-            .map((line) => line.boundingBox.height)
-            .where((height) => height > 0)
-            .toList()
-          ..sort();
-    if (heights.isEmpty) return 12.0;
-    final middle = heights.length ~/ 2;
-    return max(
-      1.0,
-      heights.length.isOdd
-          ? heights[middle]
-          : (heights[middle - 1] + heights[middle]) / 2,
     );
   }
 }
@@ -98,6 +111,8 @@ class _Column {
   double left;
   double right;
   final List<OcrBlockData> blocks;
+  double get top => blocks.map((b) => b.boundingBox.top).reduce(min);
+  double get bottom => blocks.map((b) => b.boundingBox.bottom).reduce(max);
 
   _Column({required this.left, required this.right, required this.blocks});
 

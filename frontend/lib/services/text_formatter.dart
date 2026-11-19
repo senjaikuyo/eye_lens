@@ -78,14 +78,6 @@ class TextFormatter {
       return formatRawText(correctedData.rawText);
     }
 
-    // 2. Hitung tinggi baris median sebagai satuan ukuran acuan
-    final heights = allLines.map((l) => l.boundingBox.height).toList()..sort();
-    final double medianLineHeight = heights.length.isOdd
-        ? heights[heights.length ~/ 2]
-        : (heights[(heights.length ~/ 2) - 1] + heights[heights.length ~/ 2]) /
-              2.0;
-    final double safeMedianHeight = max(12.0, medianLineHeight);
-
     // 3. Pertahankan blok ML Kit sebagai unit baca. Resolver mengurutkan
     // kolom dan blok, tetapi tidak pernah mencampurkan baris lintas blok.
     final orderedBlocks = ReadingOrderResolver.resolve(correctedData.blocks);
@@ -94,9 +86,22 @@ class TextFormatter {
 
     // 4. Proses blok demi blok supaya kartu/paragraf terpisah tetap utuh.
     for (final block in orderedBlocks) {
+      // Paragraph geometry belongs to this block, not a distant title/card.
+      final heights =
+          block.lines
+              .map((l) => l.boundingBox.height)
+              .where((h) => h > 0 && h.isFinite)
+              .toList()
+            ..sort();
+      final middle = heights.length ~/ 2;
+      final median = heights.isEmpty
+          ? 12.0
+          : heights.length.isOdd
+          ? heights[middle]
+          : (heights[middle - 1] + heights[middle]) / 2;
       _processBlockLines(
         block: block,
-        safeMedianHeight: safeMedianHeight,
+        safeMedianHeight: max(12.0, median),
         outputParagraphs: rawParagraphs,
       );
     }

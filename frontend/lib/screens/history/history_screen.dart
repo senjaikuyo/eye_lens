@@ -6,7 +6,7 @@ import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/models/riwayat_model.dart';
 import 'package:eye_lens/providers/history_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/screens/speech/speech_screen.dart';
+import 'package:eye_lens/features/speech/screen/speech_screen.dart';
 import 'package:eye_lens/screens/history/widgets/history_delete_dialog.dart';
 import 'package:eye_lens/screens/history/widgets/history_empty_state.dart';
 import 'package:eye_lens/screens/history/widgets/history_tile.dart';

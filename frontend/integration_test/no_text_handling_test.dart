@@ -10,7 +10,7 @@ import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/camera/screen/scanning_screen.dart';
 import 'package:eye_lens/features/camera/screen/widgets/no_text_alert_banner.dart';
-import 'package:eye_lens/screens/speech/speech_screen.dart';
+import 'package:eye_lens/features/speech/screen/speech_screen.dart';
 import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 

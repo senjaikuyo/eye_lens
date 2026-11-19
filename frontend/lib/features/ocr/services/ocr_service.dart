@@ -7,7 +7,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:path_provider/path_provider.dart';
 
 import 'package:eye_lens/features/ocr/models/ocr_element.dart';
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/features/ocr/services/ocr_diagnostic_collector.dart';
 import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
@@ -17,7 +17,7 @@ import 'package:eye_lens/features/ocr/correction/ocr_post_corrector.dart';
 import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
 import 'package:eye_lens/features/ocr/reading_order/ocr_orientation_resolver.dart';
 import 'package:eye_lens/features/ocr/reading_order/vertical_text_detector.dart';
-import 'package:eye_lens/services/text_formatter.dart';
+import 'package:eye_lens/features/speech/logic/text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
 /// - Menggunakan model Latin Script berkecepatan tinggi (< 500 ms).

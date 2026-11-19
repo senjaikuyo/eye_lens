@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 /// Conservative candidate detection only; never assembles or rewrites text.
 class VerticalTextDetector {

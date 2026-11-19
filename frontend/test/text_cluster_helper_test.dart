@@ -1,4 +1,4 @@
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/features/ocr/reading_order/text_cluster_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

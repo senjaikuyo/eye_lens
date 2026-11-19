@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 /// Komponen visualisasi teks bacaan yang otomatis menyorot kata/paragraf aktif
 /// dan melakukan auto-scroll halus mengikuti posisi bacaan yang sedang aktif.

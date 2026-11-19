@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 /// Model representasi kelompok teks (paragraph / text cluster) pada citra.
 @immutable

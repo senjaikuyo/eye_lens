@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 // Kept until K2 removes the manual mode UI and its callers.
 enum OcrScanMode { document, smallText, screenText, handwriting }

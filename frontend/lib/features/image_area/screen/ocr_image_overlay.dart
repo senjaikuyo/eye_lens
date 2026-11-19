@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/features/ocr/models/ocr_element.dart';
-import 'package:eye_lens/models/text_formatter_models.dart';
-import 'package:eye_lens/services/auto_play_helper.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/logic/auto_play_helper.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_controller.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';

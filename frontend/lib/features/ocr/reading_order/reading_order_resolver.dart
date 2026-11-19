@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 /// Menentukan urutan baca dokumen OCR tanpa mencampurkan baris dari blok
 /// ML Kit yang berbeda. Untuk tata letak multi-kolom, satu kolom diselesaikan

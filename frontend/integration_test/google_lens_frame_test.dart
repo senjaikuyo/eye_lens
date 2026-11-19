@@ -9,10 +9,10 @@ import 'package:eye_lens/providers/history_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/features/camera/screen/widgets/no_text_alert_banner.dart';
-import 'package:eye_lens/screens/speech/speech_screen.dart';
-import 'package:eye_lens/screens/speech/widgets/highlighted_text_view.dart';
+import 'package:eye_lens/features/speech/screen/speech_screen.dart';
+import 'package:eye_lens/features/speech/screen/widgets/highlighted_text_view.dart';
 import 'package:eye_lens/features/image_area/screen/ocr_image_overlay.dart';
-import 'package:eye_lens/screens/speech/widgets/speech_mode_toggle_button.dart';
+import 'package:eye_lens/features/speech/screen/widgets/speech_mode_toggle_button.dart';
 import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 
 void main() {

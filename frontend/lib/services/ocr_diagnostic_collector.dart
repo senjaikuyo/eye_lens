@@ -111,11 +111,9 @@ class LineHeightStats {
   });
 
   factory LineHeightStats.fromLines(List<OcrLineData> lines) {
-    final heights = lines
-        .map((l) => l.boundingBox.height)
-        .where((h) => h > 0)
-        .toList()
-      ..sort();
+    final heights =
+        lines.map((l) => l.boundingBox.height).where((h) => h > 0).toList()
+          ..sort();
     if (heights.isEmpty) return const LineHeightStats();
     final sum = heights.fold<double>(0, (a, b) => a + b);
     return LineHeightStats(
@@ -201,6 +199,7 @@ class OcrDiagnosticReport {
   final String formattedText;
 
   final int totalDurationMs;
+  final Map<String, Object?> inputMetrics;
 
   const OcrDiagnosticReport({
     this.id,
@@ -219,6 +218,7 @@ class OcrDiagnosticReport {
     required this.filteredText,
     required this.formattedText,
     required this.totalDurationMs,
+    this.inputMetrics = const {},
   });
 
   Map<String, Object?> toJson({bool includeText = true}) {
@@ -232,10 +232,7 @@ class OcrDiagnosticReport {
         'pixelHeight': photoPixelSize.height,
         'cameraPreset': cameraPreset,
       },
-      'exif': {
-        'present': exifPresent,
-        'orientation': exifOrientation,
-      },
+      'exif': {'present': exifPresent, 'orientation': exifOrientation},
       'deviceOrientation': deviceOrientation,
       'imageSentToMlKit': {
         'width': imageSentToMlKit.width,
@@ -255,13 +252,13 @@ class OcrDiagnosticReport {
               'formattedLength': formattedText.length,
             },
       'totalDurationMs': totalDurationMs,
+      'inputMetrics': inputMetrics,
     };
   }
 
   String toJsonString({bool includeText = true}) {
-    return const JsonEncoder.withIndent('  ').convert(
-      toJson(includeText: includeText),
-    );
+    return const JsonEncoder.withIndent('  ')
+        .convert(toJson(includeText: includeText));
   }
 }
 
@@ -279,6 +276,7 @@ class OcrDiagnosticCollector {
     required String cameraPreset,
     required int? exifOrientation,
     required String? deviceOrientation,
+    Map<String, Object?> inputMetrics = const {},
   }) {
     if (!DebugOcrConfig.enableDiagnostics) return disabled;
     return OcrDiagnosticCollector._(
@@ -299,6 +297,7 @@ class OcrDiagnosticCollector {
         filteredText: '',
         formattedText: '',
         totalDurationMs: 0,
+        inputMetrics: inputMetrics,
       ),
     );
   }
@@ -336,6 +335,7 @@ class OcrDiagnosticCollector {
       filteredText: filteredText,
       formattedText: formattedText,
       totalDurationMs: totalDurationMs,
+      inputMetrics: r.inputMetrics,
     );
   }
 

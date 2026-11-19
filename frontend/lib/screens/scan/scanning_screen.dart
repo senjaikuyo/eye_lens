@@ -19,9 +19,12 @@ import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
 import '../../services/ocr_noise_filter.dart';
 import '../../services/ocr_service.dart';
+import '../../services/image_blur_detector.dart';
+import '../../services/image_cache_cleanup.dart';
 import '../../services/ocr_text_validator.dart';
 import '../../services/tts_service.dart';
 import '../../widgets/zoom_ruler.dart';
+import '../../utils/image_dimension_helper.dart';
 import '../speech/speech_screen.dart';
 import 'widgets/blur_warning_banner.dart';
 import 'widgets/camera_viewfinder.dart';
@@ -272,6 +275,7 @@ class _ScanningScreenState extends State<ScanningScreen>
         final ocrResult = await _ocrService.processImageWithCoordinates(
           bytes,
           scanMode: _currentScanMode,
+          captureMetadata: _cameraService.lastCaptureMetadata,
         );
         final check = OcrTextValidator.validateResult(ocrResult);
 
@@ -352,13 +356,9 @@ class _ScanningScreenState extends State<ScanningScreen>
     // Hentikan kamera saat pengguna membuka pemilih gambar galeri
     await _cameraService.stop();
 
+    XFile? pickedFile;
     try {
-      final XFile? pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        imageQuality: 90,
-      );
+      pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
 
       if (pickedFile == null || !mounted) {
         // Jika pengguna batal memilih dari galeri, nyalakan kembali kamera
@@ -370,10 +370,19 @@ class _ScanningScreenState extends State<ScanningScreen>
         _isProcessingOcr = true;
       });
 
-      final bytes = await pickedFile.readAsBytes();
-      final ocrResult = await _ocrService.processFileWithCoordinates(
-        pickedFile.path,
+      // Picker returns an app-cache copy, not the original gallery asset.
+      final original = await pickedFile.readAsBytes();
+      final originalSize = await ImageDimensionHelper.getImageSize(original);
+      final bytes = await ImageBlurDetector.boundGalleryImage(original);
+      final ocrResult = await _ocrService.processImageWithCoordinates(
+        bytes,
         scanMode: _currentScanMode,
+        captureMetadata: {
+          'source': 'gallery',
+          'originalWidth': originalSize.width,
+          'originalHeight': originalSize.height,
+          'resizedForMemoryBudget': !identical(original, bytes),
+        },
       );
       final check = OcrTextValidator.validateResult(ocrResult);
 
@@ -433,6 +442,15 @@ class _ScanningScreenState extends State<ScanningScreen>
         );
       }
     } finally {
+      if (pickedFile != null) {
+        try {
+          await ImageCacheCleanup.delete(pickedFile.path);
+        } catch (e) {
+          debugPrint(
+            '[ScanningScreen] Gallery cache cleanup failed: ${e.runtimeType}',
+          );
+        }
+      }
       if (mounted) {
         setState(() {
           _isProcessingOcr = false;

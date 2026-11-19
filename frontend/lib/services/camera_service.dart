@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Offset;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +24,9 @@ class CameraService {
   double _maxZoom = 1.0;
   double _currentZoom = 1.0;
   bool _isFlashOn = false;
+  Future<void>? _focusOperation;
+  Map<String, Object?> lastCaptureMetadata = const {};
+  static const resolutionPreset = ResolutionPreset.veryHigh;
 
   CameraService() {
     _lifecycle = CameraLifecycleManager(
@@ -75,7 +79,7 @@ class CameraService {
 
       final newController = CameraController(
         backCamera,
-        ResolutionPreset.high,
+        resolutionPreset,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.jpeg
@@ -84,6 +88,11 @@ class CameraService {
 
       await newController.initialize();
       _controller = newController;
+      try {
+        await newController.setFocusMode(FocusMode.auto);
+      } on CameraException catch (e) {
+        debugPrint('[CameraService] Autofocus unavailable: ${e.code}');
+      }
 
       // Dapatkan batasan zoom hardware sebenarnya (hingga 10x)
       try {
@@ -117,6 +126,7 @@ class CameraService {
   }
 
   Future<void> _internalStop() async {
+    await _focusOperation;
     // 1. Matikan lampu senter terlebih dahulu jika masih aktif
     if (_isFlashOn && _controller != null && _controller!.value.isInitialized) {
       try {
@@ -165,18 +175,75 @@ class CameraService {
     }
   }
 
-  /// Menangkap citra foto langsung ke RAM (Uint8List).
+  /// Focus on the tapped point, then keep that point locked until next tap/restart.
+  Future<void> focusAt(Offset point) async {
+    final controller = _controller;
+    if (!isInitialized ||
+        controller == null ||
+        _focusOperation != null ||
+        controller.value.isTakingPicture ||
+        !controller.value.focusPointSupported) {
+      return;
+    }
+    final operation = _focusAt(controller, point);
+    _focusOperation = operation;
+    try {
+      await operation;
+    } finally {
+      _focusOperation = null;
+    }
+  }
+
+  Future<void> _focusAt(CameraController controller, Offset point) async {
+    try {
+      await controller.setFocusMode(FocusMode.auto);
+      await controller.setFocusPoint(point);
+      if (controller.value.exposurePointSupported) {
+        await controller.setExposurePoint(point);
+      }
+      // CameraX awaits its focus/metering operation. No artificial delay.
+      await controller.setFocusMode(FocusMode.locked);
+    } on CameraException catch (e) {
+      debugPrint('[CameraService] Tap focus failed: ${e.code}');
+      if (!controller.value.isInitialized) return;
+      try {
+        await controller.setFocusMode(FocusMode.auto);
+      } on CameraException catch (restoreError) {
+        debugPrint(
+          '[CameraService] Focus restore failed: ${restoreError.code}',
+        );
+      }
+    }
+  }
+
+  /// Read original JPEG bytes and remove the temporary file even on failure.
   Future<Uint8List?> captureFrameToRAM() async {
     if (!isInitialized || _isDisposed) return null;
 
+    XFile? xFile;
     try {
-      final XFile xFile = await _controller!.takePicture();
+      await _focusOperation;
+      final controller = _controller;
+      if (!isInitialized || controller == null) return null;
+      lastCaptureMetadata = {
+        'cameraPreset': resolutionPreset.name,
+        'deviceOrientation': controller.value.deviceOrientation.name,
+        'focusMode': controller.value.focusMode.name,
+        'focusPointSupported': controller.value.focusPointSupported,
+        // Public camera API does not expose native AF success state.
+        'focusSuccess': null,
+      };
+      xFile = await controller.takePicture();
       final Uint8List bytes = await xFile.readAsBytes();
-
-      // Ephemeral Memory: Hapus file sementara dari penyimpanan internal
+      return bytes;
+    } catch (e) {
+      debugPrint('[CameraService] Gagal mengambil gambar kamera: $e');
+      return null;
+    } finally {
+      // Also delete if readAsBytes throws; never re-encode camera JPEG.
       try {
-        final tempFile = File(xFile.path);
-        if (await tempFile.exists()) {
+        final tempFile = xFile == null ? null : File(xFile.path);
+        if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
       } catch (e) {
@@ -184,11 +251,6 @@ class CameraService {
           '[CameraService] Gagal menghapus file sementara (diabaikan): $e',
         );
       }
-
-      return bytes;
-    } catch (e) {
-      debugPrint('[CameraService] Gagal mengambil gambar kamera: $e');
-      return null;
     }
   }
 

@@ -9,6 +9,7 @@ import '../models/ocr_element.dart';
 import '../models/text_formatter_models.dart';
 import '../utils/image_dimension_helper.dart';
 import 'ocr_diagnostic_collector.dart';
+import 'image_blur_detector.dart';
 import 'ocr_noise_filter.dart';
 import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
@@ -274,11 +275,24 @@ class OcrService {
     bool enableMultiPass = true,
     OcrScanMode scanMode = OcrScanMode.document,
     OcrNoiseFilterConfig? noiseFilterConfig,
+    Map<String, Object?> captureMetadata = const {},
   }) async {
     if (_isDisposed) return OcrResult.empty;
 
     try {
       final imageSize = await ImageDimensionHelper.getImageSize(bytes);
+      final inputMetrics = <String, Object?>{...captureMetadata};
+      if (kDebugMode && DebugOcrConfig.enableDiagnostics) {
+        final timer = Stopwatch()..start();
+        try {
+          inputMetrics['imageAnalysis'] = await ImageBlurDetector.measure(
+            bytes,
+          );
+        } catch (e) {
+          inputMetrics['imageAnalysisError'] = e.runtimeType.toString();
+        }
+        inputMetrics['analysisDurationMs'] = timer.elapsedMilliseconds;
+      }
 
       Directory tempDir;
       try {
@@ -291,9 +305,10 @@ class OcrService {
       final diagnostics = OcrDiagnosticCollector.create(
         photoBytes: bytes,
         photoPixelSize: imageSize,
-        cameraPreset: 'unknown',
+        cameraPreset: captureMetadata['cameraPreset'] as String? ?? 'unknown',
         exifOrientation: ImageDimensionHelper.getExifOrientation(bytes),
-        deviceOrientation: null,
+        deviceOrientation: captureMetadata['deviceOrientation'] as String?,
+        inputMetrics: inputMetrics,
       );
       final List<OcrPassRecord> passRecords = [];
 
@@ -352,7 +367,8 @@ class OcrService {
             imageSize: imageSize,
           );
 
-          final Rect targetRoi = textRoi ??
+          final Rect targetRoi =
+              textRoi ??
               OcrPreprocessor.computeCenterRoi(imageSize, ratio: 0.70);
 
           try {
@@ -380,7 +396,8 @@ class OcrService {
             );
 
             if (roiScore > bestScore ||
-                (bestResult.rawLines.isEmpty && roiResult.rawLines.isNotEmpty)) {
+                (bestResult.rawLines.isEmpty &&
+                    roiResult.rawLines.isNotEmpty)) {
               bestResult = roiResult;
               bestScore = roiScore;
             }
@@ -565,10 +582,7 @@ class OcrService {
       rawText: result.rawLines.map((l) => l.text).join('\n'),
       filteredText: result.documentData?.rawText ?? '',
       formattedText: result.fullText,
-      totalDurationMs: passRecords.fold<int>(
-        0,
-        (sum, p) => sum + p.durationMs,
-      ),
+      totalDurationMs: passRecords.fold<int>(0, (sum, p) => sum + p.durationMs),
     );
     if (report == null) return result;
     return result.copyWith(diagnosticJson: report.toJsonString());

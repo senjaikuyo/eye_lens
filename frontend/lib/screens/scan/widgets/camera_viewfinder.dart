@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../services/camera_service.dart';
+import '../../../services/camera_input_policy.dart';
 import '../../../services/lens_selection_helper.dart';
 import '../../../widgets/scanner_corner_painter.dart';
 
@@ -45,6 +46,24 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTapUp: (details) async {
+        final controller = widget.cameraService.controller;
+        final preview = controller?.value.previewSize;
+        if (preview == null || !widget.cameraService.isInitialized) return;
+        final landscape = widget.size.width > widget.size.height;
+        final oriented = landscape
+            ? preview
+            : Size(preview.height, preview.width);
+        final box = context.findRenderObject() as RenderBox?;
+        if (box == null || !box.hasSize) return;
+        await widget.cameraService.focusAt(
+          CameraInputPolicy.focusPoint(
+            details.localPosition,
+            box.size,
+            oriented,
+          ),
+        );
+      },
       onScaleStart: (details) {
         _baseScaleZoom = widget.currentZoom;
       },

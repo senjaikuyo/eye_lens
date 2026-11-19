@@ -11,13 +11,15 @@ import 'providers/language_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/ocr_service.dart';
+import 'services/image_cache_cleanup.dart';
 
 /// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   unawaited(OcrService.purgeOrphanedCache());
+  await ImageCacheCleanup.purgeOrphans();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

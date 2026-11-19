@@ -9,8 +9,11 @@ import 'text_formatter.dart';
 
 enum TtsState { playing, stopped, paused }
 
-typedef TtsProgressCallback =
-    void Function(double progress, String currentWord, [int? charIndex]);
+typedef TtsProgressCallback = void Function(
+  double progress,
+  String currentWord, [
+  int? charIndex,
+]);
 
 class TtsService {
   static final TtsService _instance = TtsService._internal();
@@ -31,6 +34,16 @@ class TtsService {
   double get speedMultiplier => _speedMultiplier;
   String _currentLanguage = 'id-ID';
   String get currentLanguage => _currentLanguage;
+
+  /// Whether Android reports at least one installed text-to-speech engine.
+  Future<bool> get isAvailable async {
+    try {
+      final engines = await _flutterTts.getEngines;
+      return engines is List && engines.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   // Manajemen paragraf
   FormattedTextResult? _formattedResult;
@@ -153,8 +166,7 @@ class TtsService {
 
   Future<void> _speakCurrentParagraph() async {
     final result = _formattedResult;
-    if (result == null ||
-        _currentParagraphIndex >= result.paragraphs.length) {
+    if (result == null || _currentParagraphIndex >= result.paragraphs.length) {
       return;
     }
 
@@ -290,8 +302,9 @@ class TtsService {
     // Rata-rata pelafalan ~15 karakter per detik disesuaikan kecepatan
     final deltaChars = (seconds * 15.0 * _speedMultiplier).round();
     final int maxLen = max(0, _fullText.length - 1);
-    final int targetChar =
-        (_currentCharIndex + deltaChars).clamp(0, maxLen).toInt();
+    final int targetChar = (_currentCharIndex + deltaChars)
+        .clamp(0, maxLen)
+        .toInt();
     await seekToCharIndex(targetChar);
   }
 
@@ -309,8 +322,7 @@ class TtsService {
   /// Melompat ke fraksi progres tertentu.
   Future<void> seekTo(double fraction) async {
     if (_fullText.isEmpty) return;
-    final targetChar =
-        (fraction.clamp(0.0, 0.98) * _fullText.length).round();
+    final targetChar = (fraction.clamp(0.0, 0.98) * _fullText.length).round();
     await seekToCharIndex(targetChar);
   }
 

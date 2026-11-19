@@ -12,6 +12,7 @@ import '../utils/image_dimension_helper.dart';
 import 'ocr_diagnostic_collector.dart';
 import 'image_blur_detector.dart';
 import 'ocr_noise_filter.dart';
+import 'ocr_dictionary.dart';
 import 'ocr_post_corrector.dart';
 import 'ocr_preprocessor.dart';
 import 'ocr_orientation_resolver.dart';
@@ -94,7 +95,8 @@ class OcrService {
 
     // 1. Jalankan penyaring noise di background isolate sesuai konfigurasi mode
     final effectiveConfig =
-        noiseFilterConfig ?? OcrNoiseFilterConfig.fromMode(scanMode);
+        noiseFilterConfig ??
+        const OcrNoiseFilterConfig(enableAutoScreenshotDetection: true);
     final filterResult = await OcrNoiseFilter.filterWithCompute(
       OcrNoiseFilterInput(
         lines: allLines,
@@ -135,6 +137,7 @@ class OcrService {
     );
 
     // 2b. Koreksi karakter ambigu OCR via kamus leksikal on-device (Issue h)
+    await OcrDictionary.loadFrequencyWords();
     final correctedDocumentData = OcrPostCorrector.correctDocument(
       documentData,
       scanMode: scanMode,

@@ -7,7 +7,20 @@ import 'package:eye_lens/services/ocr_post_corrector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('OcrDictionary Tests', () {
+    test(
+      'FrequencyWords are loaded offline and correct one-edit OCR typos',
+      () async {
+        await OcrDictionary.loadFrequencyWords();
+        expect(OcrDictionary.frequency('welcome'), isNotNull);
+        expect(OcrDictionary.bestSingleEditCorrection('welcom'), 'welcome');
+        expect(OcrDictionary.bestSingleEditCorrection('welcome'), isNull);
+        expect(OcrDictionary.bestSingleEditCorrection('A4'), isNull);
+      },
+    );
+
     test('1. contains memvalidasi kata dasar dengan benar', () {
       expect(OcrDictionary.contains('indonesia'), isTrue);
       expect(OcrDictionary.contains('saya'), isTrue);
@@ -122,6 +135,7 @@ void main() {
         OcrPostCorrector.correctLine('audio v0ice output'),
         'audio voice output',
       );
+      expect(OcrPostCorrector.correctLine('Welcom home'), 'Welcome home');
     });
 
     test('8. Mengoreksi format mata uang & harga numerik', () {

@@ -1,9 +1,49 @@
-// GENERATED OFFLINE OCR DICTIONARY (ISSUE H)
+import 'package:flutter/foundation.dart' show compute, debugPrint;
+import 'package:flutter/services.dart';
+
+// GENERATED OFFLINE OCR DICTIONARY (ISSUE H), FrequencyWords-derived additions
+// are CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/
 // Kosakata terkurasi Bahasa Indonesia & Bahasa Inggris untuk koreksi karakter ambigu OCR on-device.
 // Total lema: 1085 kata dasar. Dilengkapi pemotong afiks Bahasa Indonesia otomatis.
 
 class OcrDictionary {
   const OcrDictionary._();
+
+  static Map<String, int>? _frequencyWords;
+  static Future<void>? _loadingFrequencyWords;
+
+  /// Loads bundled FrequencyWords data once. No network access or persistence.
+  static Future<void> loadFrequencyWords() {
+    if (_frequencyWords != null) return Future.value();
+    return _loadingFrequencyWords ??= _loadFrequencyWords();
+  }
+
+  static Future<void> _loadFrequencyWords() async {
+    try {
+      final entries = <String, int>{};
+      for (final asset in const [
+        'assets/ocr/id_50k.txt',
+        'assets/ocr/en_50k.txt',
+      ]) {
+        final words = await rootBundle
+            .loadString(asset)
+            .then((data) => compute(_parseFrequencyWords, data));
+        for (final entry in words.entries) {
+          final existing = entries[entry.key];
+          if (existing == null || entry.value > existing) {
+            entries[entry.key] = entry.value;
+          }
+        }
+      }
+      _frequencyWords = entries;
+    } catch (error) {
+      // Existing curated vocabulary remains available if bundled assets fail.
+      _frequencyWords = const {};
+      debugPrint('[OcrDictionary] FrequencyWords asset load failed: $error');
+    } finally {
+      _loadingFrequencyWords = null;
+    }
+  }
 
   static const Set<String> _words = {
     'a',
@@ -1100,23 +1140,84 @@ class OcrDictionary {
     return _words.contains(word.toLowerCase());
   }
 
+  static int? frequency(String word) => _frequencyWords?[word.toLowerCase()];
+
+  /// Finds a unique, materially more frequent dictionary word at edit-distance 1.
+  /// Existing valid words are never rewritten; candidates must be ASCII letters.
+  static String? bestSingleEditCorrection(String word) {
+    final frequencies = _frequencyWords;
+    final lower = word.toLowerCase();
+    if (frequencies == null ||
+        lower.length < 4 ||
+        !RegExp(r'^[a-z]+$').hasMatch(lower) ||
+        isValidWord(lower)) {
+      return null;
+    }
+
+    final candidates = <String>{};
+    for (var index = 0; index < lower.length; index++) {
+      candidates.add(lower.substring(0, index) + lower.substring(index + 1));
+      for (var code = 97; code <= 122; code++) {
+        final letter = String.fromCharCode(code);
+        if (letter != lower[index]) {
+          candidates.add(
+            '${lower.substring(0, index)}$letter${lower.substring(index + 1)}',
+          );
+        }
+      }
+    }
+    for (var index = 0; index <= lower.length; index++) {
+      for (var code = 97; code <= 122; code++) {
+        final letter = String.fromCharCode(code);
+        candidates.add(
+          '${lower.substring(0, index)}$letter${lower.substring(index)}',
+        );
+      }
+    }
+
+    String? best;
+    var bestFrequency = 0;
+    var secondFrequency = 0;
+    for (final candidate in candidates) {
+      final candidateFrequency = frequencies[candidate];
+      if (candidateFrequency == null) continue;
+      if (candidateFrequency > bestFrequency) {
+        secondFrequency = bestFrequency;
+        bestFrequency = candidateFrequency;
+        best = candidate;
+      } else if (candidateFrequency > secondFrequency) {
+        secondFrequency = candidateFrequency;
+      }
+    }
+    if (best == null || bestFrequency < secondFrequency * 1.5) return null;
+    return best;
+  }
+
   /// Memeriksa apakah kata sah secara leksikal atau derivasional morfologi Bahasa Indonesia.
   static bool isValidWord(String word) {
     final lower = word.toLowerCase();
-    if (_words.contains(lower)) return true;
+    if (_words.contains(lower) || _frequencyWords?.containsKey(lower) == true) {
+      return true;
+    }
 
     // Evaluasi sufiks Bahasa Indonesia
     final candidatesWithSuffixes = _stripSuffixes(lower);
     for (final s in candidatesWithSuffixes) {
-      if (_words.contains(s)) return true;
+      if (_words.contains(s) || _frequencyWords?.containsKey(s) == true) {
+        return true;
+      }
       for (final p in _stripPrefixes(s)) {
-        if (_words.contains(p)) return true;
+        if (_words.contains(p) || _frequencyWords?.containsKey(p) == true) {
+          return true;
+        }
       }
     }
 
     // Evaluasi prefiks langsung
     for (final p in _stripPrefixes(lower)) {
-      if (_words.contains(p)) return true;
+      if (_words.contains(p) || _frequencyWords?.containsKey(p) == true) {
+        return true;
+      }
     }
 
     return false;
@@ -1194,4 +1295,21 @@ class OcrDictionary {
 
     return res;
   }
+}
+
+Map<String, int> _parseFrequencyWords(String contents) {
+  final entries = <String, int>{};
+  for (final line in contents.split('\n')) {
+    final fields = line.trim().split(RegExp(r'\s+'));
+    if (fields.length < 2 ||
+        !RegExp(r'^[a-z]+$', caseSensitive: false).hasMatch(fields[0])) {
+      continue;
+    }
+    final frequency = int.tryParse(fields[1]);
+    if (frequency == null) continue;
+    final word = fields[0].toLowerCase();
+    final existing = entries[word];
+    if (existing == null || frequency > existing) entries[word] = frequency;
+  }
+  return entries;
 }

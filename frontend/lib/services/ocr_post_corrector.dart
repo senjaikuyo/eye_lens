@@ -317,6 +317,16 @@ class OcrPostCorrector {
             return prefix + cased + suffix;
           }
         }
+        final spellingCandidate = OcrDictionary.bestSingleEditCorrection(core);
+        if (spellingCandidate != null) {
+          final cased = isAllUpper
+              ? spellingCandidate.toUpperCase()
+              : (isCapitalized
+                    ? spellingCandidate[0].toUpperCase() +
+                          spellingCandidate.substring(1)
+                    : spellingCandidate);
+          return prefix + cased + suffix;
+        }
       }
       return null;
     }
@@ -371,6 +381,19 @@ class OcrPostCorrector {
         }
         return prefix + casedResult + suffix;
       }
+    }
+
+    // K8: FrequencyWords correction stays within one edit and only applies
+    // after OCR-confusable candidates fail to produce a valid word.
+    final spellingCandidate = OcrDictionary.bestSingleEditCorrection(core);
+    if (spellingCandidate != null) {
+      final cased = isAllUpper
+          ? spellingCandidate.toUpperCase()
+          : (isCapitalized
+                ? spellingCandidate[0].toUpperCase() +
+                      spellingCandidate.substring(1)
+                : spellingCandidate);
+      return prefix + cased + suffix;
     }
 
     // Fallback heuristik: digit tunggal di antara huruf kecil (misal: d-1-t -> i)

@@ -65,6 +65,18 @@ class DatabaseHelper extends ChangeNotifier {
 
   /// Timestamp baseline untuk baris pengaturan bawaan. Baris seperti ini
   /// tidak boleh menang atas pengaturan server pada aturan "terbaru menang".
+  /// Baseline bawaan tidak boleh menjadi pending sync hanya karena data
+  /// legacy direasign ke pengguna aktif saat login.
+  bool isUntouchedPengaturan(Map<String, dynamic> row) {
+    final parsed = DateTime.tryParse(
+      row['terakhir_diperbarui'] as String? ?? '',
+    );
+    final baseline = DateTime.tryParse(baselineTimestamp);
+    final atBaseline =
+        parsed != null && baseline != null && !parsed.isAfter(baseline);
+    return atBaseline && isBaselinePengaturan(row);
+  }
+
   static String get baselineTimestamp =>
       DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toIso8601String();
 
@@ -397,10 +409,15 @@ class DatabaseHelper extends ChangeNotifier {
         whereArgs: [userId],
         limit: 1,
       );
+      final legacyRow = legacy.first;
+      final untouchedBaseline = isUntouchedPengaturan(legacyRow);
+
       if (existing.isEmpty) {
+        // Baseline bawaan bukan perubahan pengguna. Pindahkan identitasnya
+        // tanpa menjadikan data pending sync; timestamp epoch tetap dipertahankan.
         await txn.update(
           'tbl_pengaturan',
-          {'user_id': userId, 'is_synch': 0},
+          {'user_id': userId, 'is_synch': untouchedBaseline ? 1 : 0},
           where: 'user_id = ?',
           whereArgs: [legacyUserId],
         );
@@ -408,7 +425,7 @@ class DatabaseHelper extends ChangeNotifier {
         // Baris pengguna sudah ada. Terapkan aturan "terbaru menang" agar
         // data legacy tidak menimpa pengaturan yang lebih baru.
         final legacyTime = DateTime.tryParse(
-          legacy.first['terakhir_diperbarui'] as String? ?? '',
+          legacyRow['terakhir_diperbarui'] as String? ?? '',
         );
         final existingTime = DateTime.tryParse(
           existing.first['terakhir_diperbarui'] as String? ?? '',
@@ -418,10 +435,13 @@ class DatabaseHelper extends ChangeNotifier {
             (existingTime == null || legacyTime.isAfter(existingTime));
 
         if (legacyIsNewer) {
-          final merged = Map<String, dynamic>.from(legacy.first)
+          final merged = Map<String, dynamic>.from(legacyRow)
             ..remove('id')
-            ..['user_id'] = userId
-            ..['is_synch'] = 0;
+            ..['user_id'] = userId;
+          // Hanya pengaturan yang benar-benar diubah yang ditandai pending.
+          if (!untouchedBaseline) {
+            merged['is_synch'] = 0;
+          }
           await txn.update(
             'tbl_pengaturan',
             merged,
@@ -607,7 +627,12 @@ class DatabaseHelper extends ChangeNotifier {
       whereArgs: [_scope(userId), 0],
       limit: 1,
     );
-    return res.isNotEmpty ? res.first : null;
+    if (res.isEmpty) return null;
+
+    // Pengaman untuk instalasi lama: baseline yang terlanjur ditandai pending
+    // tidak boleh dikirim dengan timestamp epoch ke backend MySQL.
+    final row = res.first;
+    return isUntouchedPengaturan(row) ? null : row;
   }
 
   /// Konfirmasi hanya diberikan setelah backend menjawab sukses.

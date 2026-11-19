@@ -295,6 +295,168 @@ void main() {
         await dbHelper.setCurrentUserId(DatabaseHelper.legacyUserId);
       }
     });
+
+    test(
+      '9. Reassignment tidak membuat baseline menjadi pending sync',
+      () async {
+        final dbHelper = DatabaseHelper.instance;
+        final db = await dbHelper.database;
+
+        try {
+          await db.delete('tbl_pengaturan');
+          dbHelper.clearCurrentUser();
+
+          final baseline = await dbHelper.getPengaturan();
+          expect(baseline['is_synch'], 1);
+          expect(
+            baseline['terakhir_diperbarui'],
+            DatabaseHelper.baselineTimestamp,
+          );
+
+          await dbHelper.setCurrentUserId(31);
+
+          final moved = await dbHelper.getPengaturan(userId: 31);
+          expect(moved['user_id'], 31);
+          expect(moved['is_synch'], 1);
+          expect(
+            moved['terakhir_diperbarui'],
+            DatabaseHelper.baselineTimestamp,
+          );
+          expect(await dbHelper.getUnsyncedPengaturan(userId: 31), isNull);
+        } finally {
+          await db.delete(
+            'tbl_pengaturan',
+            where: 'user_id IN (?, ?)',
+            whereArgs: [31, DatabaseHelper.legacyUserId],
+          );
+          await dbHelper.setCurrentUserId(DatabaseHelper.legacyUserId);
+        }
+      },
+    );
+
+    test('10. Pengaturan yang benar-benar diubah tetap pending', () async {
+      final dbHelper = DatabaseHelper.instance;
+      final db = await dbHelper.database;
+      const changedAt = '2026-11-17T10:00:00.000000Z';
+
+      try {
+        await db.delete('tbl_pengaturan');
+        dbHelper.clearCurrentUser();
+
+        await dbHelper.updatePengaturan(
+          {'tema': 'gelap'},
+          terakhirDiperbarui: changedAt,
+          userId: DatabaseHelper.legacyUserId,
+        );
+        expect(
+          await dbHelper.getUnsyncedPengaturan(
+            userId: DatabaseHelper.legacyUserId,
+          ),
+          isNotNull,
+        );
+
+        await dbHelper.setCurrentUserId(32);
+
+        final pending = await dbHelper.getUnsyncedPengaturan(userId: 32);
+        expect(pending, isNotNull);
+        expect(pending!['tema'], 'gelap');
+        expect(pending['terakhir_diperbarui'], changedAt);
+        final timestamps = DatabaseHelper.decodeFieldTimestamps(
+          pending['field_timestamps'],
+          pending['terakhir_diperbarui'] as String?,
+        );
+        expect(timestamps['tema'], changedAt);
+      } finally {
+        await db.delete(
+          'tbl_pengaturan',
+          where: 'user_id IN (?, ?)',
+          whereArgs: [32, DatabaseHelper.legacyUserId],
+        );
+        await dbHelper.setCurrentUserId(DatabaseHelper.legacyUserId);
+      }
+    });
+
+    test('11. Pergantian akun tidak menukar pengaturan', () async {
+      final dbHelper = DatabaseHelper.instance;
+      final db = await dbHelper.database;
+
+      try {
+        await db.delete('tbl_pengaturan');
+        dbHelper.clearCurrentUser();
+
+        await dbHelper.updatePengaturan(
+          {'tema': 'gelap-akun-33'},
+          terakhirDiperbarui: '2026-11-17T10:00:00.000000Z',
+          userId: 33,
+        );
+        await dbHelper.getPengaturan(userId: DatabaseHelper.legacyUserId);
+
+        await dbHelper.setCurrentUserId(34);
+
+        final account33 = await dbHelper.getPengaturan(userId: 33);
+        expect(account33['tema'], 'gelap-akun-33');
+        expect(account33['is_synch'], 0);
+
+        final account34 = await dbHelper.getPengaturan(userId: 34);
+        expect(account34['user_id'], 34);
+        expect(account34['tema'], 'light');
+        expect(account34['is_synch'], 1);
+        expect(
+          account34['terakhir_diperbarui'],
+          DatabaseHelper.baselineTimestamp,
+        );
+      } finally {
+        await db.delete(
+          'tbl_pengaturan',
+          where: 'user_id IN (?, ?, ?)',
+          whereArgs: [33, 34, DatabaseHelper.legacyUserId],
+        );
+        await dbHelper.setCurrentUserId(DatabaseHelper.legacyUserId);
+      }
+    });
+
+    test(
+      '12. Baseline lama yang terlanjur pending tetap tidak dikirim',
+      () async {
+        final dbHelper = DatabaseHelper.instance;
+        final db = await dbHelper.database;
+
+        try {
+          await db.delete('tbl_pengaturan');
+          dbHelper.clearCurrentUser();
+          await dbHelper.getPengaturan();
+
+          // Simulasikan baris baseline lama yang terlanjur is_synch = 0.
+          await db.update(
+            'tbl_pengaturan',
+            {'is_synch': 0},
+            where: 'user_id = ?',
+            whereArgs: [DatabaseHelper.legacyUserId],
+          );
+          expect(
+            await dbHelper.getUnsyncedPengaturan(
+              userId: DatabaseHelper.legacyUserId,
+            ),
+            isNull,
+          );
+
+          // Perubahan nyata dengan timestamp valid tetap terdeteksi.
+          await dbHelper.updatePengaturan(
+            {'tema': 'gelap'},
+            terakhirDiperbarui: '2026-11-17T10:00:00.000000Z',
+            userId: DatabaseHelper.legacyUserId,
+          );
+          final pending = await dbHelper.getUnsyncedPengaturan(
+            userId: DatabaseHelper.legacyUserId,
+          );
+          expect(pending, isNotNull);
+          expect(pending!['tema'], 'gelap');
+        } finally {
+          await db.delete('tbl_pengaturan');
+          await dbHelper.setCurrentUserId(DatabaseHelper.legacyUserId);
+        }
+      },
+    );
   });
 
   group('HistoryProvider Reactive Tests', () {

@@ -678,4 +678,80 @@ void main() {
       uuid,
     );
   });
+
+  test('18.Baseline hasil reassignment tidak dikirim ke server', () async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete('tbl_pengaturan');
+    DatabaseHelper.instance.clearCurrentUser();
+
+    // Baseline bawaan seperti saat aplikasi pertama kali dibuka.
+    await DatabaseHelper.instance.getPengaturan();
+    await DatabaseHelper.instance.setCurrentUserId(10);
+
+    final client = FakeClient((request) async {
+      if (isPut(request)) {
+        fail('Pengaturan baseline tidak boleh dikirim ke server');
+      }
+      return okSyncResponse([]);
+    });
+    final service = SyncService(
+      authService: FakeAuthService(token: 'token', userId: 10),
+      client: client,
+      connectivity: FakeConnectivity([ConnectivityResult.wifi]),
+    );
+
+    await service.syncPending();
+
+    expect(client.requests.where(isPut), isEmpty);
+    final row = await DatabaseHelper.instance.getPengaturan();
+    expect(row['is_synch'], 1);
+    expect(row['terakhir_diperbarui'], DatabaseHelper.baselineTimestamp);
+  });
+
+  test(
+    '19.Pengaturan pending valid tetap dikirim setelah reassignment',
+    () async {
+      const changedAt = '2026-11-17T10:00:00.000000Z';
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('tbl_pengaturan');
+      DatabaseHelper.instance.clearCurrentUser();
+
+      await DatabaseHelper.instance.updatePengaturan(
+        {'tema': 'gelap'},
+        terakhirDiperbarui: changedAt,
+        userId: DatabaseHelper.legacyUserId,
+      );
+      await DatabaseHelper.instance.setCurrentUserId(10);
+
+      Map<String, dynamic>? sentBody;
+      final client = FakeClient((request) async {
+        if (isPut(request)) {
+          sentBody = jsonDecode(
+            (request as http.Request).body,
+          ) as Map<String, dynamic>;
+          return okPutResponse(
+            serverPengaturan(terakhirDiperbarui: changedAt, tema: 'gelap'),
+          );
+        }
+        return okSyncResponse([]);
+      });
+      final service = SyncService(
+        authService: FakeAuthService(token: 'token', userId: 10),
+        client: client,
+        connectivity: FakeConnectivity([ConnectivityResult.wifi]),
+      );
+
+      await service.syncPending();
+
+      expect(sentBody, isNotNull);
+      final timestamps = sentBody!['field_timestamps'] as Map<String, dynamic>;
+      expect(timestamps['tema'], changedAt);
+      expect(sentBody!['terakhir_diperbarui'], changedAt);
+      expect(client.requests.where(isPut).length, 1);
+
+      final row = await DatabaseHelper.instance.getPengaturan();
+      expect(row['tema'], 'gelap');
+      expect(row['is_synch'], 1);
+    },
+  );
 }

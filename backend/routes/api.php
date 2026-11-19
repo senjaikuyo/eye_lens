@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\MasukanController;
+use App\Http\Controllers\Api\PengaturanController;
+use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -16,4 +19,11 @@ Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Route Sinkronisasi
+    Route::post('/sync', [SyncController::class, 'sync']);
+
+    // Pengaturan dan masukan
+    Route::put('/pengaturan', [PengaturanController::class, 'update']);
+    Route::post('/masukan', [MasukanController::class, 'store']);
 });

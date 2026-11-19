@@ -1,17 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/riwayat_model.dart';
 import '../services/database_helper.dart';
+import '../services/sync_service.dart';
 
 class HistoryProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final SyncService _syncService = SyncService();
 
   List<RiwayatModel> _items = [];
   bool _isLoading = false;
+  bool _isSyncing = false;
   String? _errorMessage;
 
   List<RiwayatModel> get items => List.unmodifiable(_items);
   bool get isLoading => _isLoading;
+  bool get isSyncing => _isSyncing;
   bool get isEmpty => _items.isEmpty;
   String? get errorMessage => _errorMessage;
 
@@ -68,6 +74,7 @@ class HistoryProvider extends ChangeNotifier {
     final waktu = DateTime.now().toIso8601String();
 
     final model = RiwayatModel(
+      clientUuid: DatabaseHelper.newClientUuid(),
       judul: title,
       isiTeks: cleanText,
       jumlahKata: wordCount,
@@ -79,14 +86,46 @@ class HistoryProvider extends ChangeNotifier {
     try {
       final id = await _dbHelper.insertRiwayatModel(model);
       final savedModel = model.copyWith(idRiwayat: id);
-      // Reload agar trigger 50 data di SQLite langsung sinkron dengan list di UI
+
+      // Reload agar trigger data di SQLite langsung sinkron dengan list di UI
       await loadRiwayat();
+
+      // Otomatis mencoba sinkron saat ada data baru. Jika offline, status
+      // lokal tetap 0 dan akan dicoba lagi oleh SyncCoordinator.
+      unawaited(syncToServer());
+
       return savedModel;
     } catch (e) {
       debugPrint('Error saving history: $e');
       _errorMessage = 'Gagal menyimpan riwayat';
       notifyListeners();
       return null;
+    }
+  }
+
+  /// Menjalankan proses sinkronisasi riwayat lokal ke server.
+  /// Kredensial diambil oleh [SyncService] dari AuthService, bukan dari UI.
+  Future<bool> syncToServer() async {
+    if (_isSyncing) {
+      return false;
+    }
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      final result = await _syncService.syncPending();
+      if (result.success) {
+        // Muat ulang agar indikator is_synch = 1 tampil di UI.
+        _items = await _dbHelper.getRiwayatModelList();
+      }
+      return result.success;
+    } catch (e) {
+      debugPrint('Error syncing history: ${e.runtimeType}');
+      return false;
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
   }
 

@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../services/database_helper.dart';
+import '../services/pengaturan_service.dart';
+
 class LanguageProvider extends ChangeNotifier {
+  final PengaturanService _pengaturanService;
+
   String _language = 'Indonesian'; // 'Indonesian' or 'English'
+  bool _disposed = false;
+  late final Future<void> _initialization;
+
+  LanguageProvider({PengaturanService? pengaturanService})
+    : _pengaturanService = pengaturanService ?? PengaturanService.instance {
+    DatabaseHelper.instance.addListener(_load);
+    _initialization = _load();
+  }
+
+  /// Selesai setelah nilai awal dibaca dari SQLite.
+  Future<void> get initialized => _initialization;
 
   String get language => _language;
   bool get isIndonesian => _language == 'Indonesian';
@@ -9,10 +25,30 @@ class LanguageProvider extends ChangeNotifier {
 
   Locale get locale => isIndonesian ? const Locale('id') : const Locale('en');
 
-  void setLanguage(String lang) {
-    if (_language != lang) {
-      _language = lang;
-      notifyListeners();
+  Future<void> _load() async {
+    try {
+      final row = await _pengaturanService.load();
+      _language = row['bahasa_aplikasi'] == 'en' ? 'English' : 'Indonesian';
+    } catch (_) {
+      // Tetap gunakan bahasa bawaan bila database belum siap.
+    } finally {
+      if (!_disposed) notifyListeners();
     }
+  }
+
+  void setLanguage(String lang) {
+    if (_language == lang) return;
+    _language = lang;
+    notifyListeners();
+    _pengaturanService.recordChange(
+      bahasaAplikasi: lang == 'English' ? 'en' : 'id',
+    );
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    DatabaseHelper.instance.removeListener(_load);
+    super.dispose();
   }
 }

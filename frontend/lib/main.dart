@@ -1,18 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_theme.dart';
+import 'providers/auth_provider.dart';
+import 'providers/display_preferences_provider.dart';
 import 'providers/history_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/settings_provider.dart';
-import 'providers/display_preferences_provider.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/pengaturan_service.dart';
+import 'services/sync_coordinator.dart';
 
 /// RouteObserver global untuk mendeteksi visibilitas layar (misal mematikan kamera saat pindah rute).
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -20,9 +25,30 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Sesi pengguna dimuat lebih dulu agar scope data lokal (user_id) benar
+  // sebelum provider lain membaca database.
+  final authProvider = AuthProvider();
+  await authProvider.load();
+
+  // Migrasi pengaturan lama dari SharedPreferences sebelum provider membaca
+  // SQLite. Kegagalan migrasi tidak boleh mencegah aplikasi dibuka.
+  try {
+    await PengaturanService.instance.migrateLegacyPreferences();
+  } catch (_) {}
+
+  // Validasi token tersimpan saat online; saat offline sesi lokal dipertahankan.
+  unawaited(authProvider.validateSession());
+
+  final syncCoordinator = SyncCoordinator(
+    onConnectivityRestored: authProvider.validateSession,
+  );
+  syncCoordinator.start();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),

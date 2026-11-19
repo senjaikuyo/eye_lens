@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/auth/auth_service.dart';
 import '../../widgets/custom_auth_field.dart';
 import '../../widgets/eyelash_icon.dart';
@@ -81,6 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      if (!mounted) return;
+      // Sinkronkan state aplikasi (termasuk scope user_id data lokal).
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.refresh();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),

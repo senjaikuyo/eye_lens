@@ -90,11 +90,9 @@ class AppStrings {
   String get codeExpiresNotice => isIndonesian
       ? 'Kode verifikasi berlaku selama 10 menit'
       : 'Verification code is valid for 10 minutes';
-  String resendInSeconds(int s) => isIndonesian
-      ? 'Kirim ulang dalam $s detik'
-      : 'Resend in $s seconds';
-  String get resendCode =>
-      isIndonesian ? 'Kirim Ulang Kode' : 'Resend Code';
+  String resendInSeconds(int s) =>
+      isIndonesian ? 'Kirim ulang dalam $s detik' : 'Resend in $s seconds';
+  String get resendCode => isIndonesian ? 'Kirim Ulang Kode' : 'Resend Code';
   String get passwordComplexityRequirements => isIndonesian
       ? 'Kata sandi minimal 8 karakter, kombinasi huruf besar, kecil, angka, dan simbol'
       : 'Password must be at least 8 characters, combination of uppercase, lowercase, numbers, and symbols';
@@ -105,12 +103,9 @@ class AppStrings {
       : 'Password successfully updated! Please login again.';
   String get passwordStrengthLabel =>
       isIndonesian ? 'Kekuatan sandi' : 'Password strength';
-  String get passwordStrengthWeak =>
-      isIndonesian ? 'Lemah' : 'Weak';
-  String get passwordStrengthMedium =>
-      isIndonesian ? 'Sedang' : 'Medium';
-  String get passwordStrengthStrong =>
-      isIndonesian ? 'Kuat' : 'Strong';
+  String get passwordStrengthWeak => isIndonesian ? 'Lemah' : 'Weak';
+  String get passwordStrengthMedium => isIndonesian ? 'Sedang' : 'Medium';
+  String get passwordStrengthStrong => isIndonesian ? 'Kuat' : 'Strong';
 
   // --- Camera & Scanner ---
   String get cameraInitializing =>
@@ -148,6 +143,21 @@ class AppStrings {
   String get feedbackSent => isIndonesian
       ? 'Terima kasih atas masukan Anda!'
       : 'Thank you for your feedback!';
+  String get feedbackEmpty => isIndonesian
+      ? 'Tulis masukan terlebih dahulu.'
+      : 'Please write your feedback first.';
+  String get feedbackFailed => isIndonesian
+      ? 'Masukan gagal dikirim. Silakan coba lagi.'
+      : 'Failed to send feedback. Please try again.';
+  String get feedbackOffline => isIndonesian
+      ? 'Tidak ada koneksi internet. Masukan belum terkirim.'
+      : 'No internet connection. Your feedback was not sent.';
+  String get feedbackTimeout => isIndonesian
+      ? 'Permintaan timeout. Silakan coba lagi.'
+      : 'The request timed out. Please try again.';
+  String get feedbackSessionExpired => isIndonesian
+      ? 'Sesi Anda telah berakhir. Silakan masuk kembali.'
+      : 'Your session has ended. Please log in again.';
   String get textSize => isIndonesian ? 'Ukuran Teks' : 'Text Size';
   String get sizeSmall => isIndonesian ? 'Kecil' : 'Small';
   String get sizeMedium => isIndonesian ? 'Sedang' : 'Medium';
@@ -289,7 +299,7 @@ class AppStrings {
           },
         ];
 
-
   String get name => isIndonesian ? 'Nama' : 'Name';
-  String get nameRequired => isIndonesian ? 'Nama wajib diisi' : 'Name is required';
+  String get nameRequired =>
+      isIndonesian ? 'Nama wajib diisi' : 'Name is required';
 }

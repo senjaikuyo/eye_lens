@@ -1,10 +1,36 @@
+import "dart:async";
 import "dart:convert";
 
 import "package:flutter/foundation.dart";
 import "package:http/http.dart" as http;
 import "package:shared_preferences/shared_preferences.dart";
 
+/// Status validasi sesi tersimpan.
+///
+/// Token Sanctum bersifat opaque, sehingga validitasnya tidak dapat
+/// diverifikasi secara kriptografis saat offline. [offline] berarti sesi
+/// lokal dipertahankan sampai backend dapat dihubungi kembali.
+enum SessionValidation { valid, invalid, offline, noSession }
+
+/// Snapshot token dan identitas pengguna yang dibaca sebagai satu kesatuan.
+///
+/// Dipakai oleh sinkronisasi agar data lokal tidak pernah dikirim dengan token
+/// milik akun lain ketika pengguna berganti akun di tengah proses.
+class AuthSession {
+  final String token;
+  final Map<String, dynamic> user;
+
+  const AuthSession({required this.token, required this.user});
+
+  int? get userId => (user['id'] as num?)?.toInt();
+}
+
 class AuthService {
+  static const String tokenKey = "auth_token";
+  static const String userKey = "auth_user";
+  static const String sessionKey = "auth_session";
+  static const Duration requestTimeout = Duration(seconds: 15);
+
   final http.Client _client;
 
   AuthService({http.Client? client}) : _client = client ?? http.Client();
@@ -24,88 +50,73 @@ class AuthService {
     required String password,
     required String passwordConfirmation,
   }) async {
-    final response = await _client.post(
-      Uri.parse("$baseUrl/register"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "name": name,
-        "email": email,
-        "password": password,
-        "password_confirmation": passwordConfirmation,
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse("$baseUrl/register"),
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "name": name,
+            "email": email,
+            "password": password,
+            "password_confirmation": passwordConfirmation,
+          }),
+        )
+        .timeout(requestTimeout);
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeMap(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      await _saveToken(data["access_token"]);
-      await _saveUser(data["user"]);
+      await _saveSessionFromResponse(data);
       return data;
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Registration failed");
+    throw Exception(
+      _firstError(data) ?? data["message"] ?? "Registration failed",
+    );
   }
 
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
-    final response = await _client.post(
-      Uri.parse("$baseUrl/login"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse("$baseUrl/login"),
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({"email": email, "password": password}),
+        )
+        .timeout(requestTimeout);
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeMap(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      await _saveToken(data["access_token"]);
-      await _saveUser(data["user"]);
+      await _saveSessionFromResponse(data);
       return data;
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Login failed");
+    throw Exception(_firstError(data) ?? data["message"] ?? "Login failed");
   }
 
   /// Meminta kode OTP 6-digit untuk lupa kata sandi
   Future<String> requestPasswordReset(String email) async {
-    final response = await _client.post(
-      Uri.parse("$baseUrl/forgot-password"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "email": email.trim(),
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse("$baseUrl/forgot-password"),
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({"email": email.trim()}),
+        )
+        .timeout(requestTimeout);
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeMap(response);
 
     if (response.statusCode == 429) {
       throw Exception("Terlalu banyak permintaan. Silakan tunggu 15 menit.");
@@ -115,15 +126,9 @@ class AuthService {
       return data["message"] ?? "Kode verifikasi telah dikirim.";
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Gagal mengirim kode verifikasi.");
+    throw Exception(
+      _firstError(data) ?? data["message"] ?? "Gagal mengirim kode verifikasi.",
+    );
   }
 
   /// Verifikasi kode OTP 6-digit dan mengembalikan reset token
@@ -131,33 +136,26 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await _client.post(
-      Uri.parse("$baseUrl/verify-reset-code"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "email": email.trim(),
-        "code": code.trim(),
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse("$baseUrl/verify-reset-code"),
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({"email": email.trim(), "code": code.trim()}),
+        )
+        .timeout(requestTimeout);
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeMap(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data["reset_token"] as String;
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Kode verifikasi tidak valid.");
+    throw Exception(
+      _firstError(data) ?? data["message"] ?? "Kode verifikasi tidak valid.",
+    );
   }
 
   /// Simpan password baru menggunakan reset token
@@ -167,78 +165,242 @@ class AuthService {
     required String password,
     required String passwordConfirmation,
   }) async {
-    final response = await _client.post(
-      Uri.parse("$baseUrl/reset-password"),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "email": email.trim(),
-        "reset_token": resetToken,
-        "password": password,
-        "password_confirmation": passwordConfirmation,
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse("$baseUrl/reset-password"),
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "email": email.trim(),
+            "reset_token": resetToken,
+            "password": password,
+            "password_confirmation": passwordConfirmation,
+          }),
+        )
+        .timeout(requestTimeout);
 
-    final data = jsonDecode(response.body.trim()) as Map<String, dynamic>;
+    final data = _decodeMap(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      // Backend mencabut semua token Sanctum setelah reset password.
+      await clearSession();
       return data["message"] ?? "Kata sandi berhasil diperbarui.";
     }
 
-    if (data["errors"] != null) {
-      final errors = data["errors"] as Map;
-      final firstError = errors.values.first;
-      if (firstError is List && firstError.isNotEmpty) {
-        throw Exception(firstError.first.toString());
-      }
-    }
-
-    throw Exception(data["message"] ?? "Gagal memperbarui kata sandi.");
+    throw Exception(
+      _firstError(data) ?? data["message"] ?? "Gagal memperbarui kata sandi.",
+    );
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("auth_token");
+    final token = await getToken();
 
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       try {
-        await _client.post(
-          Uri.parse("$baseUrl/logout"),
-          headers: {
-            "Accept": "application/json",
-            "Authorization": "Bearer $token",
-          },
-        );
+        await _client
+            .post(
+              Uri.parse("$baseUrl/logout"),
+              headers: {
+                "Accept": "application/json",
+                "Authorization": "Bearer $token",
+              },
+            )
+            .timeout(const Duration(seconds: 10));
       } catch (_) {
         // Biarkan lolos jika jaringan offline agar pembersihan sesi lokal tetap berjalan
       }
     }
 
-    await prefs.remove("auth_token");
-    await prefs.remove("auth_user");
+    await clearSession();
   }
 
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("auth_token");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(tokenKey);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>?> getUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString("auth_user");
-    if (userJson == null) return null;
-    return jsonDecode(userJson);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString(userKey);
+      if (userJson == null) return null;
+      final decoded = jsonDecode(userJson);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("auth_token", token);
+  /// Membaca token dan pengguna sebagai satu snapshot yang konsisten.
+  ///
+  /// Sejak versi ini keduanya disimpan dalam satu nilai `auth_session` agar
+  /// tidak mungkin tercampur antar-akun. Sesi lama (dua kunci terpisah)
+  /// dimigrasikan otomatis ke bentuk gabungan saat pertama kali dibaca.
+  Future<AuthSession?> getSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final raw = prefs.getString(sessionKey);
+      if (raw != null && raw.isNotEmpty) {
+        final session = _decodeSession(raw);
+        if (session != null) return session;
+      }
+
+      final token = prefs.getString(tokenKey);
+      final userJson = prefs.getString(userKey);
+      if (token == null || token.isEmpty || userJson == null) return null;
+
+      final decodedUser = jsonDecode(userJson);
+      if (decodedUser is! Map<String, dynamic> || decodedUser['id'] == null) {
+        return null;
+      }
+
+      final session = AuthSession(token: token, user: decodedUser);
+      // Self-healing: setelah ini token dan pengguna selalu dibaca bersama.
+      await prefs.setString(sessionKey, _encodeSession(session));
+      return session;
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<void> _saveUser(Map<String, dynamic> user) async {
+  Future<bool> hasStoredSession() async {
+    final session = await getSession();
+    return session != null && session.userId != null;
+  }
+
+  /// Validasi token ke `GET /api/me` bila perangkat online.
+  ///
+  /// Token Sanctum tidak dapat diverifikasi offline. Karena itu:
+  /// - 200: sesi sah dan data pengguna diperbarui.
+  /// - 401/403: token dicabut/kedaluwarsa, sesi lokal dihapus.
+  /// - gangguan jaringan/5xx: sesi lokal dipertahankan sebagai offline.
+  Future<SessionValidation> validateSession() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return SessionValidation.noSession;
+
+    try {
+      final response = await _client
+          .get(
+            Uri.parse("$baseUrl/me"),
+            headers: {
+              "Accept": "application/json",
+              "Authorization": "Bearer $token",
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = _decodeMap(response);
+        final user = data["user"];
+        if (user is Map<String, dynamic>) {
+          await _saveSession(token, user);
+        }
+        return SessionValidation.valid;
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await clearSession();
+        return SessionValidation.invalid;
+      }
+
+      return SessionValidation.offline;
+    } on TimeoutException {
+      return SessionValidation.offline;
+    } on http.ClientException {
+      return SessionValidation.offline;
+    } catch (_) {
+      return SessionValidation.offline;
+    }
+  }
+
+  Future<void> clearSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(sessionKey);
+      await prefs.remove(tokenKey);
+      await prefs.remove(userKey);
+    } catch (_) {
+      // Penyimpanan lokal tidak tersedia (mis. unit test tanpa mock).
+    }
+  }
+
+  Future<void> _saveSessionFromResponse(Map<String, dynamic> data) async {
+    final token = data["access_token"];
+    final user = data["user"];
+    if (token is! String ||
+        token.isEmpty ||
+        user is! Map<String, dynamic> ||
+        user['id'] == null) {
+      throw Exception("Respons autentikasi tidak valid.");
+    }
+    await _saveSession(token, user);
+  }
+
+  /// Menyimpan token dan pengguna dalam satu nilai agar atomik.
+  Future<void> _saveSession(String token, Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("auth_user", jsonEncode(user));
+    final session = AuthSession(token: token, user: user);
+    await prefs.setString(sessionKey, _encodeSession(session));
+    // Kunci lama tetap dipertahankan untuk kompatibilitas pembaca lain.
+    await prefs.setString(tokenKey, token);
+    await prefs.setString(userKey, jsonEncode(user));
+  }
+
+  String _encodeSession(AuthSession session) {
+    return jsonEncode({'token': session.token, 'user': session.user});
+  }
+
+  AuthSession? _decodeSession(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final token = decoded['token'];
+      final user = decoded['user'];
+      if (token is String &&
+          token.isNotEmpty &&
+          user is Map<String, dynamic> &&
+          user['id'] != null) {
+        return AuthSession(token: token, user: user);
+      }
+    } catch (_) {
+      // Format lama/rusak; pembaca akan mencoba kunci terpisah.
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _decodeMap(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body.trim());
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {
+      // Ditangani di bawah.
+    }
+    throw Exception(
+      response.statusCode >= 500
+          ? "Server sedang bermasalah. Silakan coba lagi."
+          : "Respons server tidak valid.",
+    );
+  }
+
+  String? _firstError(Map<String, dynamic> data) {
+    final errors = data["errors"];
+    if (errors is Map) {
+      for (final value in errors.values) {
+        if (value is List && value.isNotEmpty) {
+          return value.first.toString();
+        }
+        if (value is String && value.isNotEmpty) {
+          return value;
+        }
+      }
+    }
+    return null;
   }
 }

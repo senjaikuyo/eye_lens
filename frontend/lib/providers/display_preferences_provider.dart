@@ -1,28 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/settings_defaults.dart';
+import '../services/database_helper.dart';
+import '../services/pengaturan_service.dart';
+
+/// Preferensi tampilan yang bersumber dari `tbl_pengaturan` (SQLite).
+///
+/// Pemetaan kolom:
+/// - `tema` -> ThemeMode
+/// - `kontras` -> mode kontras tinggi
+/// - `warna_kursor` -> warna sorot (hex)
+/// - `tampilkan_warna_kursor` -> sakelar warna kursor (lokal, tidak disinkron)
+/// - `ukuran_teks` -> ukuran font tampilan teks
 class DisplayPreferencesProvider extends ChangeNotifier {
-  // Default values requested by user:
-  // - High contrast OFF by default
-  // - Light mode by default
+  static const List<Color> highlightColors = SettingsDefaults.highlightColors;
+
+  final PengaturanService _pengaturanService;
+
   ThemeMode _themeMode = ThemeMode.light;
   bool _highContrast = false;
   bool _cursorColor = true;
-  double _fontSize = 32.0; // Baseline range: 18.0 (100%) to 54.0 (300%)
+  double _fontSize = SettingsDefaults.defaultFontSize.toDouble();
+  Color _highlightColor = SettingsDefaults.highlightColors.first;
 
-  // 5 Preset Colors from Figma (Component Color)
-  static const List<Color> highlightColors = [
-    Color(0xFFE58E1B), // Orange
-    Color(0xFF1678BA), // Blue
-    Color(0xFFD42749), // Red
-    Color(0xFF1FB16D), // Green
-    Color(0xFF7B38D8), // Purple
-  ];
+  bool _disposed = false;
+  late final Future<void> _initialization;
 
-  Color _highlightColor = const Color(0xFFE58E1B);
+  DisplayPreferencesProvider({PengaturanService? pengaturanService})
+    : _pengaturanService = pengaturanService ?? PengaturanService.instance {
+    DatabaseHelper.instance.addListener(_load);
+    _initialization = _load();
+  }
 
-  DisplayPreferencesProvider() {
-    _loadPreferences();
+  /// Selesai setelah nilai awal dibaca dari SQLite.
+  Future<void> get initialized => _initialization;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    DatabaseHelper.instance.removeListener(_load);
+    super.dispose();
   }
 
   ThemeMode get themeMode => _themeMode;
@@ -38,116 +55,96 @@ class DisplayPreferencesProvider extends ChangeNotifier {
     return _themeMode == ThemeMode.dark;
   }
 
-  Future<void> _loadPreferences() async {
+  Future<void> _load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString('theme_mode');
-      if (savedTheme != null) {
-        if (savedTheme == 'dark') {
-          _themeMode = ThemeMode.dark;
-        } else if (savedTheme == 'system') {
-          _themeMode = ThemeMode.system;
-        } else {
-          _themeMode = ThemeMode.light;
-        }
-      }
+      final row = await _pengaturanService.load();
 
-      final savedContrast = prefs.getBool('high_contrast');
-      if (savedContrast != null) {
-        _highContrast = savedContrast;
-      }
+      _themeMode = _themeModeFromValue(row['tema'] as String?);
+      _highContrast =
+          row['kontras'] == SettingsDefaults.contrastHigh ||
+          row['kontras'] == 'high';
+      _cursorColor =
+          ((row['tampilkan_warna_kursor'] as num?)?.toInt() ?? 1) != 0;
+      _highlightColor = SettingsDefaults.highlightColorFromHex(
+        row['warna_kursor'] as String?,
+      );
 
-      final savedCursor = prefs.getBool('cursor_color');
-      if (savedCursor != null) {
-        _cursorColor = savedCursor;
+      final size = (row['ukuran_teks'] as num?)?.toDouble();
+      if (size != null) {
+        _fontSize = size.clamp(
+          SettingsDefaults.minFontSize.toDouble(),
+          SettingsDefaults.maxFontSize.toDouble(),
+        );
       }
+    } catch (_) {
+      // Tetap gunakan nilai bawaan bila database belum siap.
+    } finally {
+      if (!_disposed) notifyListeners();
+    }
+  }
 
-      final savedColorIndex = prefs.getInt('highlight_color_index');
-      if (savedColorIndex != null &&
-          savedColorIndex >= 0 &&
-          savedColorIndex < highlightColors.length) {
-        _highlightColor = highlightColors[savedColorIndex];
-      }
+  ThemeMode _themeModeFromValue(String? value) {
+    switch (value) {
+      case 'dark':
+      case 'gelap':
+        return ThemeMode.dark;
+      case 'system':
+        return ThemeMode.system;
+      case 'sistem':
+        // Nilai bawaan skema v2; tampilan lama selalu dimulai dari mode terang.
+        return ThemeMode.light;
+      default:
+        return ThemeMode.light;
+    }
+  }
 
-      final savedFontSize = prefs.getDouble('speech_font_size');
-      if (savedFontSize != null &&
-          savedFontSize >= 18.0 &&
-          savedFontSize <= 54.0) {
-        _fontSize = savedFontSize;
-      }
-
-      notifyListeners();
-    } catch (_) {}
+  String _themeValue(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.dark:
+        return SettingsDefaults.themeDark;
+      case ThemeMode.system:
+        return SettingsDefaults.themeSystem;
+      case ThemeMode.light:
+        return SettingsDefaults.themeLight;
+    }
   }
 
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
     notifyListeners();
-    _saveThemeMode(mode);
-  }
-
-  Future<void> _saveThemeMode(ThemeMode mode) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      String val = 'light';
-      if (mode == ThemeMode.dark) val = 'dark';
-      if (mode == ThemeMode.system) val = 'system';
-      await prefs.setString('theme_mode', val);
-    } catch (_) {}
+    _pengaturanService.recordChange(tema: _themeValue(mode));
   }
 
   void toggleHighContrast(bool val) {
     _highContrast = val;
     notifyListeners();
-    _saveHighContrast(val);
-  }
-
-  Future<void> _saveHighContrast(bool val) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('high_contrast', val);
-    } catch (_) {}
+    _pengaturanService.recordChange(
+      kontras: val
+          ? SettingsDefaults.contrastHigh
+          : SettingsDefaults.contrastNormal,
+    );
   }
 
   void toggleCursorColor(bool val) {
     _cursorColor = val;
     notifyListeners();
-    _saveCursorColor(val);
-  }
-
-  Future<void> _saveCursorColor(bool val) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('cursor_color', val);
-    } catch (_) {}
+    _pengaturanService.recordChange(tampilkanWarnaKursor: val ? 1 : 0);
   }
 
   void setHighlightColor(Color color) {
     _highlightColor = color;
     notifyListeners();
-    _saveHighlightColor(color);
-  }
-
-  Future<void> _saveHighlightColor(Color color) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final idx = highlightColors.indexOf(color);
-      if (idx != -1) {
-        await prefs.setInt('highlight_color_index', idx);
-      }
-    } catch (_) {}
+    _pengaturanService.recordChange(
+      warnaKursor: SettingsDefaults.hexFromColor(color),
+    );
   }
 
   void setFontSize(double size) {
-    _fontSize = size;
+    _fontSize = size.clamp(
+      SettingsDefaults.minFontSize.toDouble(),
+      SettingsDefaults.maxFontSize.toDouble(),
+    );
     notifyListeners();
-    _saveFontSize(size);
-  }
-
-  Future<void> _saveFontSize(double size) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('speech_font_size', size);
-    } catch (_) {}
+    _pengaturanService.recordChange(ukuranTeks: _fontSize.round());
   }
 }

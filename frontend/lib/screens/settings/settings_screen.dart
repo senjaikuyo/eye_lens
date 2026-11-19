@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_strings.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/display_preferences_provider.dart';
@@ -24,6 +25,19 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
+  void initState() {
+    super.initState();
+    // Segarkan data profil dari GET /api/me bila online. Saat offline,
+    // data sesi lokal tetap ditampilkan.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        context.read<AuthProvider>().validateSession();
+      } catch (_) {}
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<DisplayPreferencesProvider>();
     final isDark = themeProvider.isDark(context);
@@ -33,6 +47,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final selectedLanguage = languageProvider.language;
     final settingsProvider = context.watch<SettingsProvider>();
     final autoPlayAudio = settingsProvider.autoPlayAudio;
+
+    String email = '-';
+    try {
+      email = context.watch<AuthProvider>().email ?? '-';
+    } catch (_) {
+      // Provider tidak tersedia (mis. widget test terisolasi).
+    }
 
     final dividerColor = isHighContrast
         ? (isDark ? Colors.white : Colors.black)
@@ -91,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // 1. Email Section
               SettingsEmailTile(
                 emailLabel: strings.email,
-                email: 'afifhamzah21@gmail.com',
+                email: email,
                 isDark: isDark,
                 isHighContrast: isHighContrast,
               ),
@@ -158,7 +179,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: autoPlayAudio,
                         activeThumbColor: isDark ? Colors.white : Colors.black,
                         onChanged: (val) {
-                          context.read<SettingsProvider>().setAutoPlayAudio(val);
+                          context.read<SettingsProvider>().setAutoPlayAudio(
+                            val,
+                          );
                         },
                       ),
                     ),

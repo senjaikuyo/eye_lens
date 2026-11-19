@@ -52,18 +52,9 @@ void main() {
   group('LineHeightStats', () {
     test('menghitung tinggi minimum, rata-rata, dan jumlah di bawah 16px', () {
       final stats = LineHeightStats.fromLines([
-        const OcrLineData(
-          text: 'a',
-          boundingBox: Rect.fromLTWH(0, 0, 10, 10),
-        ),
-        const OcrLineData(
-          text: 'b',
-          boundingBox: Rect.fromLTWH(0, 10, 10, 30),
-        ),
-        const OcrLineData(
-          text: 'c',
-          boundingBox: Rect.fromLTWH(0, 40, 10, 50),
-        ),
+        const OcrLineData(text: 'a', boundingBox: Rect.fromLTWH(0, 0, 10, 10)),
+        const OcrLineData(text: 'b', boundingBox: Rect.fromLTWH(0, 10, 10, 30)),
+        const OcrLineData(text: 'c', boundingBox: Rect.fromLTWH(0, 40, 10, 50)),
       ]);
 
       expect(stats.min, 10);
@@ -172,7 +163,17 @@ void main() {
         deviceOrientation: 'portraitUp',
         imageSentToMlKit: const Size(1080, 1920),
         passes: const [],
-        rejectedLines: const [],
+        rejectedLines: const [
+          {'text': 'rahasia ditolak', 'explanation': 'mengandung rahasia'},
+        ],
+        doubtfulLines: const [
+          {
+            'text': 'rahasia diragukan',
+            'explanation': 'mengandung rahasia',
+            'suspicionScore': 3.0,
+            'signals': ['lowConfidence', 'isolated'],
+          },
+        ],
         rawText: 'Teks rahasia pengguna',
         filteredText: 'Teks rahasia',
         formattedText: 'Teks rahasia',
@@ -189,6 +190,7 @@ void main() {
 
       final encoded = jsonEncode(json);
       expect(encoded.contains('rahasia'), isFalse);
+      expect((json['doubtfulLines'] as List).single['suspicionScore'], 3.0);
     });
 
     test('includeText true menyertakan isi teks', () {

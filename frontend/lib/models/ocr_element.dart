@@ -24,6 +24,7 @@ class OcrResult {
   final OcrDocumentData? documentData;
   final FormattedTextResult? formattedResult;
   final List<RejectedLineInfo> rejectedLines;
+  final List<RejectedLineInfo> doubtfulLines;
   final bool fallbackUsed;
   final bool hasLowQualityWarning;
   final bool allLinesFilteredOut;
@@ -40,6 +41,7 @@ class OcrResult {
     this.documentData,
     this.formattedResult,
     this.rejectedLines = const [],
+    this.doubtfulLines = const [],
     this.fallbackUsed = false,
     this.hasLowQualityWarning = false,
     this.allLinesFilteredOut = false,
@@ -57,6 +59,7 @@ class OcrResult {
       documentData: documentData,
       formattedResult: formattedResult,
       rejectedLines: rejectedLines,
+      doubtfulLines: doubtfulLines,
       fallbackUsed: fallbackUsed,
       hasLowQualityWarning: hasLowQualityWarning,
       allLinesFilteredOut: allLinesFilteredOut,

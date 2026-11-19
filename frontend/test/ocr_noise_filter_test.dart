@@ -2,665 +2,270 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eye_lens/models/text_formatter_models.dart';
+import 'package:eye_lens/models/ocr_element.dart';
 import 'package:eye_lens/services/ocr_noise_filter.dart';
 import 'package:eye_lens/services/text_formatter.dart';
 
 void main() {
-  group('OcrNoiseFilter Tests', () {
-    const defaultImageSize = Size(1000, 1000);
+  const size = Size(1000, 1000);
+  OcrLineData line(
+    String text, {
+    double? confidence,
+    double x = 100,
+    double y = 100,
+    double height = 30,
+  }) => OcrLineData(
+    text: text,
+    confidence: confidence,
+    boundingBox: Rect.fromLTWH(x, y, 150, height),
+  );
+  NoiseFilterResult filter(
+    List<OcrLineData> lines, {
+    OcrNoiseFilterConfig config = const OcrNoiseFilterConfig(),
+  }) => OcrNoiseFilter.filter(lines: lines, imageSize: size, config: config);
 
-    test('1. Baris dengan confidence rendah dibuang, sedangkan confidence null dilewati', () {
+  test('null and zero confidence are unavailable, not low confidence', () {
+    for (final confidence in <double?>[
+      null,
+      0,
+      .3,
+      double.nan,
+      double.infinity,
+    ]) {
+      final result = filter([
+        line('Valid complete sentence', confidence: confidence),
+      ]);
+      expect(result.acceptedLines, hasLength(1));
+      expect(result.doubtfulLines, isEmpty);
+      expect(result.rejectedLines, isEmpty);
+    }
+  });
+
+  test(
+    'one weak confidence, size, position or distance signal preserves text',
+    () {
       final lines = [
-        const OcrLineData(
-          text: 'Teks utama berkualitas tinggi',
-          boundingBox: Rect.fromLTWH(100, 100, 400, 30),
-          confidence: 0.95,
-        ),
-        const OcrLineData(
-          text: 'Teks samar-samar tidak yakin',
-          boundingBox: Rect.fromLTWH(100, 150, 400, 30),
-          confidence: 0.35, // < 0.50
-        ),
-        const OcrLineData(
-          text: 'Teks tanpa data confidence',
-          boundingBox: Rect.fromLTWH(100, 200, 400, 30),
-          confidence: null, // Harus dilewati tanpa gagal
-        ),
+        line('Main document paragraph'),
+        line('Another document paragraph', y: 140),
+        line('Small but valid footnote', y: 180, height: 2),
+        line('Text touching left edge', x: 0, y: 220),
+        line('Text touching right edge', x: 850, y: 260),
+        line('artifak', y: 850),
+        line('Low confidence sentence', y: 300, confidence: .2),
       ];
+      final result = filter(lines);
+      expect(result.acceptedLines, orderedEquals(lines));
+      expect(result.rejectedLines, isEmpty);
+      expect(result.doubtfulLines, isEmpty);
+    },
+  );
 
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 2);
-      expect(result.rejectedLines.length, 1);
-      expect(
-        result.rejectedLines.first.reason,
+  test('combined signals quarantine separately, never hard reject', () {
+    final suspect = line('ab###', confidence: .2, x: 0, y: 850, height: 2);
+    final result = filter([
+      line('Main paragraph'),
+      line('Another paragraph', y: 140),
+      suspect,
+    ]);
+    expect(result.acceptedLines, hasLength(2));
+    expect(result.rejectedLines, isEmpty);
+    final doubtful = result.doubtfulLines.single;
+    expect(doubtful.line, same(suspect));
+    expect(doubtful.reason, NoiseRejectionReason.combinedSuspicion);
+    expect(
+      doubtful.signals,
+      containsAll([
         NoiseRejectionReason.lowConfidence,
-      );
-      expect(result.acceptedLines[0].text, 'Teks utama berkualitas tinggi');
-      expect(result.acceptedLines[1].text, 'Teks tanpa data confidence');
-    });
-
-    test(
-      '2. Tulisan sangat kecil di latar belakang (< 40% median) dibuang',
-      () {
-        // Median tinggi ~30px. 40% dari 30px = 12px.
-        // Baris dengan tinggi 8px harus dibuang.
-        final lines = [
-          const OcrLineData(
-            text: 'Judul Dokumen Utama',
-            boundingBox: Rect.fromLTWH(100, 100, 400, 30),
-          ),
-          const OcrLineData(
-            text: 'Isi teks dokumen baris pertama',
-            boundingBox: Rect.fromLTWH(100, 140, 400, 30),
-          ),
-          const OcrLineData(
-            text: 'background noise watermark',
-            boundingBox: Rect.fromLTWH(100, 180, 200, 8), // 8 < 12
-          ),
-        ];
-
-        final result = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-        );
-
-        expect(result.acceptedLines.length, 2);
-        expect(result.rejectedLines.length, 1);
-        expect(
-          result.rejectedLines.first.reason,
-          NoiseRejectionReason.tooSmall,
-        );
-        expect(
-          result.rejectedLines.first.line.text,
-          'background noise watermark',
-        );
-      },
-    );
-
-    test('3. Baris terpotong di tepi foto dibuang', () {
-      final lines = [
-        // Baris normal di tengah
-        const OcrLineData(
-          text: 'Teks aman di tengah dokumen',
-          boundingBox: Rect.fromLTWH(200, 200, 400, 30),
-        ),
-        // Baris terpotong di tepi kiri (left <= 4)
-        const OcrLineData(
-          text: 'otong di kiri',
-          boundingBox: Rect.fromLTWH(2, 300, 150, 30),
-        ),
-        // Baris terpotong di tepi kanan (right >= 1000 - 4)
-        const OcrLineData(
-          text: 'terpotong di kan',
-          boundingBox: Rect.fromLTWH(850, 350, 150, 30), // right = 1000
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 1);
-      expect(result.rejectedLines.length, 2);
-      expect(result.rejectedLines[0].reason, NoiseRejectionReason.edgeBoundary);
-      expect(result.rejectedLines[1].reason, NoiseRejectionReason.edgeBoundary);
-      expect(result.acceptedLines.first.text, 'Teks aman di tengah dokumen');
-    });
-
-    test('4. Baris pendek yang terpencil jauh dari kelompok utama dibuang', () {
-      // Tinggi median = 25. 5x median = 125.
-      // Baris 'noise' berjarak 600px dari baris utama.
-      final lines = [
-        const OcrLineData(
-          text: 'Paragraf utama dokumen halaman satu',
-          boundingBox: Rect.fromLTWH(100, 100, 400, 25),
-        ),
-        const OcrLineData(
-          text: 'Kelanjutan teks dokumen utama',
-          boundingBox: Rect.fromLTWH(100, 130, 400, 25),
-        ),
-        const OcrLineData(
-          text: 'Baris ketiga teks utama',
-          boundingBox: Rect.fromLTWH(100, 160, 400, 25),
-        ),
-        const OcrLineData(
-          text: 'artifak',
-          boundingBox: Rect.fromLTWH(100, 800, 50, 25), // Jarak > 600px
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 3);
-      expect(result.rejectedLines.length, 1);
-      expect(result.rejectedLines.first.reason, NoiseRejectionReason.isolated);
-      expect(result.rejectedLines.first.line.text, 'artifak');
-    });
-
-    test('5. Simbol acak dan rasio alfanumerik rendah (< 50%) dibuang', () {
-      final lines = [
-        const OcrLineData(
-          text: 'Teks dokumen valid dengan tanda baca standar.',
-          boundingBox: Rect.fromLTWH(100, 100, 400, 25),
-        ),
-        const OcrLineData(
-          text: '--- ... ~~~ |',
-          boundingBox: Rect.fromLTWH(100, 130, 150, 25),
-        ),
-        const OcrLineData(
-          text: 'a#%*!@&^?~', // 1 huruf dari 10 karakter = 10% alfanumerik
-          boundingBox: Rect.fromLTWH(100, 160, 150, 25),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 1);
-      expect(
-        result.acceptedLines.first.text,
-        'Teks dokumen valid dengan tanda baca standar.',
-      );
-      expect(result.rejectedLines.length, 2);
-      expect(result.rejectedLines[0].reason, NoiseRejectionReason.symbolOnly);
-      expect(
-        result.rejectedLines[1].reason,
+        NoiseRejectionReason.tooSmall,
         NoiseRejectionReason.lowAlphaNumericRatio,
-      );
-    });
-
-    test('6. Pengecualian: kata pendek sah, angka, dan item daftar tidak boleh dibuang', () {
-      final lines = [
-        const OcrLineData(
-          text: 'a',
-          boundingBox: Rect.fromLTWH(100, 100, 20, 25),
-        ),
-        const OcrLineData(
-          text: 'I',
-          boundingBox: Rect.fromLTWH(100, 130, 20, 25),
-        ),
-        const OcrLineData(
-          text: 'di',
-          boundingBox: Rect.fromLTWH(100, 160, 30, 25),
-        ),
-        const OcrLineData(
-          text: 'ke',
-          boundingBox: Rect.fromLTWH(100, 190, 30, 25),
-        ),
-        const OcrLineData(
-          text: '42',
-          boundingBox: Rect.fromLTWH(100, 220, 40, 25),
-        ),
-        const OcrLineData(
-          text: '1. Poin pertama',
-          boundingBox: Rect.fromLTWH(100, 250, 200, 25),
-        ),
-        const OcrLineData(
-          text: '• Item catatan',
-          boundingBox: Rect.fromLTWH(100, 280, 200, 25),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      // Semua kata sah dan list item harus lolos
-      expect(result.acceptedLines.length, 7);
-      expect(result.rejectedLines.isEmpty, true);
-    });
-
-    test('7. Semua baris tersaring habis ditandai allLinesFilteredOut tanpa fallback OCR mentah', () {
-      final noisyLines = [
-        const OcrLineData(
-          text: '~~~',
-          boundingBox: Rect.fromLTWH(100, 100, 50, 25),
-        ),
-        const OcrLineData(
-          text: '|',
-          boundingBox: Rect.fromLTWH(100, 130, 20, 25),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: noisyLines,
-        imageSize: defaultImageSize,
-      );
-
-      // Semua baris tersaring harus menghasilkan acceptedLines kosong dan penanda allLinesFilteredOut
-      expect(result.acceptedLines.isEmpty, true);
-      expect(result.allLinesFilteredOut, true);
-      expect(result.hasLowQualityWarning, true);
-      expect(result.fallbackUsed, false);
-    });
-
-    test(
-      '8. Filter terintegrasi dengan TextFormatter menjaga akurasi sorotan TTS',
-      () {
-        // Gabungkan tulisan utama di tengah dengan noise tepi dan simbol
-        final lines = [
-          const OcrLineData(
-            text: 'Potongan di tepi',
-            boundingBox: Rect.fromLTWH(0, 50, 120, 25), // Noise tepi
-          ),
-          const OcrLineData(
-            text: 'Buku ini mengajarkan kita tentang',
-            boundingBox: Rect.fromLTWH(100, 100, 400, 25),
-          ),
-          const OcrLineData(
-            text: 'pentingnya membaca dengan nyaman.',
-            boundingBox: Rect.fromLTWH(100, 130, 400, 25),
-          ),
-          const OcrLineData(
-            text: '--- ^^^',
-            boundingBox: Rect.fromLTWH(100, 200, 100, 25), // Simbol
-          ),
-        ];
-
-        final filterResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-        );
-
-        expect(filterResult.acceptedLines.length, 2);
-        expect(filterResult.rejectedLines.length, 2);
-
-        // Teruskan hanya baris yang lolos ke TextFormatter
-        final doc = OcrDocumentData(
-          blocks: [
-            OcrBlockData(
-              text: 'Buku ini mengajarkan kita tentang\npentingnya membaca dengan nyaman.',
-              boundingBox: const Rect.fromLTWH(100, 100, 400, 60),
-              lines: filterResult.acceptedLines,
-            ),
-          ],
-          rawText: 'Buku ini mengajarkan kita tentang\npentingnya membaca dengan nyaman.',
-        );
-
-        final formatted = TextFormatter.format(doc);
-        expect(
-          formatted.fullText,
-          'Buku ini mengajarkan kita tentang pentingnya membaca dengan nyaman.',
-        );
-
-        // Verifikasi seluruh indeks kata akurat
-        for (final word in formatted.allWords) {
-          final slice = formatted.fullText.substring(
-            word.startIndex,
-            word.endIndex,
-          );
-          expect(slice, word.text);
-        }
-      },
+        NoiseRejectionReason.edgeBoundary,
+        NoiseRejectionReason.isolated,
+      ]),
     );
+    expect(doubtful.suspicionScore, greaterThanOrEqualTo(2.5));
+    expect(result.hasLowQualityWarning, isTrue);
+  });
 
-    test('9. Jam di zona atas (status bar) harus dibuang', () {
-      final lines = [
-        const OcrLineData(
-          text: '5:51',
-          boundingBox: Rect.fromLTWH(
-            50,
-            20,
-            80,
-            25,
-          ), // Zona atas (y: 20 <= 80px)
-        ),
-        const OcrLineData(
-          text: '05.51',
-          boundingBox: Rect.fromLTWH(50, 40, 80, 25), // Zona atas
-        ),
-        const OcrLineData(
-          text: 'Judul Dokumen Resmi',
-          boundingBox: Rect.fromLTWH(100, 200, 400, 30),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 1);
-      expect(result.acceptedLines.first.text, 'Judul Dokumen Resmi');
-      expect(result.rejectedLines.length, 2);
-      expect(result.rejectedLines[0].reason, NoiseRejectionReason.clockPattern);
-      expect(result.rejectedLines[1].reason, NoiseRejectionReason.clockPattern);
-    });
-
-    test('10. Persen baterai, nama operator, dan sinyal di zona atas harus dibuang', () {
-      final lines = [
-        const OcrLineData(
-          text: '85%',
-          boundingBox: Rect.fromLTWH(850, 20, 60, 25), // Baterai di kanan atas
-        ),
-        const OcrLineData(
-          text: 'Telkomsel 4G',
-          boundingBox: Rect.fromLTWH(
-            50,
-            20,
-            150,
-            25,
-          ), // Operator + sinyal di kiri atas
-        ),
-        const OcrLineData(
-          text: 'LTE',
-          boundingBox: Rect.fromLTWH(220, 20, 50, 25), // Sinyal
-        ),
-        const OcrLineData(
-          text: 'Wi-Fi',
-          boundingBox: Rect.fromLTWH(280, 20, 60, 25), // Wi-Fi
-        ),
-        const OcrLineData(
-          text: 'Bab 1 Pendahuluan Penelitian',
-          boundingBox: Rect.fromLTWH(100, 250, 400, 30),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 1);
-      expect(result.acceptedLines.first.text, 'Bab 1 Pendahuluan Penelitian');
-      expect(result.rejectedLines.length, 4);
-      for (final rej in result.rejectedLines) {
-        expect(rej.reason, NoiseRejectionReason.statusBarPattern);
-      }
-    });
-
-    test('11. Jam di dalam tabel jadwal harus tetap lolos', () {
-      // Dalam tabel jadwal, jam berdekatan dengan baris kegiatan
-      final lines = [
-        const OcrLineData(
-          text: 'JADWAL ACARA SEMINAR',
-          boundingBox: Rect.fromLTWH(100, 200, 400, 30),
-        ),
-        const OcrLineData(
-          text: '08:00',
-          boundingBox: Rect.fromLTWH(100, 260, 80, 25),
-        ),
-        const OcrLineData(
-          text: 'Registrasi dan Sarapan Pagi',
-          boundingBox: Rect.fromLTWH(200, 260, 300, 25),
-        ),
-        const OcrLineData(
-          text: '09:00',
-          boundingBox: Rect.fromLTWH(100, 300, 80, 25),
-        ),
-        const OcrLineData(
-          text: 'Sambutan dan Pembukaan',
-          boundingBox: Rect.fromLTWH(200, 300, 300, 25),
-        ),
-        const OcrLineData(
-          text: '10:30',
-          boundingBox: Rect.fromLTWH(100, 340, 80, 25),
-        ),
-        const OcrLineData(
-          text: 'Sesi Diskusi Panel',
-          boundingBox: Rect.fromLTWH(200, 340, 300, 25),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      // Seluruh baris jadwal termasuk jam ("08:00", "09:00", "10:30") harus lolos
-      expect(result.acceptedLines.length, 7);
-      expect(result.rejectedLines.isEmpty, true);
-      expect(result.acceptedLines.any((l) => l.text == '08:00'), true);
-      expect(result.acceptedLines.any((l) => l.text == '09:00'), true);
-      expect(result.acceptedLines.any((l) => l.text == '10:30'), true);
-    });
-
-    test('12. Kalimat yang memuat waktu/jam harus tetap lolos', () {
-      final lines = [
-        const OcrLineData(
-          text: 'Pertemuan akan dimulai pukul 14:30 WIB di ruang rapat utama.',
-          boundingBox: Rect.fromLTWH(100, 300, 500, 28),
-        ),
-        const OcrLineData(
-          text: 'Penerbangan dijadwalkan tiba pada 5:51 PM waktu setempat.',
-          boundingBox: Rect.fromLTWH(100, 340, 500, 28),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: lines,
-        imageSize: defaultImageSize,
-      );
-
-      expect(result.acceptedLines.length, 2);
-      expect(result.rejectedLines.isEmpty, true);
-    });
-
-    test(
-      '13. Angka biasa seperti harga atau nomor halaman harus tetap lolos',
-      () {
-        final lines = [
-          const OcrLineData(
-            text: 'Total Belanja:',
-            boundingBox: Rect.fromLTWH(100, 200, 200, 28),
-          ),
-          const OcrLineData(
-            text: 'Rp 50.000',
-            boundingBox: Rect.fromLTWH(100, 240, 150, 28),
-          ),
-          const OcrLineData(
-            text: '15.99', // Harga desimal bukan waktu
-            boundingBox: Rect.fromLTWH(100, 280, 80, 28),
-          ),
-          const OcrLineData(
-            text: '42', // Angka biasa
-            boundingBox: Rect.fromLTWH(100, 320, 40, 28),
-          ),
-          const OcrLineData(
-            text: '12', // Nomor halaman di bagian bawah (y: 950 >= 920)
-            boundingBox: Rect.fromLTWH(500, 950, 30, 25),
-          ),
-        ];
-
-        final result = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-        );
-
-        expect(result.acceptedLines.length, 5);
-        expect(result.rejectedLines.isEmpty, true);
-        expect(result.acceptedLines.any((l) => l.text == 'Rp 50.000'), true);
-        expect(result.acceptedLines.any((l) => l.text == '15.99'), true);
-        expect(result.acceptedLines.any((l) => l.text == '12'), true);
-      },
-    );
-
-    test('14. Deteksi tangkapan layar antarmuka memperketat zona tepi', () {
-      // 5 baris pendek khas komponen UI
-      final screenshotLines = [
-        const OcrLineData(
-          text: '9:41', // Status bar atas (y: 90 berada di zona 12% tangkapan layar)
-          boundingBox: Rect.fromLTWH(40, 90, 60, 20),
-        ),
-        const OcrLineData(
-          text: 'Beranda',
-          boundingBox: Rect.fromLTWH(50, 300, 80, 20),
-        ),
-        const OcrLineData(
-          text: 'Profil',
-          boundingBox: Rect.fromLTWH(50, 350, 80, 20),
-        ),
-        const OcrLineData(
-          text: 'Pengaturan',
-          boundingBox: Rect.fromLTWH(50, 400, 100, 20),
-        ),
-        const OcrLineData(
-          text: 'Keluar',
-          boundingBox: Rect.fromLTWH(50, 450, 80, 20),
-        ),
-      ];
-
-      final result = OcrNoiseFilter.filter(
-        lines: screenshotLines,
-        imageSize: defaultImageSize,
-      );
-
-      // Jam 9:41 di y=90 dibuang karena zona tepi screenshot diperketat (12% = 120px)
+  test(
+    'edge plus low ratio can be doubtful, edge with normal ratio survives',
+    () {
+      final result = filter([
+        line('ab####', x: 0),
+        line('Valid edge text', x: 0, y: 140),
+      ], config: const OcrNoiseFilterConfig(doubtfulThreshold: 2));
+      expect(result.acceptedLines.single.text, 'Valid edge text');
       expect(
-        result.rejectedLines.any(
-          (r) => r.reason == NoiseRejectionReason.clockPattern,
-        ),
-        true,
+        result.doubtfulLines.single.signals,
+        contains(NoiseRejectionReason.edgeBoundary),
       );
-      expect(result.acceptedLines.any((l) => l.text == 'Beranda'), true);
-      expect(result.acceptedLines.any((l) => l.text == 'Pengaturan'), true);
-    });
+      expect(result.rejectedLines, isEmpty);
+    },
+  );
 
-    group('Issue f: Manual OcrScanMode Configuration Tests', () {
-      test('15. Mode Teliti (smallText) meloloskan teks kecil komposisi/catatan kaki (< 40% median)', () {
-        // Median tinggi ~30px. Dalam mode biasa, tinggi 8px (< 12px) dibuang.
-        // Dalam mode smallText (Teliti), batasnya 5% (0.05 * 30 = 1.5px), sehingga 8px lolos.
-        final lines = [
-          const OcrLineData(
-            text: 'PARACETAMOL 500 MG',
-            boundingBox: Rect.fromLTWH(100, 100, 400, 32),
-          ),
-          const OcrLineData(
-            text: 'Indikasi: Meredakan sakit kepala',
-            boundingBox: Rect.fromLTWH(100, 140, 400, 28),
-          ),
-          const OcrLineData(
-            text: 'Komposisi: Paracetamol 500mg, Gliserol, Sorbitol',
-            boundingBox: Rect.fromLTWH(100, 200, 350, 6), // Tinggi 6px
-          ),
-          const OcrLineData(
-            text: 'Exp. Date: 12/28 - Batch No. 9482',
-            boundingBox: Rect.fromLTWH(100, 230, 250, 6), // Tinggi 6px
-          ),
-        ];
+  test('even a high single weight cannot quarantine without corroboration', () {
+    final result = filter([
+      line('Complete sentence', confidence: .1),
+    ], config: const OcrNoiseFilterConfig(confidenceWeight: 100));
+    expect(result.acceptedLines, hasLength(1));
+  });
 
-        // Mode Dokumen standar membuang 2 baris kecil
-        final docResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.document),
-        );
-        expect(docResult.acceptedLines.length, 2);
-        expect(docResult.rejectedLines.length, 2);
-        expect(
-          docResult.rejectedLines.every(
-            (r) => r.reason == NoiseRejectionReason.tooSmall,
-          ),
-          true,
-        );
+  test('hard rules reject empty, pure symbols and isolated single letters', () {
+    final result = filter([
+      line('   '),
+      line('~~~|---', y: 200),
+      line('Z', y: 850),
+    ]);
+    expect(result.acceptedLines, isEmpty);
+    expect(
+      result.rejectedLines.map((r) => r.reason),
+      orderedEquals([
+        NoiseRejectionReason.emptyOrWhitespace,
+        NoiseRejectionReason.symbolOnly,
+        NoiseRejectionReason.isolatedLetter,
+      ]),
+    );
+    expect(result.allLinesFilteredOut, isTrue);
+    expect(result.fallbackUsed, isFalse);
+  });
 
-        // Mode Teliti (smallText) meloloskan seluruh baris
-        final smallResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.smallText),
-        );
-        expect(smallResult.acceptedLines.length, 4);
-        expect(smallResult.rejectedLines.isEmpty, true);
-        expect(
-          smallResult.acceptedLines.any((l) => l.text.startsWith('Komposisi')),
-          true,
-        );
-        expect(
-          smallResult.acceptedLines.any((l) => l.text.startsWith('Exp. Date')),
-          true,
-        );
-      });
+  test('contextual letters, list labels and serial numbers are retained', () {
+    final lines = [
+      line('A'),
+      line('B', y: 140),
+      line('C', y: 180),
+      line('1. First item', y: 220),
+      line('42', y: 900),
+    ];
+    expect(filter(lines).acceptedLines, orderedEquals(lines));
+  });
 
-      test('16. Mode Tulisan Tangan (handwriting) meloloskan baris ber-confidence rendah & rasio simbol tinggi', () {
-        final lines = [
-          const OcrLineData(
-            text: 'Catatan resep dokter harian',
-            boundingBox: Rect.fromLTWH(100, 100, 400, 30),
-            confidence: 0.90,
-          ),
-          const OcrLineData(
-            text: 'Amox 3x1 cth sesudah mkn',
-            boundingBox: Rect.fromLTWH(100, 150, 350, 30),
-            confidence: 0.32, // < 0.50 standar, tapi > 0.25 mode handwriting
-          ),
-          const OcrLineData(
-            text: '~# Parac 500mg - prn #~', // Karakter tanda & alfanumerik campuran
-            boundingBox: Rect.fromLTWH(100, 200, 350, 30),
-            confidence: 0.38,
-          ),
-        ];
+  test('isolated standalone letter rejected even when short-word listed', () {
+    expect(
+      filter([line('I')]).rejectedLines.single.reason,
+      NoiseRejectionReason.isolatedLetter,
+    );
+    expect(filter([line('7')]).acceptedLines, hasLength(1));
+  });
 
-        // Mode Dokumen menolak karena confidence < 0.50
-        final docResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.document),
-        );
-        expect(docResult.acceptedLines.length, 1);
-        expect(docResult.rejectedLines.length, 2);
+  test(
+    'clock, carrier, percentage and prices are not automatic hard rejections',
+    () {
+      final lines = [
+        line('08:00', y: 10),
+        line('85%', x: 850, y: 10),
+        line('Telkomsel 4G', y: 50),
+        line('Wi-Fi', x: 350, y: 50),
+        line('Rp 50.000', y: 250),
+        line('12', y: 950),
+      ];
+      final result = filter(lines);
+      expect(result.acceptedLines, orderedEquals(lines));
+      expect(result.rejectedLines, isEmpty);
+    },
+  );
 
-        // Mode Handwriting meloloskan baris tulisan tangan
-        final hwResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.handwriting),
-        );
-        expect(hwResult.acceptedLines.length, 3);
-        expect(hwResult.rejectedLines.isEmpty, true);
-      });
+  test('screen patterns only contribute a weak suspicion', () {
+    final result = filter([
+      line('09:41', y: 10),
+      line('Content here', y: 200),
+    ], config: OcrNoiseFilterConfig.fromMode(OcrScanMode.screenText));
+    expect(result.acceptedLines, hasLength(2));
+  });
 
-      test('17. Mode Tangkapan Layar (screenText) secara eksplisit menyaring jam di zona atas', () {
-        // Citra dengan hanya 2 baris (tidak memenuhi ambang deteksi otomatis screenshot),
-        // namun pengguna secara eksplisit memilih mode Layar (screenText).
-        final lines = [
-          const OcrLineData(
-            text: '09:41', // Di y: 100 (zona 12% = 120px untuk screenText)
-            boundingBox: Rect.fromLTWH(50, 100, 80, 22),
-          ),
-          const OcrLineData(
-            text: 'Detail Transaksi Pembayaran Berhasil',
-            boundingBox: Rect.fromLTWH(100, 300, 400, 28),
-          ),
-        ];
+  test('all legacy modes share conservative size and confidence scoring', () {
+    final lines = [
+      line('Main document'),
+      line('Continuation', y: 140),
+      line('Small text preserved', y: 180, height: 2, confidence: 0),
+    ];
+    for (final mode in OcrScanMode.values) {
+      expect(
+        filter(
+          lines,
+          config: OcrNoiseFilterConfig.fromMode(mode),
+        ).acceptedLines,
+        orderedEquals(lines),
+      );
+    }
+  });
 
-        // Pada mode Dokumen (auto-detect disabled via fromMode), baris di y=100 berada di luar 8% (80px),
-        // sehingga jam 09:41 tidak dibuang sebagai status bar
-        final docResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.document),
-        );
-        expect(docResult.acceptedLines.any((l) => l.text == '09:41'), true);
+  test('Unicode letters are not symbol-only noise', () {
+    expect(filter([line('Café naïve résumé')]).acceptedLines, hasLength(1));
+  });
 
-        // Pada mode screenText, zona tepi atas diperluas ke 12% (120px), sehingga 09:41 dibuang
-        final screenResult = OcrNoiseFilter.filter(
-          lines: lines,
-          imageSize: defaultImageSize,
-          config: OcrNoiseFilterConfig.fromMode(OcrScanMode.screenText),
-        );
-        expect(screenResult.acceptedLines.length, 1);
-        expect(
-          screenResult.acceptedLines.first.text,
-          'Detail Transaksi Pembayaran Berhasil',
-        );
-        expect(screenResult.rejectedLines.length, 1);
-        expect(
-          screenResult.rejectedLines.first.reason,
-          NoiseRejectionReason.clockPattern,
-        );
-      });
-    });
+  test('doubtful-only result is empty for speech, without raw fallback', () {
+    final result = filter([line('ab###', confidence: .1, x: 0)]);
+    expect(result.doubtfulLines, hasLength(1));
+    expect(result.acceptedLines, isEmpty);
+    expect(result.rejectedLines, isEmpty);
+    expect(result.allLinesFilteredOut, isTrue);
+  });
+
+  test('formatter and highlight receive accepted text only', () {
+    final result = filter([
+      line('Buku ini mengajarkan kita'),
+      line('membaca dengan nyaman.', y: 140),
+      line('ab###', x: 0, y: 800, confidence: .1),
+    ]);
+    final doc = OcrDocumentData(
+      blocks: [
+        OcrBlockData(
+          text: result.acceptedLines.map((l) => l.text).join('\n'),
+          boundingBox: const Rect.fromLTWH(100, 100, 400, 70),
+          lines: result.acceptedLines,
+        ),
+      ],
+      rawText: result.acceptedLines.map((l) => l.text).join('\n'),
+    );
+    final formatted = TextFormatter.format(doc);
+    expect(formatted.fullText, isNot(contains('ab###')));
+    for (final word in formatted.allWords) {
+      expect(
+        formatted.fullText.substring(word.startIndex, word.endIndex),
+        word.text,
+      );
+    }
+  });
+
+  test('compute preserves classification and diagnostics', () async {
+    final lines = [
+      line('Main paragraph'),
+      line('~~~', y: 200),
+      line('ab###', x: 0, y: 800, confidence: .1),
+    ];
+    final expected = filter(lines);
+    final actual = await OcrNoiseFilter.filterWithCompute(
+      OcrNoiseFilterInput(lines: lines, imageSize: size),
+    );
+    expect(
+      actual.acceptedLines.map((l) => l.text),
+      expected.acceptedLines.map((l) => l.text),
+    );
+    expect(
+      actual.doubtfulLines.single.suspicionScore,
+      expected.doubtfulLines.single.suspicionScore,
+    );
+    expect(actual.rejectedLines.single.reason, NoiseRejectionReason.symbolOnly);
+  });
+
+  test('empty input has no warnings', () {
+    final result = filter([]);
+    expect(result.hasLowQualityWarning, isFalse);
+    expect(result.allLinesFilteredOut, isFalse);
+  });
+
+  test('diagnostic copy retains doubtful lines outside speech elements', () {
+    final result = filter([line('ab###', confidence: .1, x: 0)]);
+    final ocr = OcrResult(
+      fullText: '',
+      elements: const [],
+      imageSize: size,
+      doubtfulLines: result.doubtfulLines,
+      allLinesFilteredOut: result.allLinesFilteredOut,
+    );
+    final copied = ocr.copyWith(diagnosticJson: '{}');
+    expect(copied.doubtfulLines.single.line.text, 'ab###');
+    expect(copied.elements, isEmpty);
+    expect(copied.fullText, isEmpty);
   });
 }

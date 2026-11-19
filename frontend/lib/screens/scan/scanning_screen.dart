@@ -544,18 +544,20 @@ class _ScanningScreenState extends State<ScanningScreen>
           'formattedLength': (texts['formatted'] as String?)?.length ?? 0,
         };
       }
-      final rejected = decoded['rejectedLines'];
-      if (rejected is List) {
-        for (final item in rejected) {
+      for (final key in ['rejectedLines', 'doubtfulLines']) {
+        final entries = decoded[key];
+        if (entries is! List) continue;
+        for (final item in entries) {
           if (item is Map) {
             item['text'] = '<disembunyikan>';
+            item['explanation'] = '<disembunyikan>';
           }
         }
       }
       return const JsonEncoder.withIndent('  ').convert(decoded);
     } catch (e) {
       debugPrint('[ScanningScreen] Gagal menyensor log diagnostik: $e');
-      return jsonString;
+      return '{"error":"diagnostic_redaction_failed"}';
     }
   }
 

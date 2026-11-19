@@ -146,6 +146,7 @@ class OcrPassRecord {
   final ConfidenceStats confidence;
   final LineHeightStats lineHeights;
   final String? note;
+  final int doubtfulLines;
 
   const OcrPassRecord({
     required this.name,
@@ -157,6 +158,7 @@ class OcrPassRecord {
     required this.confidence,
     required this.lineHeights,
     this.note,
+    this.doubtfulLines = 0,
   });
 
   Map<String, Object?> toJson() => {
@@ -166,6 +168,7 @@ class OcrPassRecord {
     'rawLines': rawLines,
     'acceptedLines': acceptedLines,
     'rejectedLines': rejectedLines,
+    'doubtfulLines': doubtfulLines,
     'confidence': confidence.toJson(),
     'lineHeights': lineHeights.toJson(),
     if (note != null) 'note': note,
@@ -193,6 +196,7 @@ class OcrDiagnosticReport {
   final List<OcrPassRecord> passes;
 
   final List<Map<String, Object?>> rejectedLines;
+  final List<Map<String, Object?>> doubtfulLines;
 
   final String rawText;
   final String filteredText;
@@ -214,6 +218,7 @@ class OcrDiagnosticReport {
     required this.imageSentToMlKit,
     required this.passes,
     required this.rejectedLines,
+    this.doubtfulLines = const [],
     required this.rawText,
     required this.filteredText,
     required this.formattedText,
@@ -239,7 +244,8 @@ class OcrDiagnosticReport {
         'height': imageSentToMlKit.height,
       },
       'passes': passes.map((p) => p.toJson()).toList(),
-      'rejectedLines': rejectedLines,
+      'rejectedLines': _lineJson(rejectedLines, includeText),
+      'doubtfulLines': _lineJson(doubtfulLines, includeText),
       'texts': includeText
           ? {
               'raw': rawText,
@@ -260,6 +266,22 @@ class OcrDiagnosticReport {
     return const JsonEncoder.withIndent('  ')
         .convert(toJson(includeText: includeText));
   }
+
+  static List<Map<String, Object?>> _lineJson(
+    List<Map<String, Object?>> lines,
+    bool includeText,
+  ) => lines
+      .map(
+        (line) => includeText
+            ? {...line}
+            : {
+                ...line,
+                'text': '<disembunyikan>',
+                // Legacy explanations may embed recognized words. Omit them as well.
+                'explanation': '<disembunyikan>',
+              },
+      )
+      .toList();
 }
 
 /// Pengumpul diagnostik per foto. Aman dipanggil walau diagnostik nonaktif:
@@ -315,6 +337,7 @@ class OcrDiagnosticCollector {
     required String filteredText,
     required String formattedText,
     required int totalDurationMs,
+    List<Map<String, Object?>> doubtfulLines = const [],
   }) {
     final r = _report;
     if (r == null) return null;
@@ -331,6 +354,7 @@ class OcrDiagnosticCollector {
       imageSentToMlKit: imageSentToMlKit,
       passes: passes,
       rejectedLines: rejectedLines,
+      doubtfulLines: doubtfulLines,
       rawText: rawText,
       filteredText: filteredText,
       formattedText: formattedText,
@@ -348,11 +372,13 @@ class OcrDiagnosticCollector {
     required String filteredText,
     required String formattedText,
     required int totalDurationMs,
+    List<Map<String, Object?>> doubtfulLines = const [],
   }) {
     return _build(
       imageSentToMlKit: imageSentToMlKit,
       passes: passes,
       rejectedLines: rejectedLines,
+      doubtfulLines: doubtfulLines,
       rawText: rawText,
       filteredText: filteredText,
       formattedText: formattedText,
@@ -379,6 +405,6 @@ Map<String, Object?> rejectedLineToJson({
       'width': line.boundingBox.width,
       'height': line.boundingBox.height,
     },
-    'explanation': explanation,
+    'explanation': includeText ? explanation : '<disembunyikan>',
   };
 }

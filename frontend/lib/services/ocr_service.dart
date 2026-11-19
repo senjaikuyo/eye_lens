@@ -42,7 +42,6 @@ class OcrService {
   }) async {
     final List<OcrLineData> allLines = [];
     final List<Rect> originalBlockBounds = [];
-    final List<String> originalBlockTexts = [];
 
     for (int bIdx = 0; bIdx < recognizedText.blocks.length; bIdx++) {
       final block = recognizedText.blocks[bIdx];
@@ -53,7 +52,6 @@ class OcrService {
           scale: scale,
         ),
       );
-      originalBlockTexts.add(block.text);
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
           final List<OcrWordData> words = [];
@@ -114,9 +112,8 @@ class OcrService {
       final originalBounds = (bIdx >= 0 && bIdx < originalBlockBounds.length)
           ? originalBlockBounds[bIdx]
           : linesInBlock.first.boundingBox;
-      final originalText = (bIdx >= 0 && bIdx < originalBlockTexts.length)
-          ? originalBlockTexts[bIdx]
-          : linesInBlock.map((l) => l.text).join('\n');
+      // Do not let excluded/doubtful text leak via block-level metadata.
+      final originalText = linesInBlock.map((l) => l.text).join('\n');
 
       filteredBlocks.add(
         OcrBlockData(
@@ -172,6 +169,7 @@ class OcrService {
       documentData: correctedDocumentData,
       formattedResult: formattedResult,
       rejectedLines: filterResult.rejectedLines,
+      doubtfulLines: filterResult.doubtfulLines,
       fallbackUsed: filterResult.fallbackUsed,
       hasLowQualityWarning: filterResult.hasLowQualityWarning,
       allLinesFilteredOut: filterResult.allLinesFilteredOut,
@@ -247,10 +245,14 @@ class OcrService {
             durationMs: localStopwatch.elapsedMilliseconds,
             qualityScore: OcrQualityScorer.scoreLines(result.rawLines),
             rawLines: result.rawLinesCount,
-            acceptedLines: result.rawLines.length - result.rejectedLines.length,
+            acceptedLines:
+                result.rawLines.length -
+                result.rejectedLines.length -
+                result.doubtfulLines.length,
             rejectedLines: result.rejectedLines.length,
             confidence: ConfidenceStats.fromLines(result.rawLines),
             lineHeights: LineHeightStats.fromLines(result.rawLines),
+            doubtfulLines: result.doubtfulLines.length,
           ),
         );
       }
@@ -577,6 +579,19 @@ class OcrService {
               reason: r.reason.name,
               explanation: r.explanation,
             ),
+          )
+          .toList(),
+      doubtfulLines: result.doubtfulLines
+          .map(
+            (r) => {
+              ...rejectedLineToJson(
+                line: r.line,
+                reason: r.reason.name,
+                explanation: r.explanation,
+              ),
+              'suspicionScore': r.suspicionScore,
+              'signals': r.signals.map((s) => s.name).toList(),
+            },
           )
           .toList(),
       rawText: result.rawLines.map((l) => l.text).join('\n'),

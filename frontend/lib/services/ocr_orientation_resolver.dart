@@ -14,6 +14,16 @@ class OcrOrientationResolver {
   static List<int> retryAngles(Size size) =>
       size.width > size.height ? const [180, 90, 270] : const [180];
 
+  static List<int> recoveryAngles(
+    Size size, {
+    required bool resultSufficient,
+    required bool verticalCandidate,
+  }) {
+    if (verticalCandidate) return const [180, 90, 270];
+    if (size.width > size.height && resultSufficient) return const [180];
+    return retryAngles(size);
+  }
+
   static double score(Iterable<OcrLineData> lines) {
     var characters = 0;
     var singles = 0;

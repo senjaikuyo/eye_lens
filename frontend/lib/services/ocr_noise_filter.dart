@@ -93,7 +93,7 @@ class OcrNoiseFilterConfig {
     this.screenshotShortLineCharLimit = 20,
     this.screenshotMinLines = 4,
     this.isScreenTextMode = false,
-    this.enableAutoScreenshotDetection = false,
+    this.enableAutoScreenshotDetection = true,
     this.validShortWords = const {
       'a',
       'i',

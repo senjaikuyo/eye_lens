@@ -50,6 +50,24 @@ Future<Uint8List> createSampleImageBytes({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('tile ROIs cover landscape in top-to-bottom, left-to-right order', () {
+    final tiles = OcrPreprocessor.computeTileRois(const Size(1000, 500));
+    expect(tiles, hasLength(4));
+    expect(tiles.first.top, lessThan(tiles[2].top));
+    expect(tiles[0].right, greaterThan(500));
+    expect(tiles[0].left, lessThan(tiles[1].left));
+    expect(tiles[0].bottom, greaterThan(250));
+    expect(OcrPreprocessor.computeTileRois(Size.zero), isEmpty);
+    expect(
+      OcrPreprocessor.computeTileRois(
+        const Size(100, 100),
+        rows: 3,
+        columns: 3,
+      ),
+      isEmpty,
+    );
+  });
+
   setUpAll(() {
     const MethodChannel channel = MethodChannel(
       'plugins.flutter.io/path_provider',
@@ -251,7 +269,10 @@ void main() {
 
     test('9. computeCenterRoi menghitung retikel tengah secara presisi', () {
       const imageSize = Size(1000, 800);
-      final centerRoi = OcrPreprocessor.computeCenterRoi(imageSize, ratio: 0.70);
+      final centerRoi = OcrPreprocessor.computeCenterRoi(
+        imageSize,
+        ratio: 0.70,
+      );
 
       expect(centerRoi.width, equals(700.0));
       expect(centerRoi.height, equals(560.0));
@@ -299,19 +320,22 @@ void main() {
       decoded.dispose();
     });
 
-    test('12. preprocessHandwriting mendukung strokeThickening false secara aman', () async {
-      final inputBytes = await createSampleImageBytes(width: 80, height: 60);
-      final processedBytes = await OcrPreprocessor.preprocessHandwriting(
-        inputBytes,
-        contrast: 1.5,
-        strokeThickening: false,
-      );
+    test(
+      '12. preprocessHandwriting mendukung strokeThickening false secara aman',
+      () async {
+        final inputBytes = await createSampleImageBytes(width: 80, height: 60);
+        final processedBytes = await OcrPreprocessor.preprocessHandwriting(
+          inputBytes,
+          contrast: 1.5,
+          strokeThickening: false,
+        );
 
-      expect(processedBytes.isNotEmpty, isTrue);
-      final ui.Image decoded = await decodeImageFromList(processedBytes);
-      expect(decoded.width, equals(80));
-      expect(decoded.height, equals(60));
-      decoded.dispose();
-    });
+        expect(processedBytes.isNotEmpty, isTrue);
+        final ui.Image decoded = await decodeImageFromList(processedBytes);
+        expect(decoded.width, equals(80));
+        expect(decoded.height, equals(60));
+        decoded.dispose();
+      },
+    );
   });
 }

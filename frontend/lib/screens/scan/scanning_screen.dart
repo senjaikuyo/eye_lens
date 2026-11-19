@@ -17,7 +17,6 @@ import '../../providers/display_preferences_provider.dart';
 import '../../services/camera_lifecycle_manager.dart';
 import '../../services/camera_service.dart';
 import '../../services/hardware_key_service.dart';
-import '../../services/ocr_noise_filter.dart';
 import '../../services/ocr_service.dart';
 import '../../services/image_blur_detector.dart';
 import '../../services/image_cache_cleanup.dart';
@@ -31,7 +30,6 @@ import 'widgets/camera_viewfinder.dart';
 import 'widgets/no_text_alert_banner.dart';
 import 'widgets/ocr_processing_overlay.dart';
 import 'widgets/scan_bottom_bar.dart';
-import 'widgets/scan_mode_selector.dart';
 import 'widgets/scan_top_bar.dart';
 import 'widgets/zoom_pill_indicator.dart';
 
@@ -52,7 +50,6 @@ class _ScanningScreenState extends State<ScanningScreen>
 
   bool _isSubscribedToRouteObserver = false;
   bool _isFlashOn = false;
-  OcrScanMode _currentScanMode = OcrScanMode.document;
   double _currentZoom = 1.0;
   bool _isBlurry = false;
   bool _isProcessingOcr = false;
@@ -202,19 +199,6 @@ class _ScanningScreenState extends State<ScanningScreen>
     }
   }
 
-  String _getScanModeTip(AppStrings strings) {
-    switch (_currentScanMode) {
-      case OcrScanMode.screenText:
-        return strings.modeScreenTip;
-      case OcrScanMode.smallText:
-        return strings.modeSmallTextTip;
-      case OcrScanMode.handwriting:
-        return strings.modeHandwritingTip;
-      case OcrScanMode.document:
-        return '';
-    }
-  }
-
   void _updateZoom(double newZoom) {
     final clamped = newZoom.clamp(_minZoom, _maxZoom);
     if ((clamped - _currentZoom).abs() > 0.01) {
@@ -274,7 +258,6 @@ class _ScanningScreenState extends State<ScanningScreen>
 
         final ocrResult = await _ocrService.processImageWithCoordinates(
           bytes,
-          scanMode: _currentScanMode,
           captureMetadata: _cameraService.lastCaptureMetadata,
         );
         final check = OcrTextValidator.validateResult(ocrResult);
@@ -376,7 +359,6 @@ class _ScanningScreenState extends State<ScanningScreen>
       final bytes = await ImageBlurDetector.boundGalleryImage(original);
       final ocrResult = await _ocrService.processImageWithCoordinates(
         bytes,
-        scanMode: _currentScanMode,
         captureMetadata: {
           'source': 'gallery',
           'originalWidth': originalSize.width,
@@ -623,59 +605,6 @@ class _ScanningScreenState extends State<ScanningScreen>
             strings: strings,
           ),
 
-          // 2b. Petunjuk Singkat Khusus Mode Non-Dokumen (Issue e, c, & i)
-          if (_currentScanMode != OcrScanMode.document)
-            Positioned(
-              top: topPadding + 66,
-              left: 20,
-              right: 20,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.72),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.6),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Color(0xFFF59E0B),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          _getScanModeTip(strings),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
           // 3. Slider Zoom Vertikal di Kanan Tengah
           Positioned(
             right: 0,
@@ -697,17 +626,6 @@ class _ScanningScreenState extends State<ScanningScreen>
               currentZoom: _currentZoom,
               onTap: () => _updateZoom(1.0),
             ),
-          ),
-
-          // 4b. Pemilih Mode Pemindaian Manual (Dokumen, Teliti, Layar, Tulis Tangan)
-          ScanModeSelector(
-            selectedMode: _currentScanMode,
-            onModeChanged: (newMode) {
-              setState(() {
-                _currentScanMode = newMode;
-              });
-            },
-            bottomPadding: bottomPadding,
           ),
 
           // 5. Floating Blur Warning Alert Banner

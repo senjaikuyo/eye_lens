@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -24,6 +25,7 @@ import 'text_formatter.dart';
 /// - Menjaga privasi: memproses citra via ephemeral temp file yang langsung
 ///   dimusnahkan di blok `finally` (0 byte penulisan permanen di gawai).
 class OcrService {
+  static const int maxAdditionalPasses = 10;
   final TextRecognizer _textRecognizer;
   bool _isDisposed = false;
 
@@ -288,6 +290,7 @@ class OcrService {
     Map<String, Object?> captureMetadata = const {},
   }) async {
     if (_isDisposed) return OcrResult.empty;
+    final totalStopwatch = Stopwatch()..start();
 
     try {
       final imageSize = await ImageDimensionHelper.getImageSize(bytes);
@@ -333,18 +336,6 @@ class OcrService {
         passRecords: passRecords,
       );
 
-      // K0 A/B flag: lewati seluruh pass tambahan lama bila dimatikan.
-      if (!enableMultiPass ||
-          (kDebugMode && !DebugOcrConfig.enableLegacyPreprocessing)) {
-        return _attachDiagnostics(
-          diagnostics: diagnostics,
-          result: pass1Result,
-          imageSize: imageSize,
-          passRecords: passRecords,
-          bytes: bytes,
-        );
-      }
-
       final double pass1Score = OcrOrientationResolver.score(
         pass1Result.rawLines,
       );
@@ -356,10 +347,13 @@ class OcrService {
 
       // Kriteria kualitas cukup tanpa perlu pass kedua:
       // Teks ditemukan, tidak ada peringatan kualitas rendah, dan skor token kuat.
-      const double sufficientScoreThreshold = 35.0;
+      const double sufficientScoreThreshold =
+          OcrOrientationResolver.sufficientScore;
+      final landscape = imageSize.width > imageSize.height;
       if (OcrOrientationResolver.sufficient(pass1Result) &&
           !verticalCandidate &&
           !OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) &&
+          !landscape &&
           scanMode != OcrScanMode.smallText) {
         return _attachDiagnostics(
           diagnostics: diagnostics,
@@ -367,25 +361,31 @@ class OcrService {
           imageSize: imageSize,
           passRecords: passRecords,
           bytes: bytes,
+          totalStopwatch: totalStopwatch,
         );
       }
 
       OcrResult bestResult = pass1Result;
       double bestScore = pass1Score;
+      var additionalPasses = 0;
 
       // K5: bounded, sequential retries, always from the same original photo.
       // Missing angle never blocks recovery; 0 degrees is a valid angle.
       if (!OcrOrientationResolver.sufficient(pass1Result) ||
           OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) ||
-          verticalCandidate) {
+          verticalCandidate ||
+          landscape) {
         // K6 evidence permits 90/270 even in portrait. Share the K5 retry
         // budget: never repeat angles or exceed three additional attempts.
-        final retries = verticalCandidate
-            ? const [180, 90, 270]
-            : OcrOrientationResolver.retryAngles(imageSize);
+        final retries = OcrOrientationResolver.recoveryAngles(
+          imageSize,
+          resultSufficient: OcrOrientationResolver.sufficient(pass1Result),
+          verticalCandidate: verticalCandidate,
+        );
         var verticalResolved = !verticalCandidate;
         for (final degrees in retries) {
-          if (_isDisposed) break;
+          if (_isDisposed || additionalPasses >= maxAdditionalPasses) break;
+          additionalPasses++;
           final timer = Stopwatch()..start();
           try {
             final rotated = await OcrPreprocessor.rotate(bytes, degrees);
@@ -428,7 +428,8 @@ class OcrService {
               );
             }
             if (verticalResolved &&
-                OcrOrientationResolver.sufficient(bestResult)) {
+                OcrOrientationResolver.sufficient(bestResult) &&
+                (!landscape || degrees == retries.last)) {
               break;
             }
           } catch (e) {
@@ -444,193 +445,156 @@ class OcrService {
             imageSize: imageSize,
             passRecords: passRecords,
             bytes: bytes,
+            totalStopwatch: totalStopwatch,
           );
         }
       }
 
+      // K0 A/B controls only image preprocessing; orientation recovery remains
+      // enabled because it preserves original-image OCR ordering semantics.
+      if (!enableMultiPass ||
+          (kDebugMode && !DebugOcrConfig.enableLegacyPreprocessing)) {
+        return _attachDiagnostics(
+          diagnostics: diagnostics,
+          result: bestResult,
+          imageSize: imageSize,
+          passRecords: passRecords,
+          bytes: bytes,
+          totalStopwatch: totalStopwatch,
+        );
+      }
+
+      final tileResults = <OcrResult>[];
       try {
-        if (scanMode == OcrScanMode.smallText) {
-          // --- Alur Khusus Mode Teks Kecil / Teliti (Issue c) ---
-          // 1. Coba smart crop ROI dari baris teks yang sudah terdeteksi di Pass 1
-          final textRoi = OcrPreprocessor.computeTextRoi(
-            bestResult.rawLines,
-            imageSize: imageSize,
+        if ((bestScore < sufficientScoreThreshold ||
+                bestResult.rawLines.isEmpty) &&
+            additionalPasses < maxAdditionalPasses) {
+          additionalPasses++;
+          final contrastBytes = await OcrPreprocessor.enhanceContrast(
+            bytes,
+            contrast: 1.6,
           );
-
-          final Rect targetRoi =
-              textRoi ??
-              OcrPreprocessor.computeCenterRoi(imageSize, ratio: 0.70);
-
-          try {
-            const double roiScale = 2.0;
-            final roiBytes = await OcrPreprocessor.cropAndScaleRoi(
-              bytes,
-              cropRect: targetRoi,
-              scale: roiScale,
-            );
-            final enhancedRoiBytes = await OcrPreprocessor.enhanceContrast(
-              roiBytes,
-              contrast: 1.5,
-            );
-            final roiResult = await _recognizeSinglePass(
-              imageBytes: enhancedRoiBytes,
-              imageSize: imageSize,
-              tempDir: tempDir,
-              scanMode: scanMode,
-              noiseFilterConfig: noiseFilterConfig,
-              cropOffset: targetRoi.topLeft,
-              scale: roiScale,
-            );
-            final double roiScore = OcrOrientationResolver.score(
-              roiResult.rawLines,
-            );
-
-            if (roiScore > bestScore ||
-                (bestResult.rawLines.isEmpty &&
-                    roiResult.rawLines.isNotEmpty)) {
-              bestResult = roiResult;
-              bestScore = roiScore;
-            }
-          } catch (e) {
-            debugPrint('[OcrService] SmallText ROI pass gagal: $e');
-          }
-
-          // Jika skor masih rendah atau belum ada teks, coba Otsu binarization
-          if (bestScore < sufficientScoreThreshold ||
-              bestResult.rawLines.isEmpty) {
-            try {
-              final otsuBytes = await OcrPreprocessor.binarizeOtsu(bytes);
-              final otsuResult = await _recognizeSinglePass(
-                imageBytes: otsuBytes,
-                imageSize: imageSize,
-                tempDir: tempDir,
-                scanMode: scanMode,
-                noiseFilterConfig: noiseFilterConfig,
-              );
-              final double otsuScore = OcrOrientationResolver.score(
-                otsuResult.rawLines,
-              );
-
-              if (otsuScore > bestScore) {
-                bestResult = otsuResult;
-                bestScore = otsuScore;
-              }
-            } catch (e) {
-              debugPrint('[OcrService] SmallText Otsu fallback gagal: $e');
-            }
-          }
-        } else {
-          // --- Alur Mode Dokumen, Layar, & Tulis Tangan ---
-          // Pass 2: Khusus mode Layar -> Moiré suppression + Contrast,
-          //         Mode Tulis Tangan -> Stroke thickening + Contrast,
-          //         Mode Dokumen -> Grayscale + Contrast
-          final Uint8List pass2Bytes;
-          if (scanMode == OcrScanMode.screenText) {
-            pass2Bytes = await OcrPreprocessor.preprocessScreenText(
-              bytes,
-              blurSigma: 0.8,
-              contrast: 1.5,
-            );
-          } else if (scanMode == OcrScanMode.handwriting) {
-            pass2Bytes = await OcrPreprocessor.preprocessHandwriting(
-              bytes,
-              contrast: 1.6,
-              strokeThickening: true,
-            );
-          } else {
-            pass2Bytes = await OcrPreprocessor.enhanceContrast(
-              bytes,
-              contrast: 1.6,
-            );
-          }
-          final pass2Result = await _recognizeSinglePass(
-            imageBytes: pass2Bytes,
+          final contrastResult = await _recognizeSinglePass(
+            imageBytes: contrastBytes,
             imageSize: imageSize,
             tempDir: tempDir,
-            scanMode: scanMode,
             noiseFilterConfig: noiseFilterConfig,
+            passName: 'fallback_contrast',
+            passRecords: passRecords,
           );
-          final double pass2Score = OcrOrientationResolver.score(
-            pass2Result.rawLines,
+          final contrastScore = OcrOrientationResolver.score(
+            contrastResult.rawLines,
           );
-
-          if (pass2Score > bestScore) {
-            bestResult = pass2Result;
-            bestScore = pass2Score;
+          if (contrastScore > bestScore) {
+            bestResult = contrastResult;
+            bestScore = contrastScore;
           }
+        }
 
-          // Pass 3: Otsu Adaptive Binarization jika skor masih rendah atau belum ada teks
-          if (bestScore < sufficientScoreThreshold ||
-              bestResult.rawLines.isEmpty) {
-            try {
-              final pass3Bytes = await OcrPreprocessor.binarizeOtsu(bytes);
-              final pass3Result = await _recognizeSinglePass(
-                imageBytes: pass3Bytes,
+        if ((bestScore < sufficientScoreThreshold ||
+                bestResult.rawLines.isEmpty) &&
+            additionalPasses < maxAdditionalPasses) {
+          additionalPasses++;
+          final otsuBytes = await OcrPreprocessor.binarizeOtsu(bytes);
+          final otsuResult = await _recognizeSinglePass(
+            imageBytes: otsuBytes,
+            imageSize: imageSize,
+            tempDir: tempDir,
+            noiseFilterConfig: noiseFilterConfig,
+            passName: 'fallback_otsu',
+            passRecords: passRecords,
+          );
+          final otsuScore = OcrOrientationResolver.score(otsuResult.rawLines);
+          if (otsuScore > bestScore) {
+            bestResult = otsuResult;
+            bestScore = otsuScore;
+          }
+        }
+
+        if ((bestScore < sufficientScoreThreshold ||
+                bestResult.rawLines.isEmpty) &&
+            additionalPasses < maxAdditionalPasses) {
+          if (bestResult.rawLines.isNotEmpty) {
+            final roi = OcrPreprocessor.computeTextRoi(
+              bestResult.rawLines,
+              imageSize: imageSize,
+            );
+            if (roi != null &&
+                roi.width * roi.height <
+                    imageSize.width * imageSize.height * .65) {
+              additionalPasses++;
+              const scale = 1.5;
+              final crop = await OcrPreprocessor.cropAndScaleRoi(
+                bytes,
+                cropRect: roi,
+                scale: scale,
+              );
+              final enhancedCrop = await OcrPreprocessor.enhanceContrast(
+                crop,
+                contrast: 1.4,
+              );
+              final roiResult = await _recognizeSinglePass(
+                imageBytes: enhancedCrop,
                 imageSize: imageSize,
                 tempDir: tempDir,
-                scanMode: scanMode,
                 noiseFilterConfig: noiseFilterConfig,
+                cropOffset: roi.topLeft,
+                scale: scale,
+                passName: 'fallback_smart_crop',
+                passRecords: passRecords,
               );
-              final double pass3Score = OcrOrientationResolver.score(
-                pass3Result.rawLines,
-              );
-
-              if (pass3Score > bestScore) {
-                bestResult = pass3Result;
-                bestScore = pass3Score;
+              final roiScore = OcrOrientationResolver.score(roiResult.rawLines);
+              if (roiScore > bestScore) {
+                bestResult = roiResult;
+                bestScore = roiScore;
               }
-            } catch (e) {
-              debugPrint('[OcrService] Pass 3 Otsu gagal: $e');
             }
           }
+        }
 
-          // Smart crop ROI fallback jika teks terkonsentrasi di area kecil dan skor belum memadai
-          if (bestScore < sufficientScoreThreshold &&
-              bestResult.rawLines.isNotEmpty) {
-            try {
-              final textRoi = OcrPreprocessor.computeTextRoi(
-                bestResult.rawLines,
-                imageSize: imageSize,
-              );
-              if (textRoi != null) {
-                final double roiArea = textRoi.width * textRoi.height;
-                final double totalArea = imageSize.width * imageSize.height;
-                if (roiArea < totalArea * 0.65) {
-                  const double roiScale = 1.5;
-                  final croppedBytes = await OcrPreprocessor.cropAndScaleRoi(
-                    bytes,
-                    cropRect: textRoi,
-                    scale: roiScale,
-                  );
-                  final enhancedRoi = await OcrPreprocessor.enhanceContrast(
-                    croppedBytes,
-                    contrast: 1.4,
-                  );
-                  final smartCropResult = await _recognizeSinglePass(
-                    imageBytes: enhancedRoi,
-                    imageSize: imageSize,
-                    tempDir: tempDir,
-                    scanMode: scanMode,
-                    noiseFilterConfig: noiseFilterConfig,
-                    cropOffset: textRoi.topLeft,
-                    scale: roiScale,
-                  );
-                  final double smartScore = OcrOrientationResolver.score(
-                    smartCropResult.rawLines,
-                  );
-                  if (smartScore > bestScore) {
-                    bestResult = smartCropResult;
-                    bestScore = smartScore;
-                  }
-                }
-              }
-            } catch (e) {
-              debugPrint('[OcrService] Smart crop fallback gagal: $e');
+        if ((bestScore < sufficientScoreThreshold ||
+                bestResult.rawLines.isEmpty) &&
+            additionalPasses < maxAdditionalPasses) {
+          final tiles = OcrPreprocessor.computeTileRois(imageSize);
+          for (
+            var i = 0;
+            i < tiles.length && additionalPasses < maxAdditionalPasses;
+            i++
+          ) {
+            if (_isDisposed) break;
+            additionalPasses++;
+            final tile = tiles[i];
+            const scale = 1.5;
+            final tileBytes = await OcrPreprocessor.cropAndScaleRoi(
+              bytes,
+              cropRect: tile,
+              scale: scale,
+            );
+            final tileResult = await _recognizeSinglePass(
+              imageBytes: tileBytes,
+              imageSize: imageSize,
+              tempDir: tempDir,
+              noiseFilterConfig: noiseFilterConfig,
+              cropOffset: tile.topLeft,
+              scale: scale,
+              passName: 'fallback_tile_${i + 1}',
+              passRecords: passRecords,
+            );
+            tileResults.add(tileResult);
+          }
+          if (tileResults.isNotEmpty) {
+            final combined = await _mergeTileResults(tileResults, imageSize);
+            final tileScore = OcrOrientationResolver.score(combined.rawLines);
+            if (tileScore > bestScore || bestResult.rawLines.isEmpty) {
+              bestResult = combined;
+              bestScore = tileScore;
             }
           }
         }
       } catch (e) {
-        debugPrint('[OcrService] Multi-pass preprocessing gagal: $e');
+        debugPrint(
+          '[OcrService] Unified OCR fallback failed: ${e.runtimeType}',
+        );
       }
 
       return _attachDiagnostics(
@@ -639,11 +603,100 @@ class OcrService {
         imageSize: imageSize,
         passRecords: passRecords,
         bytes: bytes,
+        totalStopwatch: totalStopwatch,
       );
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
       return OcrResult.empty;
     }
+  }
+
+  Future<OcrResult> _mergeTileResults(
+    List<OcrResult> results,
+    Size imageSize,
+  ) async {
+    final blocks = <OcrBlockData>[];
+    for (final result in results) {
+      for (final block
+          in result.documentData?.blocks ?? const <OcrBlockData>[]) {
+        final unique = <OcrLineData>[];
+        for (final line in block.lines) {
+          final repeated = blocks.expand((previous) => previous.lines).any((
+            previous,
+          ) {
+            if (previous.text.trim().toLowerCase() !=
+                line.text.trim().toLowerCase()) {
+              return false;
+            }
+            final intersection = previous.boundingBox.intersect(
+              line.boundingBox,
+            );
+            final smallerArea = math.min(
+              previous.boundingBox.width * previous.boundingBox.height,
+              line.boundingBox.width * line.boundingBox.height,
+            );
+            return !intersection.isEmpty &&
+                smallerArea > 0 &&
+                intersection.width * intersection.height / smallerArea >= .6;
+          });
+          if (!repeated) unique.add(line);
+        }
+        if (unique.isEmpty) continue;
+        final blockBounds = unique
+            .map((line) => line.boundingBox)
+            .reduce((a, b) => a.expandToInclude(b));
+        final blockIndex = blocks.length;
+        final indexed = unique
+            .map(
+              (line) => OcrLineData(
+                text: line.text,
+                boundingBox: line.boundingBox,
+                confidence: line.confidence,
+                angle: line.angle,
+                blockIndex: blockIndex,
+                elements: line.elements,
+              ),
+            )
+            .toList();
+        blocks.add(
+          OcrBlockData(
+            text: indexed.map((line) => line.text).join('\n'),
+            boundingBox: blockBounds,
+            lines: indexed,
+          ),
+        );
+      }
+    }
+    final lines = blocks.expand((block) => block.lines).toList();
+    final document = OcrDocumentData(
+      blocks: blocks,
+      rawText: lines.map((line) => line.text).join('\n'),
+      allRawLines: lines,
+    );
+    final formatted = await TextFormatter.formatWithCompute(document);
+    final elements = <OcrElement>[
+      for (var index = 0; index < lines.length; index++)
+        OcrElement(
+          id: 'tile_elem_$index',
+          text: lines[index].text,
+          boundingBox: lines[index].boundingBox,
+        ),
+    ];
+    return OcrResult(
+      fullText: formatted.fullText,
+      elements: elements,
+      imageSize: imageSize,
+      documentData: document,
+      formattedResult: formatted,
+      rawLines: lines,
+      rawLinesCount: lines.length,
+      rejectedLines: results.expand((result) => result.rejectedLines).toList(),
+      doubtfulLines: results.expand((result) => result.doubtfulLines).toList(),
+      hasLowQualityWarning: results.any(
+        (result) => result.hasLowQualityWarning,
+      ),
+      allLinesFilteredOut: lines.isEmpty,
+    );
   }
 
   /// Menyusun laporan diagnostik (K0) untuk satu foto dan melampirkannya
@@ -654,6 +707,7 @@ class OcrService {
     required Size imageSize,
     required List<OcrPassRecord> passRecords,
     required Uint8List bytes,
+    required Stopwatch totalStopwatch,
   }) {
     if (!diagnostics.isActive) return result;
 
@@ -685,7 +739,7 @@ class OcrService {
       rawText: result.rawLines.map((l) => l.text).join('\n'),
       filteredText: result.documentData?.rawText ?? '',
       formattedText: result.fullText,
-      totalDurationMs: passRecords.fold<int>(0, (sum, p) => sum + p.durationMs),
+      totalDurationMs: totalStopwatch.elapsedMilliseconds,
     );
     if (report == null) return result;
     return result.copyWith(diagnosticJson: report.toJsonString());

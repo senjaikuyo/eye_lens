@@ -472,6 +472,48 @@ class OcrPreprocessor {
     return Rect.fromLTWH(left, top, roiW, roiH);
   }
 
+  /// Returns bounded overlapping tiles in visual row-major order.
+  static List<Rect> computeTileRois(
+    Size imageSize, {
+    int rows = 2,
+    int columns = 2,
+    double overlap = 0.12,
+  }) {
+    if (!imageSize.width.isFinite ||
+        !imageSize.height.isFinite ||
+        imageSize.width <= 0 ||
+        imageSize.height <= 0 ||
+        rows < 1 ||
+        columns < 1 ||
+        rows * columns > 4) {
+      return const [];
+    }
+    final safeOverlap = overlap.clamp(0.0, 0.4);
+    final tileWidth = imageSize.width / columns;
+    final tileHeight = imageSize.height / rows;
+    return List.generate(rows * columns, (index) {
+      final row = index ~/ columns;
+      final column = index % columns;
+      final left = (column * tileWidth - tileWidth * safeOverlap).clamp(
+        0.0,
+        imageSize.width,
+      );
+      final top = (row * tileHeight - tileHeight * safeOverlap).clamp(
+        0.0,
+        imageSize.height,
+      );
+      final right = ((column + 1) * tileWidth + tileWidth * safeOverlap).clamp(
+        left,
+        imageSize.width,
+      );
+      final bottom = ((row + 1) * tileHeight + tileHeight * safeOverlap).clamp(
+        top,
+        imageSize.height,
+      );
+      return Rect.fromLTRB(left, top, right, bottom);
+    }, growable: false);
+  }
+
   /// Memetakan kembali koordinat bounding box dari citra ROI (yang di-crop dan di-scale)
   /// ke ruang koordinat citra asli secara presisi.
   static Rect remapBoundingBox(

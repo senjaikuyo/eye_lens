@@ -30,6 +30,24 @@ void main() {
       OcrOrientationResolver.maxRetries,
     );
   });
+  test('sufficient landscape still checks 180-degree orientation', () {
+    expect(
+      OcrOrientationResolver.recoveryAngles(
+        const Size(200, 100),
+        resultSufficient: true,
+        verticalCandidate: false,
+      ),
+      [180],
+    );
+    expect(
+      OcrOrientationResolver.recoveryAngles(
+        const Size(200, 100),
+        resultSufficient: false,
+        verticalCandidate: false,
+      ),
+      [180, 90, 270],
+    );
+  });
   test('deterministic score prefers valid words over singleton fragments', () {
     final valid = [line('makanan dan buku')];
     expect(
@@ -145,6 +163,35 @@ void main() {
       }
     },
   );
+  test('180-degree coordinate remap does not reverse upright reading text', () {
+    final title = OcrLineData(
+      text: 'Judul',
+      boundingBox: const Rect.fromLTWH(10, 10, 40, 12),
+    );
+    final body = OcrLineData(
+      text: 'Baris pertama',
+      boundingBox: const Rect.fromLTWH(10, 30, 80, 12),
+    );
+    final uprightText = 'Judul\nBaris pertama';
+    final mapped = OcrOrientationResolver.mapResult(
+      OcrResult(
+        fullText: uprightText,
+        elements: const [],
+        imageSize: const Size(100, 100),
+        rawLines: [title, body],
+      ),
+      const Size(100, 100),
+      180,
+    );
+
+    expect(mapped.fullText, uprightText);
+    expect(mapped.rawLines.map((line) => line.text), [
+      'Judul',
+      'Baris pertama',
+    ]);
+    expect(mapped.rawLines.first.boundingBox.top, 78);
+    expect(mapped.rawLines.last.boundingBox.top, 58);
+  });
   testWidgets(
     'rotation produces swapped dimensions without touching original bytes',
     (tester) async {

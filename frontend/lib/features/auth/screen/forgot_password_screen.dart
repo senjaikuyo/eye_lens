@@ -6,10 +6,11 @@ import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/utils/password_validator.dart';
 import 'package:eye_lens/features/auth/logic/auth_service.dart';
-import 'package:eye_lens/core/widgets/custom_auth_field.dart';
-import 'package:eye_lens/core/widgets/eyelash_icon.dart';
 import 'package:eye_lens/features/auth/screen/login_screen.dart';
-import 'package:eye_lens/features/auth/screen/widgets/otp_input_row.dart';
+import 'package:eye_lens/features/auth/screen/widgets/forgot_password_email_step.dart';
+import 'package:eye_lens/features/auth/screen/widgets/forgot_password_header_widgets.dart';
+import 'package:eye_lens/features/auth/screen/widgets/forgot_password_otp_step.dart';
+import 'package:eye_lens/features/auth/screen/widgets/forgot_password_reset_step.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthService? authService;
@@ -375,362 +376,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildStepIndicator(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        final step = index + 1;
-        final isActive = step == _currentStep;
-        final isCompleted = step < _currentStep;
-
-        return Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive
-                    ? (isDark ? AppColors.white : AppColors.black)
-                    : (isCompleted
-                          ? Colors.green
-                          : (isDark
-                                ? const Color(0xFF333333)
-                                : const Color(0xFFE5E7EB))),
-              ),
-              child: Center(
-                child: isCompleted
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
-                    : Text(
-                        '$step',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isActive
-                              ? (isDark ? AppColors.black : AppColors.white)
-                              : (isDark ? Colors.white70 : Colors.black54),
-                        ),
-                      ),
-              ),
-            ),
-            if (index < 2)
-              Container(
-                width: 36,
-                height: 2,
-                color: isCompleted
-                    ? Colors.green
-                    : (isDark
-                          ? const Color(0xFF333333)
-                          : const Color(0xFFE5E7EB)),
-              ),
-          ],
-        );
-      }),
-    );
-  }
-
-  Widget _buildActionButton({
-    required VoidCallback? onPressed,
-    required String label,
-    required bool isDark,
-  }) {
-    return Center(
-      child: Material(
-        color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: _isLoading ? null : onPressed,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isDark ? Colors.white : AppColors.black,
-                width: 1.2,
-              ),
-            ),
-            child: Center(
-              child: _isLoading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: isDark ? Colors.white : AppColors.black,
-                      ),
-                    )
-                  : Text(
-                      label,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : AppColors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStep1(AppStrings strings, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          strings.forgotPasswordTitle,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.white : AppColors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          strings.forgotPasswordStep1Desc,
-          style: TextStyle(
-            fontSize: 16,
-            color: isDark ? Colors.white70 : Colors.black87,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 32),
-        CustomAuthField(
-          label: strings.email,
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          errorText: _emailError,
-          onChanged: (_) {
-            if (_emailError != null) {
-              setState(() {
-                _emailError = null;
-              });
-            }
-          },
-        ),
-        const SizedBox(height: 32),
-        _buildActionButton(
-          onPressed: () => _handleSendCode(strings),
-          label: strings.sendCode,
-          isDark: isDark,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep2(AppStrings strings, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          strings.verifyCode,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.white : AppColors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${strings.forgotPasswordStep2Desc} $_email',
-          style: TextStyle(
-            fontSize: 16,
-            color: isDark ? Colors.white70 : Colors.black87,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          strings.codeExpiresNotice,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-        ),
-        const SizedBox(height: 32),
-        OtpInputRow(
-          key: ValueKey<int>(_otpGeneration),
-          onChanged: (code) {
-            setState(() {
-              _otpCode = code;
-              if (_otpError != null) _otpError = null;
-            });
-          },
-          onCompleted: (_) => _handleVerifyCode(strings),
-        ),
-        if (_otpError != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _otpError!,
-            style: const TextStyle(color: Colors.red, fontSize: 14),
-          ),
-        ],
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: () {
-                _resendTimer?.cancel();
-                setState(() {
-                  _currentStep = 1;
-                  _resendCountdown = 0;
-                  _otpCode = '';
-                  _otpError = null;
-                  _otpGeneration++;
-                });
-              },
-              child: const Text(
-                'Ubah Email',
-                style: TextStyle(
-                  color: AppColors.linkBlue,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            GestureDetector(
-              onTap: _resendCountdown == 0
-                  ? () => _handleResendCode(strings)
-                  : null,
-              child: Text(
-                _resendCountdown > 0
-                    ? strings.resendInSeconds(_resendCountdown)
-                    : strings.resendCode,
-                style: TextStyle(
-                  color: _resendCountdown == 0
-                      ? AppColors.linkBlue
-                      : Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        _buildActionButton(
-          onPressed: () => _handleVerifyCode(strings),
-          label: strings.verifyCode,
-          isDark: isDark,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep3(AppStrings strings, bool isDark) {
-    final passwordText = _passwordController.text;
-    final strength = PasswordValidator.calculateStrength(passwordText);
-    String strengthLabel = strings.passwordStrengthWeak;
-    Color strengthColor = Colors.red;
-
-    if (strength > 0.6) {
-      strengthLabel = strings.passwordStrengthStrong;
-      strengthColor = Colors.green;
-    } else if (strength > 0.3) {
-      strengthLabel = strings.passwordStrengthMedium;
-      strengthColor = Colors.orange;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          strings.createNewPassword,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.white : AppColors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          strings.forgotPasswordStep3Desc,
-          style: TextStyle(
-            fontSize: 16,
-            color: isDark ? Colors.white70 : Colors.black87,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 24),
-        CustomAuthField(
-          label: strings.newPassword,
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          errorText: _passwordError,
-          onChanged: (_) {
-            setState(() {
-              if (_passwordError != null) _passwordError = null;
-            });
-          },
-          suffixIcon: EyelashIcon(
-            isObscured: _obscurePassword,
-            onTap: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword;
-              });
-            },
-          ),
-        ),
-        if (passwordText.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: strength,
-                    color: strengthColor,
-                    backgroundColor: isDark
-                        ? const Color(0xFF333333)
-                        : const Color(0xFFE5E7EB),
-                    minHeight: 6,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '${strings.passwordStrengthLabel}: $strengthLabel',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: strengthColor,
-                ),
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 18),
-        CustomAuthField(
-          label: strings.confirmNewPassword,
-          controller: _confirmPasswordController,
-          obscureText: _obscureConfirmPassword,
-          errorText: _confirmPasswordError,
-          onChanged: (_) {
-            setState(() {
-              if (_confirmPasswordError != null) _confirmPasswordError = null;
-            });
-          },
-          suffixIcon: EyelashIcon(
-            isObscured: _obscureConfirmPassword,
-            onTap: () {
-              setState(() {
-                _obscureConfirmPassword = !_obscureConfirmPassword;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 32),
-        _buildActionButton(
-          onPressed: () => _handleResetPassword(strings),
-          label: strings.saveNewPassword,
-          isDark: isDark,
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -752,11 +397,90 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 12),
-              _buildStepIndicator(isDark),
+              ForgotPasswordStepIndicator(
+                currentStep: _currentStep,
+                isDark: isDark,
+              ),
               const SizedBox(height: 36),
-              if (_currentStep == 1) _buildStep1(strings, isDark),
-              if (_currentStep == 2) _buildStep2(strings, isDark),
-              if (_currentStep == 3) _buildStep3(strings, isDark),
+              if (_currentStep == 1)
+                ForgotPasswordEmailStep(
+                  strings: strings,
+                  isDark: isDark,
+                  isLoading: _isLoading,
+                  emailController: _emailController,
+                  emailError: _emailError,
+                  onEmailChanged: () {
+                    if (_emailError != null) {
+                      setState(() {
+                        _emailError = null;
+                      });
+                    }
+                  },
+                  onSubmit: () => _handleSendCode(strings),
+                ),
+              if (_currentStep == 2)
+                ForgotPasswordOtpStep(
+                  strings: strings,
+                  isDark: isDark,
+                  isLoading: _isLoading,
+                  email: _email,
+                  otpGeneration: _otpGeneration,
+                  otpError: _otpError,
+                  resendCountdown: _resendCountdown,
+                  onOtpChanged: (code) {
+                    setState(() {
+                      _otpCode = code;
+                      if (_otpError != null) _otpError = null;
+                    });
+                  },
+                  onVerify: () => _handleVerifyCode(strings),
+                  onChangeEmail: () {
+                    _resendTimer?.cancel();
+                    setState(() {
+                      _currentStep = 1;
+                      _resendCountdown = 0;
+                      _otpCode = '';
+                      _otpError = null;
+                      _otpGeneration++;
+                    });
+                  },
+                  onResend: () => _handleResendCode(strings),
+                ),
+              if (_currentStep == 3)
+                ForgotPasswordResetStep(
+                  strings: strings,
+                  isDark: isDark,
+                  isLoading: _isLoading,
+                  passwordController: _passwordController,
+                  confirmPasswordController: _confirmPasswordController,
+                  obscurePassword: _obscurePassword,
+                  obscureConfirmPassword: _obscureConfirmPassword,
+                  passwordError: _passwordError,
+                  confirmPasswordError: _confirmPasswordError,
+                  onPasswordChanged: () {
+                    setState(() {
+                      if (_passwordError != null) _passwordError = null;
+                    });
+                  },
+                  onConfirmPasswordChanged: () {
+                    setState(() {
+                      if (_confirmPasswordError != null) {
+                        _confirmPasswordError = null;
+                      }
+                    });
+                  },
+                  onToggleObscurePassword: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                  onToggleObscureConfirmPassword: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
+                  onSubmit: () => _handleResetPassword(strings),
+                ),
               const SizedBox(height: 40),
             ],
           ),

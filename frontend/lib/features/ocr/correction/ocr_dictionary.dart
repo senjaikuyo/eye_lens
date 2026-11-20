@@ -656,6 +656,7 @@ class OcrDictionary {
     'mobil',
     'mobile',
     'modal',
+    'modern',
     'mode',
     'most',
     'motor',

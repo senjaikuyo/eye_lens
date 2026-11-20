@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -10,6 +11,7 @@ import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/features/ocr/services/ocr_diagnostic_collector.dart';
+import 'package:eye_lens/features/ocr/services/ocr_timeout.dart';
 import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
@@ -232,8 +234,8 @@ class OcrService {
       await tempFile.writeAsBytes(imageBytes, flush: true);
 
       final inputImage = InputImage.fromFilePath(tempPath);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(
-        inputImage,
+      final RecognizedText recognizedText = await OcrTimeout.run(
+        _textRecognizer.processImage(inputImage),
       );
 
       final result = await _buildOcrResult(
@@ -291,6 +293,29 @@ class OcrService {
     OcrScanMode scanMode = OcrScanMode.document,
     OcrNoiseFilterConfig? noiseFilterConfig,
     Map<String, Object?> captureMetadata = const {},
+  }) async {
+    try {
+      return await OcrTimeout.run(
+        _processImageWithCoordinates(
+          bytes,
+          enableMultiPass: enableMultiPass,
+          scanMode: scanMode,
+          noiseFilterConfig: noiseFilterConfig,
+          captureMetadata: captureMetadata,
+        ),
+        timeout: OcrTimeout.totalTimeout,
+      );
+    } on TimeoutException {
+      return OcrResult.failed(OcrFailureType.timeout);
+    }
+  }
+
+  Future<OcrResult> _processImageWithCoordinates(
+    Uint8List bytes, {
+    required bool enableMultiPass,
+    required OcrScanMode scanMode,
+    OcrNoiseFilterConfig? noiseFilterConfig,
+    required Map<String, Object?> captureMetadata,
   }) async {
     if (_isDisposed) return OcrResult.empty;
     final totalStopwatch = Stopwatch()..start();
@@ -608,6 +633,9 @@ class OcrService {
         bytes: bytes,
         totalStopwatch: totalStopwatch,
       );
+    } on TimeoutException catch (e) {
+      debugPrint('[OcrService] OCR melewati batas waktu: $e');
+      return OcrResult.failed(OcrFailureType.timeout);
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
       return OcrResult.failed();

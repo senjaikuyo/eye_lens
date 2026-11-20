@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/features/onboarding/screen/widgets/onboarding_slide_parts.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/features/auth/screen/login_screen.dart';
 
@@ -193,7 +194,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Stack(
       children: [
         // Top graphic area (inside upper white section)
-        _buildTopGraphic(index, size, topPadding),
+        OnboardingTopGraphic(index: index, size: size, topPadding: topPadding),
 
         // Bottom text area (right-anchored in the black section, matching Figma center ~64%)
         Positioned(
@@ -231,107 +232,4 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ],
     );
   }
-
-  Widget _buildTopGraphic(int index, Size size, double topPadding) {
-    if (index == 0) {
-      // Slide 1: Primary EyeLens stacked logo (proportional, positioned cleanly in the white triangle)
-      return Positioned(
-        top: topPadding + 28,
-        left: size.width * 0.10,
-        child: Image.asset(
-          'assets/images/logo.png',
-          width: size.width * 0.42,
-          fit: BoxFit.contain,
-        ),
-      );
-    } else if (index == 1) {
-      // Slide 2: Top-left horizontal logo + centered magnifying glass
-      return Stack(
-        children: [
-          // Top-left logo (sharply rendered, perfectly readable)
-          Positioned(
-            top: topPadding + 14,
-            left: 20,
-            child: Image.asset(
-              'assets/images/logo_horizontal.png',
-              width: 105,
-              height: 32,
-              fit: BoxFit.contain,
-            ),
-          ),
-          // Magnifying glass illustration
-          Positioned(
-            top: topPadding + size.height * 0.13,
-            left: size.width * 0.35,
-            child: Image.asset(
-              'assets/images/icon_magnifier.png',
-              width: size.width * 0.22,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ],
-      );
-    } else {
-      // Slide 3: Top-left horizontal logo (identical to slide 2) + bold "Pharmacy" text
-      return Stack(
-        children: [
-          // Top-left logo (identical to slide 2 for consistency)
-          Positioned(
-            top: topPadding + 14,
-            left: 20,
-            child: Image.asset(
-              'assets/images/logo_horizontal.png',
-              width: 105,
-              height: 32,
-              fit: BoxFit.contain,
-            ),
-          ),
-          // "Pharmacy" prominent text
-          Positioned(
-            top: topPadding + size.height * 0.10,
-            left: size.width * 0.14,
-            child: const Text(
-              '“Pharmacy”',
-              style: TextStyle(
-                color: AppColors.black,
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-  }
-}
-
-class OnboardingItem {
-  final String title;
-  final String subtitle;
-  final String buttonText;
-
-  const OnboardingItem({
-    required this.title,
-    required this.subtitle,
-    required this.buttonText,
-  });
-}
-
-class DiagonalSplitClipper extends CustomClipper<Path> {
-  const DiagonalSplitClipper();
-
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.moveTo(0, size.height * 0.607);
-    path.lineTo(size.width, size.height * 0.122);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

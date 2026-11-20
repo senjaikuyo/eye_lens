@@ -620,7 +620,7 @@ class OcrService {
       );
     } catch (e) {
       debugPrint('[OcrService] Ekstraksi OCR berkoordinat gagal: $e');
-      return OcrResult.empty;
+      return OcrResult.failed();
     }
   }
 

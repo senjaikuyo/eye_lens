@@ -16,6 +16,9 @@ enum NoTextReason {
 
   /// Teks yang tersisa terlalu pendek untuk dibaca sebagai kalimat.
   insufficientAlphanumeric,
+
+  /// Mesin OCR gagal memproses gambar; ini bukan kondisi gambar tanpa teks.
+  processingFailed,
 }
 
 /// DTO hasil evaluasi kondisi teks pada alur pemindaian OCR.
@@ -45,6 +48,9 @@ class OcrTextValidationResult {
   /// - Untuk kasus kosong lainnya, mengembalikan pesan standar teks tidak ditemukan.
   String getAlertMessage(AppStrings strings) {
     if (hasText) return '';
+    if (reason == NoTextReason.processingFailed) {
+      return strings.ocrFailedAlert;
+    }
     if (reason == NoTextReason.allLinesFiltered) {
       return strings.unclearImageNoTextAlert;
     }
@@ -54,6 +60,9 @@ class OcrTextValidationResult {
   /// Mengembalikan judul singkat untuk banner alert merah.
   String getAlertTitle(AppStrings strings) {
     if (hasText) return '';
+    if (reason == NoTextReason.processingFailed) {
+      return strings.ocrFailedTitle;
+    }
     if (reason == NoTextReason.allLinesFiltered) {
       return strings.unclearImageNoTextTitle;
     }
@@ -63,6 +72,9 @@ class OcrTextValidationResult {
   /// Mengembalikan petunjuk aksi untuk pengguna.
   String getAlertInstruction(AppStrings strings) {
     if (hasText) return '';
+    if (reason == NoTextReason.processingFailed) {
+      return strings.ocrFailedInstruction;
+    }
     return strings.noTextFoundInstruction;
   }
 }
@@ -151,6 +163,15 @@ class OcrTextValidator {
 
   /// Helper untuk mengevaluasi langsung dari objek [OcrResult].
   static OcrTextValidationResult validateResult(OcrResult result) {
+    if (result.hasFailure) {
+      return const OcrTextValidationResult(
+        hasText: false,
+        reason: NoTextReason.processingFailed,
+        text: '',
+        alphanumericCount: 0,
+      );
+    }
+
     final rawCount = result.rawLinesCount > 0
         ? result.rawLinesCount
         : (result.elements.length + result.rejectedLines.length);

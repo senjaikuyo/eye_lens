@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:eye_lens/features/ocr/reading_order/reading_order_resolver.dart';
+import 'package:eye_lens/features/ocr/orientation/orientation_aware_reading_order.dart';
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -25,7 +25,7 @@ void main() {
         ],
       );
 
-      final ordered = ReadingOrderResolver.resolve([block]);
+      final ordered = OrientationAwareReadingOrder.resolve([block]);
 
       expect(ordered.single.lines.map((l) => l.text), [
         'kiri satu',
@@ -51,7 +51,7 @@ void main() {
         ],
       );
 
-      final ordered = ReadingOrderResolver.resolve([block]);
+      final ordered = OrientationAwareReadingOrder.resolve([block]);
 
       expect(ordered.single.lines.map((l) => l.text), [
         'judul lebar',

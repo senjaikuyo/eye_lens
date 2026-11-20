@@ -18,8 +18,10 @@ import 'package:eye_lens/features/ocr/correction/ocr_confidence_gate.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_post_corrector.dart';
 import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
-import 'package:eye_lens/features/ocr/reading_order/ocr_orientation_resolver.dart';
 import 'package:eye_lens/features/ocr/reading_order/vertical_text_detector.dart';
+import 'package:eye_lens/features/ocr/orientation/image_orientation_analyzer.dart';
+import 'package:eye_lens/features/ocr/orientation/orientation_transform.dart';
+import 'package:eye_lens/features/ocr/orientation/text_orientation_analyzer.dart';
 import 'package:eye_lens/features/speech/logic/text_formatter.dart';
 
 /// Service untuk ekstraksi karakter teks on-device menggunakan Google ML Kit:
@@ -96,13 +98,20 @@ class OcrService {
       }
     }
 
+    // Orientasi diestimasi sekali per baris memakai sudut ML Kit + geometri.
+    // Estimasi ini ikut ke resolver urutan baca dan ke diagnostik.
+    final orientedLines = [
+      for (final line in allLines)
+        line.withOrientation(TextOrientationAnalyzer.analyzeLine(line)),
+    ];
+
     // 1. Jalankan penyaring noise di background isolate sesuai konfigurasi mode
     final effectiveConfig =
         noiseFilterConfig ??
         const OcrNoiseFilterConfig(enableAutoScreenshotDetection: true);
     final filterResult = await OcrNoiseFilter.filterWithCompute(
       OcrNoiseFilterInput(
-        lines: allLines,
+        lines: orientedLines,
         imageSize: imageSize,
         config: effectiveConfig,
       ),
@@ -139,7 +148,7 @@ class OcrService {
     final documentData = OcrDocumentData(
       blocks: filteredBlocks,
       rawText: confidenceGate.acceptedLines.map((l) => l.text).join('\n'),
-      allRawLines: allLines,
+      allRawLines: orientedLines,
     );
 
     // 2b. Koreksi karakter ambigu OCR via kamus leksikal on-device (Issue h)
@@ -192,8 +201,8 @@ class OcrService {
       allLinesFilteredOut:
           filterResult.allLinesFilteredOut ||
           confidenceGate.acceptedLines.isEmpty,
-      rawLinesCount: allLines.length,
-      rawLines: allLines,
+      rawLinesCount: orientedLines.length,
+      rawLines: orientedLines,
     );
   }
 
@@ -263,7 +272,10 @@ class OcrService {
           OcrPassRecord(
             name: passName ?? 'pass',
             durationMs: localStopwatch.elapsedMilliseconds,
-            qualityScore: OcrOrientationResolver.score(result.rawLines),
+            qualityScore: TextOrientationAnalyzer.score(result.rawLines),
+            orientation: TextOrientationAnalyzer.analyze(
+              result.rawLines,
+            ).toJson(),
             rawLines: result.rawLinesCount,
             acceptedLines:
                 result.rawLines.length -
@@ -374,24 +386,30 @@ class OcrService {
         passRecords: passRecords,
       );
 
-      final double pass1Score = OcrOrientationResolver.score(
+      final pass1Analysis = TextOrientationAnalyzer.analyze(
         pass1Result.rawLines,
       );
+      final pass1Score = TextOrientationAnalyzer.score(pass1Result.rawLines);
       final verticalCandidate = await compute(
         VerticalTextDetector.hasStrongCandidate,
         pass1Result.rawLines,
       );
       inputMetrics['verticalCandidate'] = verticalCandidate;
+      inputMetrics['orientationAnalysis'] = pass1Analysis.toJson();
 
-      // Kriteria kualitas cukup tanpa perlu pass kedua:
-      // Teks ditemukan, tidak ada peringatan kualitas rendah, dan skor token kuat.
+      final orientationPlan = ImageOrientationAnalyzer.plan(
+        pass1Analysis,
+        verticalCandidate: verticalCandidate,
+      );
+      inputMetrics['orientationPlan'] = orientationPlan.toJson();
+
       const double sufficientScoreThreshold =
-          OcrOrientationResolver.sufficientScore;
-      final landscape = imageSize.width > imageSize.height;
-      if (OcrOrientationResolver.sufficient(pass1Result) &&
-          !verticalCandidate &&
-          !OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) &&
-          !landscape &&
+          TextOrientationAnalyzer.minimumScore;
+      final pass1Sufficient = pass1Result.fullText.trim().isNotEmpty &&
+          !pass1Result.hasLowQualityWarning &&
+          pass1Score >= sufficientScoreThreshold;
+      if (!orientationPlan.needsRecognition &&
+          pass1Sufficient &&
           scanMode != OcrScanMode.smallText) {
         return _attachDiagnostics(
           diagnostics: diagnostics,
@@ -405,23 +423,14 @@ class OcrService {
 
       OcrResult bestResult = pass1Result;
       double bestScore = pass1Score;
+      double bestUprightShare = pass1Analysis.uprightShare;
       var additionalPasses = 0;
 
-      // K5: bounded, sequential retries, always from the same original photo.
-      // Missing angle never blocks recovery; 0 degrees is a valid angle.
-      if (!OcrOrientationResolver.sufficient(pass1Result) ||
-          OcrOrientationResolver.angleSuggestsUpsideDown(pass1Result) ||
-          verticalCandidate ||
-          landscape) {
-        // K6 evidence permits 90/270 even in portrait. Share the K5 retry
-        // budget: never repeat angles or exceed three additional attempts.
-        final retries = OcrOrientationResolver.recoveryAngles(
-          imageSize,
-          resultSufficient: OcrOrientationResolver.sufficient(pass1Result),
-          verticalCandidate: verticalCandidate,
-        );
-        var verticalResolved = !verticalCandidate;
-        for (final degrees in retries) {
+      // Kandidat rotasi berasal dari bukti orientasi teks, bukan rasio citra.
+      // Maksimal tiga putaran tambahan dan hasil diterima hanya jika bukti
+      // tegak menguat serta kualitas leksikal tidak merosot.
+      if (orientationPlan.needsRecognition) {
+        for (final degrees in orientationPlan.candidateRotations) {
           if (_isDisposed || additionalPasses >= maxAdditionalPasses) break;
           additionalPasses++;
           final timer = Stopwatch()..start();
@@ -436,47 +445,43 @@ class OcrService {
               tempDir: tempDir,
               scanMode: scanMode,
               noiseFilterConfig: noiseFilterConfig,
-              passName: verticalCandidate && degrees != 180
-                  ? 'vertical_rotation_$degrees'
-                  : 'rotation_$degrees',
+              passName: 'orientation_$degrees',
               passRecords: passRecords,
               passStopwatch: timer,
               rotationDegrees: degrees,
             );
-            final score = OcrOrientationResolver.score(candidate.rawLines);
-            if ((score > bestScore ||
-                    (score == bestScore &&
-                        OcrOrientationResolver.angleSuggestsUpsideDown(
-                          bestResult,
-                        ) &&
-                        !OcrOrientationResolver.angleSuggestsUpsideDown(
-                          candidate,
-                        ))) &&
-                (!candidate.allLinesFilteredOut ||
-                    bestResult.allLinesFilteredOut)) {
-              bestResult = OcrOrientationResolver.mapResult(
+            final candidateAnalysis = TextOrientationAnalyzer.analyze(
+              candidate.rawLines,
+            );
+            final candidateScore = TextOrientationAnalyzer.score(
+              candidate.rawLines,
+            );
+            final candidateBetter = !candidate.allLinesFilteredOut &&
+                candidate.fullText.trim().isNotEmpty &&
+                candidateAnalysis.uprightShare > bestUprightShare + 0.05 &&
+                candidateAnalysis.confidence >= 0.4 &&
+                candidateScore >= bestScore * 0.9;
+            if (candidateBetter) {
+              bestResult = OrientationTransform.mapResultBack(
                 candidate,
                 imageSize,
                 degrees,
               );
-              bestScore = score;
-              verticalResolved = !await compute(
-                VerticalTextDetector.hasStrongCandidate,
-                candidate.rawLines,
-              );
-            }
-            if (verticalResolved &&
-                OcrOrientationResolver.sufficient(bestResult) &&
-                (!landscape || degrees == retries.last)) {
+              bestScore = candidateScore;
+              bestUprightShare = candidateAnalysis.uprightShare;
+              inputMetrics['appliedOrientationRotation'] = degrees;
               break;
             }
           } catch (e) {
             debugPrint(
-              '[OcrService] Rotation $degrees failed: ${e.runtimeType}',
+              '[OcrService] Orientation rotation $degrees failed: ${e.runtimeType}',
             );
           }
         }
-        if (verticalResolved && OcrOrientationResolver.sufficient(bestResult)) {
+
+        if (bestResult != pass1Result &&
+            bestScore >= sufficientScoreThreshold &&
+            !bestResult.hasLowQualityWarning) {
           return _attachDiagnostics(
             diagnostics: diagnostics,
             result: bestResult,
@@ -520,7 +525,7 @@ class OcrService {
             passName: 'fallback_contrast',
             passRecords: passRecords,
           );
-          final contrastScore = OcrOrientationResolver.score(
+          final contrastScore = TextOrientationAnalyzer.score(
             contrastResult.rawLines,
           );
           if (contrastScore > bestScore) {
@@ -542,7 +547,7 @@ class OcrService {
             passName: 'fallback_otsu',
             passRecords: passRecords,
           );
-          final otsuScore = OcrOrientationResolver.score(otsuResult.rawLines);
+          final otsuScore = TextOrientationAnalyzer.score(otsuResult.rawLines);
           if (otsuScore > bestScore) {
             bestResult = otsuResult;
             bestScore = otsuScore;
@@ -581,7 +586,7 @@ class OcrService {
                 passName: 'fallback_smart_crop',
                 passRecords: passRecords,
               );
-              final roiScore = OcrOrientationResolver.score(roiResult.rawLines);
+              final roiScore = TextOrientationAnalyzer.score(roiResult.rawLines);
               if (roiScore > bestScore) {
                 bestResult = roiResult;
                 bestScore = roiScore;
@@ -622,7 +627,7 @@ class OcrService {
           }
           if (tileResults.isNotEmpty) {
             final combined = await _mergeTileResults(tileResults, imageSize);
-            final tileScore = OcrOrientationResolver.score(combined.rawLines);
+            final tileScore = TextOrientationAnalyzer.score(combined.rawLines);
             if (tileScore > bestScore || bestResult.rawLines.isEmpty) {
               bestResult = combined;
               bestScore = tileScore;
@@ -694,6 +699,7 @@ class OcrService {
                 boundingBox: line.boundingBox,
                 confidence: line.confidence,
                 angle: line.angle,
+                orientation: line.orientation,
                 blockIndex: blockIndex,
                 elements: line.elements,
               ),

@@ -95,6 +95,7 @@ class OcrPostCorrector {
                 boundingBox: l.boundingBox,
                 confidence: l.confidence,
                 angle: l.angle,
+                orientation: l.orientation,
                 blockIndex: l.blockIndex,
                 elements: l.elements,
               ),
@@ -115,6 +116,7 @@ class OcrPostCorrector {
           boundingBox: line.boundingBox,
           confidence: line.confidence,
           angle: line.angle,
+          orientation: line.orientation,
           blockIndex: line.blockIndex,
           elements: line.elements,
         );

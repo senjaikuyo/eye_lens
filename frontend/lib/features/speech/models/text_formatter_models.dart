@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:eye_lens/features/ocr/orientation/text_orientation.dart';
+
 /// DTO untuk satu kata terformat lengkap dengan indeks karakter pada teks akhir.
 @immutable
 class FormattedWord {
@@ -118,6 +120,9 @@ class OcrLineData {
 
   /// ML Kit angle in the coordinate space of the submitted image; iOS null.
   final double? angle;
+
+  /// Orientasi baris hasil analisis geometri + sudut. Null sebelum dianalisis.
+  final TextOrientationEstimate? orientation;
   final int blockIndex;
   final List<OcrWordData> elements;
 
@@ -126,9 +131,20 @@ class OcrLineData {
     required this.boundingBox,
     this.confidence,
     this.angle,
+    this.orientation,
     this.blockIndex = 0,
     this.elements = const [],
   });
+
+  OcrLineData withOrientation(TextOrientationEstimate estimate) => OcrLineData(
+    text: text,
+    boundingBox: boundingBox,
+    confidence: confidence,
+    angle: angle,
+    orientation: estimate,
+    blockIndex: blockIndex,
+    elements: elements,
+  );
 }
 
 /// DTO blok OCR murni dengan baris-baris di dalamnya.

@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
-import 'package:eye_lens/features/ocr/reading_order/reading_order_resolver.dart';
+import 'package:eye_lens/features/ocr/orientation/orientation_aware_reading_order.dart';
 
 /// Konfigurasi dan ambang batas aturan perapian teks OCR.
 class TextFormatterConfig {
@@ -79,7 +79,7 @@ class TextFormatter {
 
     // 3. Pertahankan blok ML Kit sebagai unit baca. Resolver mengurutkan
     // kolom dan blok, tetapi tidak pernah mencampurkan baris lintas blok.
-    final orderedBlocks = ReadingOrderResolver.resolve(data.blocks);
+    final orderedBlocks = OrientationAwareReadingOrder.resolve(data.blocks);
 
     final List<_RawParagraphAccumulator> rawParagraphs = [];
 

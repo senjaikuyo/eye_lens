@@ -150,6 +150,7 @@ class OcrPassRecord {
   final List<double?> angles;
   final int rotationDegrees;
   final Size? submittedImageSize;
+  final Map<String, Object?>? orientation;
 
   const OcrPassRecord({
     required this.name,
@@ -165,6 +166,7 @@ class OcrPassRecord {
     this.angles = const [],
     this.rotationDegrees = 0,
     this.submittedImageSize,
+    this.orientation,
   });
 
   Map<String, Object?> toJson() => {
@@ -190,6 +192,7 @@ class OcrPassRecord {
     },
     'confidence': confidence.toJson(),
     'lineHeights': lineHeights.toJson(),
+    if (orientation != null) 'orientation': orientation,
     if (note != null) 'note': note,
   };
 }

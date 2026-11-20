@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,9 @@ import 'package:eye_lens/features/image_area/logic/lens_selection_controller.dar
 import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/reading_order/text_cluster_helper.dart';
-import 'package:eye_lens/features/camera/screen/widgets/scanner_corner_painter.dart';
+import 'package:eye_lens/features/image_area/screen/widgets/full_image_reset_button.dart';
+import 'package:eye_lens/features/image_area/screen/widgets/google_lens_frame_painter.dart';
+import 'package:eye_lens/features/image_area/screen/widgets/ocr_debug_badge.dart';
 
 /// Menentukan apakah overlay visual debug OCR (kotak hijau/merah) diaktifkan.
 /// Default bernilai false: citra tampil bersih ala Google Lens tanpa kotak pada teks.
@@ -387,7 +388,6 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final textTheme = Theme.of(context).textTheme;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -476,7 +476,7 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                     IgnorePointer(
                       child: CustomPaint(
                         size: Size.infinite,
-                        painter: _GoogleLensFramePainter(
+                        painter: GoogleLensFramePainter(
                           frameRect: screenFrameRect,
                         ),
                       ),
@@ -606,90 +606,15 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                           : 'Right edge handle',
                     ),
 
-                    // Tombol "Seluruh gambar" (Full image) di posisi aman yang tidak menutupi bingkai atau teks.
-                    // Jika bingkai sudah berstatus Full image 1x, sembunyikan tombol agar tidak menutupi konten atas.
-                    Builder(
-                      builder: (context) {
-                        final bool isFullImage =
-                            (imageCropRect.width >=
-                                widget.imageSize.width - 4.0) &&
-                            (imageCropRect.height >=
-                                widget.imageSize.height - 4.0) &&
-                            _transformationController.value.isIdentity();
-                        if (isFullImage) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final bool hasSpaceBelow =
-                            (screenFrameRect.bottom + 60) <
-                            (_viewportSize.height - 110);
-                        final bool hasSpaceAbove = screenFrameRect.top > 60;
-                        final double buttonTop = hasSpaceBelow
-                            ? screenFrameRect.bottom + 12
-                            : (hasSpaceAbove
-                                  ? screenFrameRect.top - 54
-                                  : max(16.0, _viewportSize.height - 100));
-                        final double buttonLeft =
-                            (screenFrameRect.center.dx - 70).clamp(
-                              16.0,
-                              max(16.0, _viewportSize.width - 156),
-                            );
-
-                        return Positioned(
-                          top: buttonTop,
-                          left: buttonLeft,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _resetZoomAndFitImage,
-                              borderRadius: BorderRadius.circular(24),
-                              child: Container(
-                                constraints: const BoxConstraints(
-                                  minHeight: 48,
-                                  minWidth: 48,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.75),
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: Colors.white70,
-                                    width: 1.2,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black45,
-                                      blurRadius: 6,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.fullscreen_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      strings.fullImage,
-                                      style: textTheme.labelMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+                    FullImageResetButton(
+                      imageCropRect: imageCropRect,
+                      imageSize: widget.imageSize,
+                      isTransformIdentity: _transformationController.value
+                          .isIdentity(),
+                      screenFrameRect: screenFrameRect,
+                      viewportSize: _viewportSize,
+                      label: strings.fullImage,
+                      onReset: _resetZoomAndFitImage,
                     ),
                   ],
                 );
@@ -698,93 +623,13 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
 
             // 4. Bilah Debug OCR
             if (kDebugOcrOverlay)
-              Positioned(
-                bottom: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Text(
-                    'Debug OCR: ${widget.elements.length} lolos | ${widget.rejectedLines.length} dibuang',
-                    style: textTheme.labelSmall?.copyWith(color: Colors.white),
-                  ),
-                ),
+              OcrDebugBadge(
+                acceptedCount: widget.elements.length,
+                rejectedCount: widget.rejectedLines.length,
               ),
           ],
         );
       },
     );
-  }
-}
-
-/// Painter untuk menggambar scrim gelap tipis di luar bingkai serta empat sudut putih
-/// melengkung halus khas Google Lens, tanpa garis sisi penuh dan tanpa glow/bayangan tebal.
-class _GoogleLensFramePainter extends CustomPainter {
-  final Rect frameRect;
-
-  const _GoogleLensFramePainter({required this.frameRect});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (frameRect.width <= 0 || frameRect.height <= 0) return;
-
-    // 1. Scrim gelap tipis di luar bingkai (cutout tengah 100% transparan dengan radius sudut Google Lens)
-    final scrimPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.38)
-      ..style = PaintingStyle.fill;
-
-    final fullPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-    final framePath = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          frameRect,
-          const Radius.circular(LensSelectionHelper.lensCornerRadius),
-        ),
-      );
-
-    final cutOutPath = Path.combine(
-      PathOperation.difference,
-      fullPath,
-      framePath,
-    );
-    canvas.drawPath(cutOutPath, scrimPaint);
-
-    // 2. Empat sudut berbentuk huruf L melengkung putih tipis ala Google Lens
-    // Diberi inset setengah stroke agar tidak pernah terpotong di tepi layar maupun tepi citra
-    final halfStroke = LensSelectionHelper.lensStrokeWidth / 2.0;
-    final insetRect = Rect.fromLTRB(
-      max(halfStroke, frameRect.left + halfStroke),
-      max(halfStroke, frameRect.top + halfStroke),
-      min(size.width - halfStroke, frameRect.right - halfStroke),
-      min(size.height - halfStroke, frameRect.bottom - halfStroke),
-    );
-
-    final cornerPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = LensSelectionHelper.lensStrokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    ScannerCornerPainter.drawGoogleLensCorners(
-      canvas: canvas,
-      rect: insetRect,
-      paint: cornerPaint,
-      cornerLength: LensSelectionHelper.lensCornerLength,
-      cornerRadius: LensSelectionHelper.lensCornerRadius,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _GoogleLensFramePainter oldDelegate) {
-    return oldDelegate.frameRect != frameRect;
   }
 }

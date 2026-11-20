@@ -11,7 +11,9 @@ class SpeechTopActionBar extends StatelessWidget {
   final VoidCallback onSettingsTap;
   final VoidCallback onFeedbackTap;
   final VoidCallback onFaqTap;
+  final VoidCallback? onEditPressed;
   final bool showAppearanceButton;
+  final bool showEditButton;
 
   const SpeechTopActionBar({
     super.key,
@@ -22,7 +24,9 @@ class SpeechTopActionBar extends StatelessWidget {
     required this.onSettingsTap,
     required this.onFeedbackTap,
     required this.onFaqTap,
+    this.onEditPressed,
     this.showAppearanceButton = true,
+    this.showEditButton = false,
   });
 
   @override
@@ -42,6 +46,23 @@ class SpeechTopActionBar extends StatelessWidget {
         ),
 
         const Spacer(),
+
+        // Edit teks sebelum dibacakan
+        if (showEditButton) ...[
+          Semantics(
+            label: strings.isIndonesian ? 'Edit teks' : 'Edit text',
+            button: true,
+            child: _buildCircleButton(
+              onTap: onEditPressed,
+              child: const Icon(
+                Icons.edit_rounded,
+                color: Colors.black,
+                size: 23,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
 
         // "Aa" Appearance Button (hanya tampil di mode teks)
         if (showAppearanceButton) ...[

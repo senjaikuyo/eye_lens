@@ -26,6 +26,7 @@ import 'package:eye_lens/features/settings/screen/widgets/language_sheet.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_body_view.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_mode_toggle_button.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_top_action_bar.dart';
+import 'package:eye_lens/features/speech/screen/widgets/speech_text_editor_dialog.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
@@ -152,6 +153,28 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _showNoTextAlert = false;
       });
     }
+  }
+
+  Future<void> _editCurrentText() async {
+    if (_activeText.trim().isEmpty) return;
+
+    final edited = await showSpeechTextEditor(
+      context: context,
+      initialText: _activeText,
+      isIndonesian: AppStrings.of(context).isIndonesian,
+    );
+    if (!mounted || edited == null) return;
+
+    _ttsService.stop();
+    setState(() {
+      _currentFramedText = edited;
+      _currentFramedFormattedResult = null;
+      _hasTextInFrame = true;
+      _showNoTextAlert = false;
+    });
+    _isPlayingNotifier.value = false;
+    _progressNotifier.value = 0.0;
+    _currentCharIndexNotifier.value = 0;
   }
 
   Future<void> _startSpeech() async {
@@ -356,6 +379,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
               isDark: isDark,
               strings: strings,
               showAppearanceButton: _isTextView,
+              showEditButton: _hasTextInFrame,
+              onEditPressed: _editCurrentText,
               onBackPressed: () => Navigator.of(context).pop(),
               onAppearancePressed: () {
                 _isAppearanceSheetOpen = true;

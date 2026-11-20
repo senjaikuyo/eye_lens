@@ -79,3 +79,6 @@ backend/.vscode
 
 eyelens-backend-image.tar
 eyelens.tar
+
+# QA artifacts (local only)
+qa-report/

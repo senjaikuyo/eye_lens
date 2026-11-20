@@ -33,6 +33,11 @@ class OcrResult {
   final int rawLinesCount;
   final List<OcrLineData> rawLines;
 
+  /// Rotasi searah jarum jam yang dipakai OCR untuk membaca citra ini.
+  /// Hasil dan koordinat publik tetap berada pada citra asli; UI dapat memakai
+  /// nilai ini untuk memutar preview beserta koordinat overlay secara konsisten.
+  final int appliedOrientationRotation;
+
   /// Laporan diagnostik K0 dalam format JSON. Hanya terisi pada build debug.
   final String? diagnosticJson;
 
@@ -54,6 +59,7 @@ class OcrResult {
     this.allLinesFilteredOut = false,
     this.rawLinesCount = 0,
     this.rawLines = const [],
+    this.appliedOrientationRotation = 0,
     this.diagnosticJson,
     this.failureType,
   });
@@ -73,6 +79,7 @@ class OcrResult {
       allLinesFilteredOut: allLinesFilteredOut,
       rawLinesCount: rawLinesCount,
       rawLines: rawLines,
+      appliedOrientationRotation: appliedOrientationRotation,
       diagnosticJson: diagnosticJson ?? this.diagnosticJson,
       failureType: failureType,
     );

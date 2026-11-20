@@ -44,8 +44,7 @@ class OrientationTransform {
     int degrees,
   ) {
     if (estimate == null) return null;
-    final originalQuarter =
-        (estimate.quarterTurns - degrees ~/ 90 + 4) % 4;
+    final originalQuarter = (estimate.quarterTurns - degrees ~/ 90 + 4) % 4;
     return TextOrientationEstimate(
       orientation: TextOrientation.fromQuarterTurns(originalQuarter),
       skewDegrees: estimate.skewDegrees,
@@ -74,6 +73,120 @@ class OrientationTransform {
             ),
           )
           .toList(),
+    );
+  }
+
+  /// Memetakan kotak dari citra asli ke citra yang diputar searah jarum jam.
+  static Rect rotateBox(Rect box, Size original, int degrees) {
+    switch (degrees) {
+      case 180:
+        return Rect.fromLTRB(
+          original.width - box.right,
+          original.height - box.bottom,
+          original.width - box.left,
+          original.height - box.top,
+        );
+      case 90:
+        return Rect.fromLTRB(
+          original.height - box.bottom,
+          box.left,
+          original.height - box.top,
+          box.right,
+        );
+      case 270:
+        return Rect.fromLTRB(
+          box.top,
+          original.width - box.right,
+          box.bottom,
+          original.width - box.left,
+        );
+      default:
+        throw ArgumentError.value(degrees, 'degrees');
+    }
+  }
+
+  /// Menyiapkan salinan hasil untuk overlay pada citra yang telah diputar.
+  /// Teks terformat dipertahankan karena urutan bacanya sudah benar.
+  static OcrResult rotateResultForDisplay(OcrResult result, int degrees) {
+    if (degrees == 0) return result;
+    final original = result.imageSize;
+    Rect box(Rect value) => rotateBox(value, original, degrees);
+    OcrLineData line(OcrLineData value) => OcrLineData(
+      text: value.text,
+      boundingBox: box(value.boundingBox),
+      confidence: value.confidence,
+      angle: value.angle == null
+          ? null
+          : ((value.angle! + degrees + 180) % 360) - 180,
+      orientation: value.orientation == null
+          ? null
+          : TextOrientationEstimate(
+              orientation: TextOrientation.fromQuarterTurns(
+                value.orientation!.quarterTurns + degrees ~/ 90,
+              ),
+              skewDegrees: value.orientation!.skewDegrees,
+              confidence: value.orientation!.confidence,
+              evidence: value.orientation!.evidence,
+            ),
+      blockIndex: value.blockIndex,
+      elements: value.elements
+          .map(
+            (word) => OcrWordData(
+              text: word.text,
+              boundingBox: box(word.boundingBox),
+              confidence: word.confidence,
+            ),
+          )
+          .toList(),
+    );
+    final displaySize = degrees == 180
+        ? original
+        : Size(original.height, original.width);
+    RejectedLineInfo rejected(RejectedLineInfo value) => RejectedLineInfo(
+      line: line(value.line),
+      reason: value.reason,
+      explanation: value.explanation,
+      suspicionScore: value.suspicionScore,
+      signals: value.signals,
+    );
+    return OcrResult(
+      fullText: result.fullText,
+      elements: result.elements
+          .map(
+            (element) => OcrElement(
+              id: element.id,
+              text: element.text,
+              boundingBox: box(element.boundingBox),
+            ),
+          )
+          .toList(),
+      imageSize: displaySize,
+      documentData: result.documentData == null
+          ? null
+          : OcrDocumentData(
+              blocks: result.documentData!.blocks
+                  .map(
+                    (block) => OcrBlockData(
+                      text: block.text,
+                      boundingBox: box(block.boundingBox),
+                      lines: block.lines.map(line).toList(),
+                    ),
+                  )
+                  .toList(),
+              rawText: result.documentData!.rawText,
+              allRawLines: result.documentData!.allRawLines.map(line).toList(),
+            ),
+      formattedResult: result.formattedResult,
+      rejectedLines: result.rejectedLines.map(rejected).toList(),
+      doubtfulLines: result.doubtfulLines.map(rejected).toList(),
+      fallbackUsed: result.fallbackUsed,
+      hasLowQualityWarning: result.hasLowQualityWarning,
+      allLinesFilteredOut: result.allLinesFilteredOut,
+      rawLinesCount: result.rawLinesCount,
+      rawLines: result.rawLines.map(line).toList(),
+      diagnosticJson: result.diagnosticJson,
+      failureType: result.failureType,
+      appliedOrientationRotation: 0,
     );
   }
 
@@ -124,7 +237,10 @@ class OrientationTransform {
       formatted = TextFormatter.format(mappedDoc);
       fullText = formatted.fullText.isNotEmpty
           ? formatted.fullText
-          : mappedDoc.blocks.expand((b) => b.lines).map((l) => l.text).join('\n');
+          : mappedDoc.blocks
+                .expand((b) => b.lines)
+                .map((l) => l.text)
+                .join('\n');
     }
 
     return OcrResult(
@@ -140,6 +256,7 @@ class OrientationTransform {
       allLinesFilteredOut: result.allLinesFilteredOut,
       rawLinesCount: result.rawLinesCount,
       rawLines: mappedLines,
+      appliedOrientationRotation: degrees,
       diagnosticJson: result.diagnosticJson,
       failureType: result.failureType,
     );

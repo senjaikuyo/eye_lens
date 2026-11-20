@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/features/ocr/models/ocr_element.dart';
+import 'package:eye_lens/features/ocr/orientation/orientation_transform.dart';
+import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/features/settings/logic/settings_provider.dart';
@@ -66,6 +68,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
   String _noTextAlertMessage = '';
   bool _showNoTextAlert = false;
   Timer? _noTextAlertDismissTimer;
+  Uint8List? _displayImageBytes;
+  OcrResult? _displayOcrResult;
 
   String get _activeText => _currentFramedText;
 
@@ -211,6 +215,9 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _currentFramedText = widget.text;
     _currentFramedFormattedResult = widget.ocrResult?.formattedResult;
     _hasTextInFrame = widget.text.trim().isNotEmpty;
+    _displayImageBytes = widget.imageBytes;
+    _displayOcrResult = widget.ocrResult;
+    _prepareOrientedPreview();
 
     final langProv = Provider.of<LanguageProvider>(context, listen: false);
     _selectedLanguage = langProv.isEnglish ? 'English' : 'Indonesia';
@@ -264,6 +271,27 @@ class _SpeechScreenState extends State<SpeechScreen> {
         await _startSpeech();
       }
     });
+  }
+
+  Future<void> _prepareOrientedPreview() async {
+    final bytes = widget.imageBytes;
+    final result = widget.ocrResult;
+    final degrees = result?.appliedOrientationRotation ?? 0;
+    if (bytes == null || result == null || degrees == 0) return;
+
+    try {
+      final rotatedBytes = await OcrPreprocessor.rotate(bytes, degrees);
+      if (!mounted) return;
+      setState(() {
+        _displayImageBytes = rotatedBytes;
+        _displayOcrResult = OrientationTransform.rotateResultForDisplay(
+          result,
+          degrees,
+        );
+      });
+    } catch (error) {
+      debugPrint('[SpeechScreen] Preview rotation failed: $error');
+    }
   }
 
   @override
@@ -365,8 +393,8 @@ class _SpeechScreenState extends State<SpeechScreen> {
               highlightColor: themeProvider.highlightColor,
               topPadding: topPadding,
               bottomPadding: bottomPadding,
-              imageBytes: widget.imageBytes,
-              ocrResult: widget.ocrResult,
+              imageBytes: _displayImageBytes,
+              ocrResult: _displayOcrResult,
               lensSelectionController: _lensSelectionController,
               onFrameChanging: _onFrameChanging,
               onSelectionComputed: _onSelectionComputed,

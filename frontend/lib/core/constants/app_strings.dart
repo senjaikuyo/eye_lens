@@ -136,6 +136,12 @@ class AppStrings {
       : 'Image is unclear. No text found. Point the camera at text and try again.';
   String get unclearImageNoTextTitle =>
       isIndonesian ? 'Gambar kurang jelas' : 'Image is unclear';
+  String get ocrFailedTitle =>
+      isIndonesian ? 'Gagal memproses gambar' : 'Could not process image';
+  String get ocrFailedAlert => isIndonesian
+      ? 'Gagal memproses gambar. Coba lagi dengan gambar yang lebih jelas.'
+      : 'Could not process the image. Try again with a clearer image.';
+  String get ocrFailedInstruction => isIndonesian ? 'Coba lagi.' : 'Try again.';
   String get close => isIndonesian ? 'Tutup' : 'Close';
   String get feedback => isIndonesian ? 'Masukan' : 'Feedback';
   String get feedbackTitle => isIndonesian ? 'Kirim Masukan' : 'Send Feedback';

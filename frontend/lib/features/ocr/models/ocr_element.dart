@@ -16,6 +16,8 @@ class OcrElement {
   });
 }
 
+enum OcrFailureType { processing, timeout }
+
 /// Hasil lengkap ekstraksi OCR: teks penuh, daftar elemen berkoordinat, dan ukuran citra.
 class OcrResult {
   final String fullText;
@@ -34,6 +36,11 @@ class OcrResult {
   /// Laporan diagnostik K0 dalam format JSON. Hanya terisi pada build debug.
   final String? diagnosticJson;
 
+  /// Terisi jika OCR gagal dijalankan, bukan sekadar tidak menemukan teks.
+  final OcrFailureType? failureType;
+
+  bool get hasFailure => failureType != null;
+
   const OcrResult({
     required this.fullText,
     required this.elements,
@@ -48,6 +55,7 @@ class OcrResult {
     this.rawLinesCount = 0,
     this.rawLines = const [],
     this.diagnosticJson,
+    this.failureType,
   });
 
   /// Menyalin hasil OCR dengan laporan diagnostik opsional.
@@ -66,6 +74,16 @@ class OcrResult {
       rawLinesCount: rawLinesCount,
       rawLines: rawLines,
       diagnosticJson: diagnosticJson ?? this.diagnosticJson,
+      failureType: failureType,
+    );
+  }
+
+  static OcrResult failed([OcrFailureType type = OcrFailureType.processing]) {
+    return OcrResult(
+      fullText: '',
+      elements: const [],
+      imageSize: Size.zero,
+      failureType: type,
     );
   }
 

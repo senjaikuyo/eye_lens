@@ -95,15 +95,76 @@ class ReadingOrderResolver {
 
   static OcrBlockData _withOrderedLines(OcrBlockData block) {
     final lines = [...block.lines];
-    lines.sort((a, b) {
-      final top = a.boundingBox.top.compareTo(b.boundingBox.top);
-      return top != 0 ? top : a.boundingBox.left.compareTo(b.boundingBox.left);
-    });
+    final columnSplit = _detectColumnSplit(lines, block.boundingBox.width);
+
+    if (columnSplit != null) {
+      final left = <OcrLineData>[];
+      final right = <OcrLineData>[];
+      for (final line in lines) {
+        (line.boundingBox.center.dx < columnSplit ? left : right).add(line);
+      }
+      if (left.length >= 2 && right.length >= 2) {
+        left.sort(_compareLines);
+        right.sort(_compareLines);
+        return OcrBlockData(
+          text: block.text,
+          boundingBox: block.boundingBox,
+          lines: List.unmodifiable([...left, ...right]),
+        );
+      }
+    }
+
+    lines.sort(_compareLines);
     return OcrBlockData(
       text: block.text,
       boundingBox: block.boundingBox,
       lines: List.unmodifiable(lines),
     );
+  }
+
+  static int _compareLines(OcrLineData a, OcrLineData b) {
+    final top = a.boundingBox.top.compareTo(b.boundingBox.top);
+    return top != 0 ? top : a.boundingBox.left.compareTo(b.boundingBox.left);
+  }
+
+  /// Mendeteksi dua kolom di dalam satu blok ML Kit. Hanya dipakai jika ada
+  /// gutter yang jelas dan minimal dua baris di tiap sisi. Judul yang
+  /// membentang hampir seluruh blok membatalkan deteksi.
+  static double? _detectColumnSplit(
+    List<OcrLineData> lines,
+    double blockWidth,
+  ) {
+    if (lines.length < 4 || blockWidth <= 0) return null;
+    if (lines.any((line) => line.boundingBox.width > blockWidth * 0.6)) {
+      return null;
+    }
+
+    final byCenter = [...lines]
+      ..sort(
+        (a, b) => a.boundingBox.center.dx.compareTo(b.boundingBox.center.dx),
+      );
+
+    final minimumGap = max(20.0, blockWidth * 0.06);
+    double? bestSplit;
+    var bestGap = 0.0;
+
+    for (var cut = 2; cut <= byCenter.length - 2; cut++) {
+      final left = byCenter.sublist(0, cut);
+      final right = byCenter.sublist(cut);
+      final maxLeftRight = left
+          .map((line) => line.boundingBox.right)
+          .reduce(max);
+      final minRightLeft = right
+          .map((line) => line.boundingBox.left)
+          .reduce(min);
+      final gap = minRightLeft - maxLeftRight;
+      if (gap >= minimumGap && gap > bestGap) {
+        bestGap = gap;
+        bestSplit = (maxLeftRight + minRightLeft) / 2;
+      }
+    }
+
+    return bestSplit;
   }
 }
 

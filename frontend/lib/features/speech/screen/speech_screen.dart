@@ -240,6 +240,22 @@ class _SpeechScreenState extends State<SpeechScreen> {
       _currentCharIndexNotifier.value = 0;
     };
 
+    _ttsService.onError = (_) {
+      if (!mounted) return;
+      _isPlayingNotifier.value = false;
+      final message = AppStrings.of(context).isIndonesian
+          ? 'Suara tidak tersedia. Periksa pengaturan suara di HP.'
+          : 'Audio is unavailable. Check your phone sound settings.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 6)),
+      );
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        TextDirection.ltr,
+      );
+    };
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final langCode = _selectedLanguage == 'Indonesia' ? 'id-ID' : 'en-US';
       await _ttsService.setLanguage(langCode);

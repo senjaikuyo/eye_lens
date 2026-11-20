@@ -152,6 +152,21 @@ class AppStrings {
   String get feedbackSent => isIndonesian
       ? 'Terima kasih atas masukan Anda!'
       : 'Thank you for your feedback!';
+  String get feedbackEmpty => isIndonesian
+      ? 'Tulis masukan terlebih dahulu.'
+      : 'Please write your feedback first.';
+  String get feedbackFailed => isIndonesian
+      ? 'Masukan gagal dikirim. Silakan coba lagi.'
+      : 'Failed to send feedback. Please try again.';
+  String get feedbackOffline => isIndonesian
+      ? 'Tidak ada koneksi internet. Masukan belum terkirim.'
+      : 'No internet connection. Your feedback was not sent.';
+  String get feedbackTimeout => isIndonesian
+      ? 'Permintaan timeout. Silakan coba lagi.'
+      : 'The request timed out. Please try again.';
+  String get feedbackSessionExpired => isIndonesian
+      ? 'Sesi Anda telah berakhir. Silakan masuk kembali.'
+      : 'Your session has ended. Please log in again.';
   String get textSize => isIndonesian ? 'Ukuran Teks' : 'Text Size';
   String get sizeSmall => isIndonesian ? 'Kecil' : 'Small';
   String get sizeMedium => isIndonesian ? 'Sedang' : 'Medium';

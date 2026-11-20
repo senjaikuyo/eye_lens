@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/models/history_model.dart';
-import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/features/speech/screen/speech_screen.dart';
+import 'package:eye_lens/features/history/logic/history_provider.dart';
 import 'package:eye_lens/features/history/screen/widgets/history_delete_dialog.dart';
 import 'package:eye_lens/features/history/screen/widgets/history_empty_state.dart';
 import 'package:eye_lens/features/history/screen/widgets/history_tile.dart';
+import 'package:eye_lens/features/speech/screen/speech_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -24,9 +24,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<HistoryProvider>().loadRiwayat();
+        final historyProvider = context.read<HistoryProvider>();
+        historyProvider.loadRiwayat();
+        _triggerSync();
       }
     });
+  }
+
+  Future<void> _triggerSync() async {
+    if (!mounted) return;
+    await context.read<HistoryProvider>().syncToServer();
   }
 
   Future<void> _handleDeleteSingle(
@@ -77,7 +84,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             const SizedBox(height: 12),
 
-            // Header: Back Button + "History" Title + Clear All Action
+            // Header: Back Button + "History" Title + Sync Action + Clear All Action
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -113,6 +120,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
                   ),
+
+                  // Tombol Indikator Sinkronisasi
+                  if (historyProvider.isSyncing)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(
+                        Icons.sync_rounded,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                      onPressed: _triggerSync,
+                    ),
+
                   if (historyList.isNotEmpty)
                     TextButton(
                       onPressed: () => _handleClearAll(strings, isDark),
@@ -136,7 +166,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               height: 1,
             ),
 
-            // History Flat List or Empty State
+            // History Flat List or Empty State dengan Pull-to-Refresh
             Expanded(
               child: historyProvider.isLoading && historyList.isEmpty
                   ? Center(
@@ -146,34 +176,59 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     )
                   : historyList.isEmpty
                   ? HistoryEmptyState(strings: strings, isDark: isDark)
-                  : ListView.separated(
-                      padding: EdgeInsets.zero,
-                      itemCount: historyList.length,
-                      separatorBuilder: (context, index) => Divider(
-                        color: dividerColor,
-                        thickness: dividerThickness,
-                        height: 1,
-                      ),
-                      itemBuilder: (context, index) {
-                        final item = historyList[index];
-                        return HistoryTile(
-                          item: item,
-                          isDark: isDark,
-                          isHighContrast: isHighContrast,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => SpeechScreen(
-                                  text: item.isiTeks,
-                                  hasImage: false,
+                  : RefreshIndicator(
+                      onRefresh: _triggerSync,
+                      color: isDark ? Colors.black : Colors.white,
+                      backgroundColor: isDark ? Colors.white : Colors.black,
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        itemCount: historyList.length,
+                        separatorBuilder: (context, index) => Divider(
+                          color: dividerColor,
+                          thickness: dividerThickness,
+                          height: 1,
+                        ),
+                        itemBuilder: (context, index) {
+                          final item = historyList[index];
+                          final isSynced = item.statusSinkron == 1;
+
+                          return Stack(
+                            children: [
+                              HistoryTile(
+                                item: item,
+                                isDark: isDark,
+                                isHighContrast: isHighContrast,
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => SpeechScreen(
+                                        text: item.isiTeks,
+                                        hasImage: false,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onDelete: () =>
+                                    _handleDeleteSingle(item, strings, isDark),
+                              ),
+                              // Indikator Status Sinkronisasi di pojok kanan bawah item
+                              Positioned(
+                                right: 16,
+                                bottom: 12,
+                                child: Icon(
+                                  isSynced
+                                      ? Icons.cloud_done_rounded
+                                      : Icons.cloud_upload_rounded,
+                                  size: 16,
+                                  color: isSynced
+                                      ? const Color(0xFF10B981) // Hijau
+                                      : const Color(0xFFF59E0B), // Oranye
                                 ),
                               ),
-                            );
-                          },
-                          onDelete: () =>
-                              _handleDeleteSingle(item, strings, isDark),
-                        );
-                      },
+                            ],
+                          );
+                        },
+                      ),
                     ),
             ),
           ],

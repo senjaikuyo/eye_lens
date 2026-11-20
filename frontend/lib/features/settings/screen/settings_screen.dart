@@ -6,7 +6,6 @@ import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
 import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/features/settings/screen/change_password_screen.dart';
 import 'package:eye_lens/features/settings/screen/faq_screen.dart';
 import 'package:eye_lens/features/settings/screen/widgets/language_selector_tile.dart';
@@ -15,6 +14,7 @@ import 'package:eye_lens/features/settings/screen/widgets/settings_email_tile.da
 import 'package:eye_lens/features/settings/screen/widgets/settings_nav_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_logout_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/theme_selector_tile.dart';
+import 'package:eye_lens/core/services/auth_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,25 +24,17 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _userEmail = '';
-
   @override
   void initState() {
     super.initState();
-    _loadUserEmail();
-  }
-
-  Future<void> _loadUserEmail() async {
-    try {
-      final user = await AuthService().getUser();
-      if (mounted && user != null && user['email'] != null) {
-        setState(() {
-          _userEmail = user['email'].toString();
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to load user email: $e');
-    }
+    // Segarkan data profil dari GET /api/me bila online. Saat offline,
+    // data sesi lokal tetap ditampilkan.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        context.read<AuthProvider>().validateSession();
+      } catch (_) {}
+    });
   }
 
   @override
@@ -55,6 +47,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final selectedLanguage = languageProvider.language;
     final settingsProvider = context.watch<SettingsProvider>();
     final autoPlayAudio = settingsProvider.autoPlayAudio;
+
+    String email = '-';
+    try {
+      email = context.watch<AuthProvider>().email ?? '-';
+    } catch (_) {
+      // Provider tidak tersedia (mis. widget test terisolasi).
+    }
 
     final dividerColor = isHighContrast
         ? (isDark ? Colors.white : Colors.black)
@@ -113,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // 1. Email Section
               SettingsEmailTile(
                 emailLabel: strings.email,
-                email: _userEmail.isNotEmpty ? _userEmail : '-',
+                email: email,
                 isDark: isDark,
                 isHighContrast: isHighContrast,
               ),
@@ -146,7 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 1,
               ),
 
-              // 3. Auto-Play Audio
               SettingsAutoPlayTile(
                 value: autoPlayAudio,
                 isDark: isDark,
@@ -157,12 +155,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (val) {
                   context.read<SettingsProvider>().setAutoPlayAudio(val);
                 },
-              ),
-
-              Divider(
-                color: dividerColor,
-                thickness: dividerThickness,
-                height: 1,
               ),
 
               // 4. Theme Selector

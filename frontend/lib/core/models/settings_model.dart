@@ -1,5 +1,6 @@
 class SettingsModel {
   final int id;
+  final int userId;
   final String tema;
   final int ukuranTeks;
   final String warnaKursor;
@@ -9,9 +10,11 @@ class SettingsModel {
   final String bahasaSuara;
   final String bahasaAplikasi;
   final String terakhirDiperbarui;
+  final int isSynch;
 
   const SettingsModel({
     this.id = 1,
+    this.userId = -1,
     this.tema = 'sistem',
     this.ukuranTeks = 18,
     this.warnaKursor = '#FACC15',
@@ -21,13 +24,15 @@ class SettingsModel {
     this.bahasaSuara = 'id-ID',
     this.bahasaAplikasi = 'id',
     required this.terakhirDiperbarui,
+    this.isSynch = 0,
   });
 
   bool get isOtomatisPutar => otomatisPutar == 1;
+  bool get tersinkron => isSynch == 1;
 
   Map<String, dynamic> toMap() {
     return {
-      'id': 1,
+      'user_id': userId,
       'tema': tema,
       'ukuran_teks': ukuranTeks,
       'warna_kursor': warnaKursor,
@@ -37,12 +42,14 @@ class SettingsModel {
       'bahasa_suara': bahasaSuara,
       'bahasa_aplikasi': bahasaAplikasi,
       'terakhir_diperbarui': terakhirDiperbarui,
+      'is_synch': isSynch,
     };
   }
 
   factory SettingsModel.fromMap(Map<String, dynamic> map) {
     return SettingsModel(
       id: map['id'] as int? ?? 1,
+      userId: (map['user_id'] as int?) ?? -1,
       tema: map['tema'] as String? ?? 'sistem',
       ukuranTeks: map['ukuran_teks'] as int? ?? 18,
       warnaKursor: map['warna_kursor'] as String? ?? '#FACC15',
@@ -54,6 +61,7 @@ class SettingsModel {
       terakhirDiperbarui:
           map['terakhir_diperbarui'] as String? ??
           DateTime.now().toIso8601String(),
+      isSynch: (map['is_synch'] as int?) ?? 0,
     );
   }
 
@@ -82,9 +90,11 @@ class SettingsModel {
     String? bahasaSuara,
     String? bahasaAplikasi,
     String? terakhirDiperbarui,
+    int? isSynch,
   }) {
     return SettingsModel(
       id: 1,
+      userId: userId,
       tema: tema ?? this.tema,
       ukuranTeks: ukuranTeks ?? this.ukuranTeks,
       warnaKursor: warnaKursor ?? this.warnaKursor,
@@ -94,6 +104,7 @@ class SettingsModel {
       bahasaSuara: bahasaSuara ?? this.bahasaSuara,
       bahasaAplikasi: bahasaAplikasi ?? this.bahasaAplikasi,
       terakhirDiperbarui: terakhirDiperbarui ?? this.terakhirDiperbarui,
+      isSynch: isSynch ?? this.isSynch,
     );
   }
 }

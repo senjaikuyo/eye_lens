@@ -23,6 +23,7 @@ class Pengaturan extends Model
         'bahasa_suara',
         'bahasa_aplikasi',
         'terakhir_diperbarui',
+        'field_timestamps',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class Pengaturan extends Model
             'otomatis_putar' => 'boolean',
             'kecepatan_suara' => 'float',
             'terakhir_diperbarui' => 'datetime',
+            'field_timestamps' => 'array',
         ];
     }
 

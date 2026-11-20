@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/features/auth/logic/auth_service.dart';
+import 'package:eye_lens/core/services/auth_provider.dart';
 import 'package:eye_lens/core/widgets/custom_auth_field.dart';
 import 'package:eye_lens/core/widgets/eyelash_icon.dart';
-import 'package:eye_lens/features/home/screen/home_screen.dart';
+import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/features/auth/screen/forgot_password_screen.dart';
 import 'package:eye_lens/features/auth/screen/register_screen.dart';
+import 'package:eye_lens/features/home/screen/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -81,6 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      if (!mounted) return;
+      // Sinkronkan state aplikasi (termasuk scope user_id data lokal).
+      final authProvider = context.read<AuthProvider>();
+      await authProvider.refresh();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),

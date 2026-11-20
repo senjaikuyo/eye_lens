@@ -1,7 +1,10 @@
 <?php
 
-use App\Http\Controllers\UsersController;
+use App\Http\Controllers\Api\MasukanController;
+use App\Http\Controllers\Api\PengaturanController;
+use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\ChangePasswordController;
+use App\Http\Controllers\UsersController;
 use Illuminate\Support\Facades\Route;
 
 // Rute Publik (Autentikasi & Reset Password)
@@ -24,4 +27,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [UsersController::class, 'getProfile']);
     Route::get('/profile', [UsersController::class, 'getProfile']);
     Route::post('/change-password', [ChangePasswordController::class, 'changePassword']);
+
+    // Route Sinkronisasi
+    Route::post('/sync', [SyncController::class, 'sync']);
+
+    // Pengaturan dan masukan
+    Route::put('/pengaturan', [PengaturanController::class, 'update']);
+    Route::post('/masukan', [MasukanController::class, 'store']);
 });

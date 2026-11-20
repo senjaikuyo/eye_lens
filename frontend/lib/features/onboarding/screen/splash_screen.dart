@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/features/onboarding/screen/onboarding_screen.dart';
+import 'package:eye_lens/core/services/auth_provider.dart';
+import 'package:eye_lens/features/home/screen/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,10 +45,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     _timer = Timer(const Duration(milliseconds: 2500), () {
       if (mounted) {
+        // Sesi tersimpan (termasuk saat offline) langsung membuka Home.
+        // Pengguna tanpa sesi tetap melihat onboarding/login.
+        final destination = _hasStoredSession()
+            ? const HomeScreen()
+            : const OnboardingScreen();
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                const OnboardingScreen(),
+                destination,
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
@@ -55,6 +63,15 @@ class _SplashScreenState extends State<SplashScreen>
         );
       }
     });
+  }
+
+  bool _hasStoredSession() {
+    try {
+      return Provider.of<AuthProvider>(context, listen: false).isAuthenticated;
+    } catch (_) {
+      // Provider tidak tersedia (mis. widget test terisolasi).
+      return false;
+    }
   }
 
   @override

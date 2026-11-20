@@ -1,19 +1,31 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:eye_lens/core/constants/app_constants.dart';
+import 'package:eye_lens/core/services/database_helper.dart';
+import 'package:eye_lens/features/settings/logic/pengaturan_service.dart';
 
-/// Provider untuk mengelola preferensi umum aplikasi seperti putar otomatis suara.
+/// Provider preferensi umum yang bersumber dari `tbl_pengaturan` (SQLite).
 class SettingsProvider extends ChangeNotifier {
+  final PengaturanService _pengaturanService;
+
   bool _autoPlayAudio = true;
   bool _isLoaded = false;
+  bool _disposed = false;
+  late final Future<void> _initialization;
 
-  SettingsProvider({SharedPreferences? preferences}) {
-    if (preferences != null) {
-      _initFromPrefs(preferences);
-    } else {
-      _loadPreferences();
-    }
+  SettingsProvider({PengaturanService? pengaturanService})
+    : _pengaturanService = pengaturanService ?? PengaturanService.instance {
+    DatabaseHelper.instance.addListener(_load);
+    _initialization = _load();
+  }
+
+  /// Selesai setelah nilai awal dibaca dari SQLite.
+  Future<void> get initialized => _initialization;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    DatabaseHelper.instance.removeListener(_load);
+    super.dispose();
   }
 
   /// Status pengaturan putar otomatis suara saat berpindah kelompok teks (default: true).
@@ -22,31 +34,24 @@ class SettingsProvider extends ChangeNotifier {
   /// Menandakan apakah pengaturan telah selesai dimuat dari penyimpanan lokal.
   bool get isLoaded => _isLoaded;
 
-  void _initFromPrefs(SharedPreferences prefs) {
-    _autoPlayAudio = prefs.getBool(AppPreferenceKeys.autoPlayAudio) ?? true;
-    _isLoaded = true;
-    notifyListeners();
-  }
-
-  Future<void> _loadPreferences() async {
+  Future<void> _load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _initFromPrefs(prefs);
+      final row = await _pengaturanService.load();
+      _autoPlayAudio = ((row['otomatis_putar'] as num?)?.toInt() ?? 1) != 0;
     } catch (_) {
+      // Tetap gunakan nilai bawaan bila database belum siap.
+    } finally {
       _isLoaded = true;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
   }
 
-  /// Mengubah status sakelar putar otomatis suara dan menyimpannya ke SharedPreferences.
+  /// Mengubah status sakelar dan menyimpannya ke `tbl_pengaturan`.
   Future<void> setAutoPlayAudio(bool val) async {
     if (_autoPlayAudio == val) return;
     _autoPlayAudio = val;
     notifyListeners();
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(AppPreferenceKeys.autoPlayAudio, val);
-    } catch (_) {}
+    await _pengaturanService.recordChange(otomatisPutar: val ? 1 : 0);
   }
 }

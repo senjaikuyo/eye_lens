@@ -5,10 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/app.dart';
+import 'package:eye_lens/core/services/auth_provider.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/core/services/image_cache_cleanup.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
+import 'package:eye_lens/core/services/sync_coordinator.dart';
 import 'package:eye_lens/features/history/logic/history_provider.dart';
+import 'package:eye_lens/features/settings/logic/pengaturan_service.dart';
 import 'package:eye_lens/features/settings/logic/settings_provider.dart';
 import 'package:eye_lens/features/ocr/services/ocr_service.dart';
 
@@ -24,9 +27,30 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Sesi pengguna dimuat lebih dulu agar scope data lokal (user_id) benar
+  // sebelum provider lain membaca database.
+  final authProvider = AuthProvider();
+  await authProvider.load();
+
+  // Migrasi pengaturan lama dari SharedPreferences sebelum provider membaca
+  // SQLite. Kegagalan migrasi tidak boleh mencegah aplikasi dibuka.
+  try {
+    await PengaturanService.instance.migrateLegacyPreferences();
+  } catch (_) {}
+
+  // Validasi token tersimpan saat online; saat offline sesi lokal dipertahankan.
+  unawaited(authProvider.validateSession());
+
+  final syncCoordinator = SyncCoordinator(
+    onConnectivityRestored: authProvider.validateSession,
+  );
+  syncCoordinator.start();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => DisplayPreferencesProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),

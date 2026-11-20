@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/core/services/auth_provider.dart';
 import 'package:eye_lens/features/auth/logic/auth_service.dart';
 import 'package:eye_lens/features/auth/screen/login_screen.dart';
 
@@ -58,8 +60,11 @@ class LogoutDialog {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: () async {
+              final authProvider = context.read<AuthProvider>();
               Navigator.of(dialogContext).pop();
               await AuthService().logout();
+              // Hanya mengosongkan scope akun; data lokal tidak dihapus.
+              await authProvider.clear();
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const LoginScreen()),

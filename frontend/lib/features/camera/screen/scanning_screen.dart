@@ -446,17 +446,31 @@ class _ScanningScreenState extends State<ScanningScreen>
 
   void _checkAndShowLowQualityWarning(OcrResult ocrResult) {
     if (ocrResult.hasLowQualityWarning && mounted) {
+      final message = AppStrings.of(context).isIndonesian
+          ? 'Hasil mungkin tidak akurat. Periksa teks atau potret ulang.'
+          : 'The result may be inaccurate. Check the text or retake the photo.';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppStrings.of(context).isIndonesian
-                ? 'Gambar kurang jelas, teks mungkin kurang akurat.'
-                : 'Image is unclear, text may be less accurate.',
-            style: const TextStyle(fontSize: 16),
-          ),
+          content: Text(message, style: const TextStyle(fontSize: 16)),
           backgroundColor: const Color(0xFFE58E1B),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 6),
         ),
+      );
+
+      // Pengguna lansia/low vision tidak selalu membaca layar.
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        TextDirection.ltr,
+      );
+      final tts = TtsService();
+      unawaited(
+        tts
+            .setLanguage(
+              AppStrings.of(context).isIndonesian ? 'id-ID' : 'en-US',
+            )
+            .then((_) => tts.speak(message)),
       );
     }
   }

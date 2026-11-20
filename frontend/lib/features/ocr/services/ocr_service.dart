@@ -12,6 +12,7 @@ import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/features/ocr/services/ocr_diagnostic_collector.dart';
 import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_confidence_gate.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_post_corrector.dart';
 import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
@@ -105,9 +106,12 @@ class OcrService {
       ),
     );
 
-    // 2. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
+    // 2. Gerbang confidence: baris di bawah ambang tidak boleh masuk hasil.
+    final confidenceGate = OcrConfidenceGate.apply(filterResult.acceptedLines);
+
+    // 2b. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
     final Map<int, List<OcrLineData>> blockMap = {};
-    for (final line in filterResult.acceptedLines) {
+    for (final line in confidenceGate.acceptedLines) {
       blockMap.putIfAbsent(line.blockIndex, () => []).add(line);
     }
 
@@ -132,7 +136,7 @@ class OcrService {
 
     final documentData = OcrDocumentData(
       blocks: filteredBlocks,
-      rawText: filterResult.acceptedLines.map((l) => l.text).join('\n'),
+      rawText: confidenceGate.acceptedLines.map((l) => l.text).join('\n'),
       allRawLines: allLines,
     );
 
@@ -176,10 +180,16 @@ class OcrService {
       documentData: correctedDocumentData,
       formattedResult: formattedResult,
       rejectedLines: filterResult.rejectedLines,
-      doubtfulLines: filterResult.doubtfulLines,
+      doubtfulLines: [
+        ...filterResult.doubtfulLines,
+        ...confidenceGate.quarantinedLines,
+      ],
       fallbackUsed: filterResult.fallbackUsed,
-      hasLowQualityWarning: filterResult.hasLowQualityWarning,
-      allLinesFilteredOut: filterResult.allLinesFilteredOut,
+      hasLowQualityWarning:
+          filterResult.hasLowQualityWarning || confidenceGate.hasWarning,
+      allLinesFilteredOut:
+          filterResult.allLinesFilteredOut ||
+          confidenceGate.acceptedLines.isEmpty,
       rawLinesCount: allLines.length,
       rawLines: allLines,
     );

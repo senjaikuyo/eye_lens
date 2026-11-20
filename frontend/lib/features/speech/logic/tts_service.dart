@@ -6,6 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/features/speech/logic/text_formatter.dart';
+import 'package:eye_lens/features/speech/logic/tts_text_chunker.dart';
 
 enum TtsState { playing, stopped, paused }
 
@@ -52,6 +53,15 @@ class TtsService {
   Timer? _paragraphPauseTimer;
   int _playbackSessionId = 0;
 
+  // Potongan teks per permintaan TTS. Sebagian mesin membatasi panjang teks.
+  List<String> _rawChunks = const [];
+  int _rawChunkIndex = 0;
+  int _rawChunkOffset = 0;
+
+  List<String> _paragraphChunks = const [];
+  int _paragraphChunkIndex = 0;
+  int _paragraphChunkOffset = 0;
+
   TtsProgressCallback? onProgress;
   VoidCallback? onStart;
   VoidCallback? onCompletion;
@@ -75,9 +85,17 @@ class TtsService {
 
     _flutterTts.setCompletionHandler(() async {
       if (_formattedResult != null) {
-        await _handleParagraphCompletion();
+        if (_paragraphChunkIndex + 1 < _paragraphChunks.length) {
+          await _speakNextParagraphChunk();
+        } else {
+          await _handleParagraphCompletion();
+        }
+      } else if (_rawChunkIndex + 1 < _rawChunks.length) {
+        await _speakNextRawChunk();
       } else {
         _state = TtsState.stopped;
+        _rawChunks = const [];
+        _rawChunkIndex = 0;
         _charOffset = 0;
         _currentCharIndex = 0;
         onProgress?.call(1.0, '', _fullText.length);
@@ -108,13 +126,10 @@ class TtsService {
           _currentParagraphIndex < _formattedResult!.paragraphs.length) {
         final currentPara =
             _formattedResult!.paragraphs[_currentParagraphIndex];
-        absoluteIndex =
-            (currentPara.startIndex + _charOffsetInParagraph + start).clamp(
-              0,
-              _fullText.length,
-            );
+        absoluteIndex = (currentPara.startIndex + _paragraphChunkOffset + start)
+            .clamp(0, _fullText.length);
       } else {
-        absoluteIndex = (_charOffset + start).clamp(0, _fullText.length);
+        absoluteIndex = (_rawChunkOffset + start).clamp(0, _fullText.length);
       }
 
       _currentCharIndex = absoluteIndex;
@@ -127,6 +142,10 @@ class TtsService {
     _flutterTts.setErrorHandler((dynamic msg) {
       _state = TtsState.stopped;
       _paragraphPauseTimer?.cancel();
+      _rawChunks = const [];
+      _rawChunkIndex = 0;
+      _paragraphChunks = const [];
+      _paragraphChunkIndex = 0;
       onError?.call(msg.toString());
     });
   }
@@ -140,6 +159,9 @@ class TtsService {
     if (nextIndex < result.paragraphs.length) {
       _currentParagraphIndex = nextIndex;
       _charOffsetInParagraph = 0;
+      _paragraphChunks = const [];
+      _paragraphChunkIndex = 0;
+      _paragraphChunkOffset = 0;
       final sessionId = ++_playbackSessionId;
 
       _paragraphPauseTimer?.cancel();
@@ -183,7 +205,16 @@ class TtsService {
       return;
     }
 
-    await _flutterTts.speak(textToSpeak);
+    _paragraphChunks = TtsTextChunker.split(textToSpeak);
+    _paragraphChunkIndex = 0;
+    _paragraphChunkOffset = _charOffsetInParagraph;
+    await _flutterTts.speak(_paragraphChunks.first);
+  }
+
+  Future<void> _speakNextParagraphChunk() async {
+    _paragraphChunkOffset += _paragraphChunks[_paragraphChunkIndex].length;
+    _paragraphChunkIndex++;
+    await _flutterTts.speak(_paragraphChunks[_paragraphChunkIndex]);
   }
 
   Future<void> setLanguage(String languageCode) async {
@@ -251,8 +282,22 @@ class TtsService {
     _charOffset = 0;
     _currentCharIndex = 0;
     _state = TtsState.playing;
+    _rawChunks = TtsTextChunker.split(text);
+    _rawChunkIndex = 0;
+    _rawChunkOffset = 0;
     await _flutterTts.stop();
-    await _flutterTts.speak(text);
+    if (_rawChunks.isEmpty) {
+      _state = TtsState.stopped;
+      onCompletion?.call();
+      return;
+    }
+    await _flutterTts.speak(_rawChunks.first);
+  }
+
+  Future<void> _speakNextRawChunk() async {
+    _rawChunkOffset += _rawChunks[_rawChunkIndex].length;
+    _rawChunkIndex++;
+    await _flutterTts.speak(_rawChunks[_rawChunkIndex]);
   }
 
   Future<void> pause() async {
@@ -277,7 +322,14 @@ class TtsService {
         final remaining = _fullText.substring(
           _charOffset.clamp(0, _fullText.length),
         );
-        final res = await _flutterTts.speak(remaining);
+        _rawChunks = TtsTextChunker.split(remaining);
+        _rawChunkIndex = 0;
+        _rawChunkOffset = _charOffset;
+        if (_rawChunks.isEmpty) {
+          _state = TtsState.stopped;
+          return;
+        }
+        final res = await _flutterTts.speak(_rawChunks.first);
         if (res != 1) {
           _state = TtsState.stopped;
         }
@@ -293,6 +345,11 @@ class TtsService {
     _currentCharIndex = 0;
     _currentParagraphIndex = 0;
     _charOffsetInParagraph = 0;
+    _rawChunks = const [];
+    _rawChunkIndex = 0;
+    _paragraphChunks = const [];
+    _paragraphChunkIndex = 0;
+    _paragraphChunkOffset = 0;
     await _flutterTts.stop();
   }
 
@@ -375,7 +432,12 @@ class TtsService {
       if (_state == TtsState.playing) {
         await _flutterTts.stop();
         _state = TtsState.playing;
-        await _flutterTts.speak(remainingText);
+        _rawChunks = TtsTextChunker.split(remainingText);
+        _rawChunkIndex = 0;
+        _rawChunkOffset = _charOffset;
+        if (_rawChunks.isNotEmpty) {
+          await _flutterTts.speak(_rawChunks.first);
+        }
       }
     }
   }

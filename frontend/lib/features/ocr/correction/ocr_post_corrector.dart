@@ -234,6 +234,15 @@ class OcrPostCorrector {
     final hasSeparators = RegExp(r'[.,]').hasMatch(rawAmount);
     final hasDigits = RegExp(r'\d').hasMatch(rawAmount);
 
+    // Jangan mengubah angka di belakang koma desimal. Contoh: "12,5OO"
+    // lebih aman dibiarkan apa adanya daripada menjadi "12,500" yang
+    // terbaca sebagai ribuan.
+    final comma = rawAmount.lastIndexOf(',');
+    if (comma >= 0 &&
+        RegExp(r'[A-Za-z|]').hasMatch(rawAmount.substring(comma + 1))) {
+      return null;
+    }
+
     if (isPrevCurrency ||
         currencyPrefix.isNotEmpty ||
         (hasSeparators && hasDigits)) {
@@ -290,38 +299,37 @@ class OcrPostCorrector {
     }
 
     if (!hasDigits) {
-      // Periksa ambigu optik tulisan tangan (rn -> m, cl -> d) jika kata saat ini tidak valid di kamus
-      if (!OcrDictionary.isValidWord(core)) {
-        final isAllUpper = core.toUpperCase() == core;
-        final isCapitalized = core[0].toUpperCase() == core[0];
+      // Token alfabetik murni hanya boleh dikoreksi jika kandidatnya ada di
+      // kamus terkurasi. Nama orang/obat tidak ada di kamus sehingga tidak
+      // akan pernah ditebak. Panjang minimum 6 melindungi kata pendek seperti
+      // "clari" agar tidak berubah menjadi "dari".
+      final isAllUpperWord = core.toUpperCase() == core;
+      final isCapitalizedWord = core[0].toUpperCase() == core[0];
 
+      if (core == core.toLowerCase() &&
+          core.length >= 6 &&
+          !OcrDictionary.isValidWord(core)) {
         if (core.contains('rn')) {
           final cand = core.replaceAll('rn', 'm');
           if (OcrDictionary.isValidWord(cand)) {
-            final cased = isAllUpper
-                ? cand.toUpperCase()
-                : (isCapitalized
-                      ? cand[0].toUpperCase() + cand.substring(1)
-                      : cand);
-            return prefix + cased + suffix;
+            return prefix + cand + suffix;
           }
         }
         if (core.contains('cl')) {
           final cand = core.replaceAll('cl', 'd');
           if (OcrDictionary.isValidWord(cand)) {
-            final cased = isAllUpper
-                ? cand.toUpperCase()
-                : (isCapitalized
-                      ? cand[0].toUpperCase() + cand.substring(1)
-                      : cand);
-            return prefix + cased + suffix;
+            return prefix + cand + suffix;
           }
         }
+      }
+
+      if (core.length >= 6) {
         final spellingCandidate = OcrDictionary.bestSingleEditCorrection(core);
-        if (spellingCandidate != null) {
-          final cased = isAllUpper
+        if (spellingCandidate != null &&
+            OcrDictionary.contains(spellingCandidate)) {
+          final cased = isAllUpperWord
               ? spellingCandidate.toUpperCase()
-              : (isCapitalized
+              : (isCapitalizedWord
                     ? spellingCandidate[0].toUpperCase() +
                           spellingCandidate.substring(1)
                     : spellingCandidate);

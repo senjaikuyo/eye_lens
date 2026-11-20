@@ -23,7 +23,8 @@ void main() {
     });
 
     test('pecahan diutamakan pada batas kalimat', () {
-      final text = '${List.filled(240, 'A').join()}. '
+      final text =
+          '${List.filled(240, 'A').join()}. '
           '${List.filled(240, 'B').join()}.';
       final chunks = TtsTextChunker.split(text, maxChars: 300);
 

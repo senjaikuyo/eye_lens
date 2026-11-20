@@ -18,7 +18,6 @@ enum NoiseRejectionReason {
   emptyOrWhitespace,
   clockPattern,
   statusBarPattern,
-  isolatedLetter,
   combinedSuspicion,
   shortText,
 }
@@ -177,9 +176,6 @@ class OcrNoiseFilterInput {
 
 class OcrNoiseFilter {
   static final _alphaNumeric = RegExp(r'[\p{L}\p{N}]', unicode: true);
-  static final _letter = RegExp(r'^\p{L}$', unicode: true);
-  static final _number = RegExp(r'^\d+(?:[.,]\d+)*$');
-  static final _listItem = RegExp(r'^(?:\d+[.)]|[a-zA-Z][.)]|[•‣◦⁃∙*+\-])\s*');
   static final _clock = RegExp(
     r'^\d{1,2}[:.][0-5]\d(?::[0-5]\d)?(?:\s*(?:AM|PM))?$',
     caseSensitive: false,
@@ -284,11 +280,6 @@ class OcrNoiseFilter {
           _distance(line.boundingBox, lines[other].boundingBox),
         );
       }
-      final contextHeight = max(median, line.boundingBox.height);
-      final isolated = nearest > config.isolationDistanceFactor * contextHeight;
-      if (_letter.hasMatch(text) && isolated) {
-        hardReason = NoiseRejectionReason.isolatedLetter;
-      }
       if (hardReason != null) {
         rejected.add(
           RejectedLineInfo(
@@ -334,19 +325,8 @@ class OcrNoiseFilter {
         add(NoiseRejectionReason.lowAlphaNumericRatio, config.alphaRatioWeight);
         if (edge) add(NoiseRejectionReason.edgeBoundary, config.edgeWeight);
       }
-      final protectedShort =
-          config.validShortWords.contains(text.toLowerCase()) ||
-          _number.hasMatch(text) ||
-          _listItem.hasMatch(text);
-      if (!protectedShort) {
-        if (length < config.shortLength) {
-          add(NoiseRejectionReason.shortText, config.shortWeight);
-        }
-        if (isolated && length <= config.isolationShortCharCount) {
-          // Use a distinct signal for distance; length is not corroboration of itself.
-          add(NoiseRejectionReason.isolated, config.isolationWeight);
-        }
-      }
+      // Panjang, ukuran, jarak antarbaris, dan confidence bukan bukti noise.
+      // Karakter tunggal dan teks kecil dapat menjadi label atau teks vertikal.
       final zone =
           config.edgeZoneHeightRatio *
           (screenshot ? config.screenshotSensitivity : 1);

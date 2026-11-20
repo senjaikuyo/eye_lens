@@ -27,16 +27,16 @@ void main() {
     calls.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-      calls.add(call.method);
-      if (call.method == 'speak') {
-        final args = call.arguments;
-        spoken.add(args is Map ? args['text'] as String : args as String);
-        return 1;
-      }
-      if (call.method == 'pause') return 1;
-      if (call.method == 'getEngines') return ['mock'];
-      return 1;
-    });
+          calls.add(call.method);
+          if (call.method == 'speak') {
+            final args = call.arguments;
+            spoken.add(args is Map ? args['text'] as String : args as String);
+            return 1;
+          }
+          if (call.method == 'pause') return 1;
+          if (call.method == 'getEngines') return ['mock'];
+          return 1;
+        });
     await TtsService().stop();
   });
 

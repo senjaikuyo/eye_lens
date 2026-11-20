@@ -11,19 +11,15 @@ OcrLineData line(String text, double? confidence) => OcrLineData(
 );
 
 void main() {
-  group('RC-02 PM-01 confidence menjadi gerbang', () {
-    test('confidence di bawah 0.30 dikarantina', () {
+  group('RC-02 confidence hanya informasi kualitas', () {
+    test('confidence sangat rendah tetap diterima', () {
       final result = OcrConfidenceGate.apply([
         line('Teks sampah hasil OCR', 0.2),
       ]);
 
-      expect(result.acceptedLines, isEmpty);
-      expect(result.quarantinedLines, hasLength(1));
+      expect(result.acceptedLines, hasLength(1));
+      expect(result.quarantinedLines, isEmpty);
       expect(result.hasWarning, isTrue);
-      expect(
-        result.quarantinedLines.single.reason.name,
-        'lowConfidence',
-      );
     });
 
     test('confidence 0.30 sampai 0.60 diterima dengan peringatan', () {
@@ -48,14 +44,17 @@ void main() {
       expect(result.hasWarning, isTrue);
     });
 
-    test('hanya baris yakin yang lolos dari campuran', () {
+    test('baris buruk dan baik sama-sama lolos tanpa dibuang', () {
       final result = OcrConfidenceGate.apply([
         line('baris buruk', 0.1),
         line('baris baik', 0.8),
       ]);
 
-      expect(result.acceptedLines.map((l) => l.text), ['baris baik']);
-      expect(result.quarantinedLines, hasLength(1));
+      expect(result.acceptedLines.map((l) => l.text), [
+        'baris buruk',
+        'baris baik',
+      ]);
+      expect(result.quarantinedLines, isEmpty);
       expect(result.hasWarning, isTrue);
     });
 

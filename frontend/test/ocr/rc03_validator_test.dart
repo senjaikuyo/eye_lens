@@ -9,23 +9,28 @@ OcrTextValidationResult evaluate(String text) => OcrTextValidator.evaluate(
 );
 
 void main() {
-  group('RC-03 IS-04/PM-04/PG-03 fragmen bukan teks', () {
-    test('fragmen harga "Rp 5" ditolak', () {
-      final result = evaluate('Rp 5');
-
-      expect(result.hasText, isFalse);
-      expect(result.reason, NoTextReason.insufficientAlphanumeric);
+  group('RC-03 fragmen teks pendek tetap diterima', () {
+    test('fragmen harga dan angka pendek diterima', () {
+      for (final text in ['Rp 5', '12', '3', 'X7']) {
+        expect(evaluate(text).hasText, isTrue, reason: 'Input "$text"');
+      }
     });
 
-    test('angka pendek dan dua huruf ditolak', () {
-      for (final text in ['12', '3', 'ab', 'X7']) {
-        expect(evaluate(text).hasText, isFalse, reason: 'Input "$text"');
+    test('dua huruf dan karakter tunggal diterima', () {
+      for (final text in ['ab', 'd', 'g']) {
+        expect(evaluate(text).hasText, isTrue, reason: 'Input "$text"');
       }
     });
 
     test('kalimat pendek yang bermakna tetap diterima', () {
       for (final text in ['Halo', 'Obat', 'Ya, ambil', 'Rp 5000']) {
         expect(evaluate(text).hasText, isTrue, reason: 'Input "$text"');
+      }
+    });
+
+    test('teks tanpa alfanumerik ditolak', () {
+      for (final text in ['', '   ', '~~~', '---']) {
+        expect(evaluate(text).hasText, isFalse, reason: 'Input "$text"');
       }
     });
   });

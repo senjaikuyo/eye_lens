@@ -79,7 +79,6 @@ void main() {
         NoiseRejectionReason.tooSmall,
         NoiseRejectionReason.lowAlphaNumericRatio,
         NoiseRejectionReason.edgeBoundary,
-        NoiseRejectionReason.isolated,
       ]),
     );
     expect(doubtful.suspicionScore, greaterThanOrEqualTo(2.5));
@@ -109,22 +108,21 @@ void main() {
     expect(result.acceptedLines, hasLength(1));
   });
 
-  test('hard rules reject empty, pure symbols and isolated single letters', () {
+  test('hard rules reject only empty and pure symbols', () {
     final result = filter([
       line('   '),
       line('~~~|---', y: 200),
       line('Z', y: 850),
     ]);
-    expect(result.acceptedLines, isEmpty);
+    expect(result.acceptedLines.map((line) => line.text), ['Z']);
     expect(
       result.rejectedLines.map((r) => r.reason),
       orderedEquals([
         NoiseRejectionReason.emptyOrWhitespace,
         NoiseRejectionReason.symbolOnly,
-        NoiseRejectionReason.isolatedLetter,
       ]),
     );
-    expect(result.allLinesFilteredOut, isTrue);
+    expect(result.allLinesFilteredOut, isFalse);
     expect(result.fallbackUsed, isFalse);
   });
 
@@ -139,11 +137,8 @@ void main() {
     expect(filter(lines).acceptedLines, orderedEquals(lines));
   });
 
-  test('isolated standalone letter rejected even when short-word listed', () {
-    expect(
-      filter([line('I')]).rejectedLines.single.reason,
-      NoiseRejectionReason.isolatedLetter,
-    );
+  test('isolated standalone letters and digits are retained', () {
+    expect(filter([line('I')]).acceptedLines, hasLength(1));
     expect(filter([line('7')]).acceptedLines, hasLength(1));
   });
 

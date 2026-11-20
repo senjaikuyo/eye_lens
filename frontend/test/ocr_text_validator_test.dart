@@ -63,24 +63,18 @@ void main() {
       );
     });
 
-    test('3. Kondisi teks kurang dari 2 karakter huruf atau angka menghasilkan hasText false', () {
-      // Kasus A: Hanya 1 huruf
+    test('3. Karakter tunggal diterima, simbol tanpa alfanumerik ditolak', () {
+      // Kasus A: Hanya 1 huruf tetap ditampilkan
       final singleCharResult = OcrTextValidator.evaluate(
         rawOcrText: 'A',
         rawLinesCount: 1,
         filteredText: 'A',
         acceptedLinesCount: 1,
       );
-      expect(singleCharResult.hasText, isFalse);
+      expect(singleCharResult.hasText, isTrue);
       expect(singleCharResult.alphanumericCount, equals(1));
-      expect(
-        singleCharResult.reason,
-        equals(NoTextReason.insufficientAlphanumeric),
-      );
-      expect(
-        singleCharResult.getAlertMessage(indoStrings),
-        equals('Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'),
-      );
+      expect(singleCharResult.reason, equals(NoTextReason.none));
+      expect(singleCharResult.getAlertMessage(indoStrings), isEmpty);
 
       // Kasus B: Hanya simbol / tanda baca tanpa huruf dan angka
       final symbolResult = OcrTextValidator.evaluate(
@@ -96,20 +90,17 @@ void main() {
         equals(NoTextReason.insufficientAlphanumeric),
       );
 
-      // Kasus C: Baris awalnya banyak lalu tersaring hingga tersisa kurang dari 2 karakter
+      // Kasus C: Teks yang tersisa tetap ditampilkan walau satu karakter
       final filteredDownResult = OcrTextValidator.evaluate(
         rawOcrText: 'Kata pertama\nNoise baris\n1',
         rawLinesCount: 3,
         filteredText: '1',
         acceptedLinesCount: 1,
       );
-      expect(filteredDownResult.hasText, isFalse);
+      expect(filteredDownResult.hasText, isTrue);
       expect(filteredDownResult.alphanumericCount, equals(1));
-      expect(filteredDownResult.reason, equals(NoTextReason.allLinesFiltered));
-      expect(
-        filteredDownResult.getAlertMessage(indoStrings),
-        contains('Gambar kurang jelas'),
-      );
+      expect(filteredDownResult.reason, equals(NoTextReason.none));
+      expect(filteredDownResult.getAlertMessage(indoStrings), isEmpty);
     });
 
     test(

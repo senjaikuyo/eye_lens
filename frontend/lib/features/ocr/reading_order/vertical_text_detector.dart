@@ -5,7 +5,7 @@ import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 /// Conservative candidate detection only; never assembles or rewrites text.
 class VerticalTextDetector {
   const VerticalTextDetector._();
-  static const minimumCharacters = 4;
+  static const minimumCharacters = 2;
   static const maxCenterSpreadFactor = .6;
   static const minStepHeightFactor = .7;
   static const maxStepHeightFactor = 2.5;
@@ -13,7 +13,14 @@ class VerticalTextDetector {
   static final _letter = RegExp(r'^[A-Za-z]$');
 
   static bool hasStrongCandidate(List<OcrLineData> lines) {
-    if (lines.length > 1024) return false;
+    return characterColumns(lines).isNotEmpty;
+  }
+
+  /// Mengembalikan kolom karakter yang dibaca dari atas ke bawah.
+  /// Setiap karakter tetap menjadi [OcrLineData] tersendiri; fungsi ini tidak
+  /// pernah merangkai karakter menjadi kata.
+  static List<List<OcrLineData>> characterColumns(List<OcrLineData> lines) {
+    if (lines.length > 1024) return const [];
     final letters =
         lines
             .where(
@@ -31,10 +38,13 @@ class VerticalTextDetector {
           );
     // Bound geometry work for pathological OCR output. No image is retained.
     if (letters.length < minimumCharacters || letters.length > 256) {
-      return false;
+      return const [];
     }
+    final columns = <List<OcrLineData>>[];
+    final consumed = <OcrLineData>{};
     for (var start = 0; start < letters.length; start++) {
       final anchor = letters[start];
+      if (consumed.contains(anchor)) continue;
       final group =
           letters
               .where(
@@ -61,18 +71,6 @@ class VerticalTextDetector {
         ),
       );
       if (hasRowContent) continue;
-      final codes = group
-          .map((l) => l.text.trim().toUpperCase().codeUnitAt(0))
-          .toList();
-      final sequential = List.generate(
-        codes.length - 1,
-        (i) => codes[i + 1] - codes[i],
-      );
-      if (sequential.every((d) => d == 1) || sequential.every((d) => d == -1)) {
-        continue;
-      }
-      // Repeated labels do not provide convincing word structure.
-      if (codes.toSet().length < 2) continue;
       final heights = group.map((l) => l.boundingBox.height).toList()..sort();
       final height = heights[heights.length ~/ 2];
       final steps = List.generate(
@@ -92,8 +90,9 @@ class VerticalTextDetector {
       if (xs.reduce(max) - xs.reduce(min) > height * maxCenterSpreadFactor) {
         continue;
       }
-      return true;
+      columns.add(List.unmodifiable(group));
+      consumed.addAll(group);
     }
-    return false;
+    return List.unmodifiable(columns);
   }
 }

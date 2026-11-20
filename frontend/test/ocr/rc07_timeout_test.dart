@@ -28,10 +28,7 @@ void main() {
     });
 
     test('batas waktu pass lebih pendek dari total', () {
-      expect(
-        OcrTimeout.passTimeout,
-        lessThan(Duration(seconds: 60)),
-      );
+      expect(OcrTimeout.passTimeout, lessThan(Duration(seconds: 60)));
       expect(OcrTimeout.totalTimeout, Duration(seconds: 60));
     });
   });

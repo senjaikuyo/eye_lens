@@ -5,7 +5,7 @@ import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 
 /// Alasan mengapa sebuah hasil ekstraksi OCR diklasifikasikan sebagai kondisi tanpa teks.
 enum NoTextReason {
-  /// Teks sah ditemukan (minimal 4 alfanumerik dan 2 huruf).
+  /// Teks sah ditemukan (minimal satu karakter alfanumerik).
   none,
 
   /// Hasil OCR mentah kosong (tidak ada teks atau baris yang terdeteksi dari sensor/gambar).
@@ -102,9 +102,8 @@ class OcrTextValidator {
   /// 1. Hasil OCR mentah kosong (`rawLinesCount == 0` atau `rawOcrText.trim().isEmpty`).
   /// 2. Seluruh baris terbuang oleh penyaring (`acceptedLinesCount == 0` ketika `rawLinesCount > 0`,
   ///    atau `allLinesFiltered == true`).
-  /// 3. Teks yang tersisa kurang dari 4 alfanumerik atau kurang dari 2 huruf.
-  ///    Aturan ini menolak fragmen seperti `Rp 5` atau `12`, tetapi tetap
-  ///    menerima kata pendek bermakna seperti `Halo`.
+  /// 3. Teks yang tersisa tidak memiliki karakter alfanumerik. Karakter
+  ///    tunggal dapat berupa label, nomor, atau bagian teks vertikal.
   static OcrTextValidationResult evaluate({
     required String rawOcrText,
     required int rawLinesCount,
@@ -137,8 +136,7 @@ class OcrTextValidator {
 
     // 3. Periksa apakah teks cukup panjang dan mengandung huruf.
     final alphaCount = countAlphanumeric(filteredText);
-    final letterCount = countLetters(filteredText);
-    if (alphaCount < 4 || letterCount < 2) {
+    if (alphaCount == 0) {
       // Jika awalnya ada baris yang tersaring sehingga tersisa fragmen.
       final wasFilteredDown =
           acceptedLinesCount < rawLinesCount || allLinesFiltered;

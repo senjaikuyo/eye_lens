@@ -117,12 +117,23 @@ class OcrService {
       ),
     );
 
-    // 2. Gerbang confidence: baris di bawah ambang tidak boleh masuk hasil.
+    // 2. Confidence hanya menandai kualitas; tidak menghapus teks OCR.
     final confidenceGate = OcrConfidenceGate.apply(filterResult.acceptedLines);
 
-    // 2b. Kelompokkan baris yang lolos kembali ke dalam blok masing-masing
+    // Karakter dalam satu kolom vertikal menjadi blok tersendiri. Teksnya
+    // tidak pernah dirangkai, sehingga formatter dan TTS tetap menerimanya
+    // sebagai karakter individual dari atas ke bawah.
+    final verticalColumns = VerticalTextDetector.characterColumns(
+      confidenceGate.acceptedLines,
+    );
+    final verticalLines = <OcrLineData>{
+      for (final column in verticalColumns) ...column,
+    };
+
+    // 2b. Kelompokkan baris horizontal yang lolos kembali ke blok ML Kit.
     final Map<int, List<OcrLineData>> blockMap = {};
     for (final line in confidenceGate.acceptedLines) {
+      if (verticalLines.contains(line)) continue;
       blockMap.putIfAbsent(line.blockIndex, () => []).add(line);
     }
 
@@ -141,6 +152,19 @@ class OcrService {
           text: originalText,
           boundingBox: originalBounds,
           lines: linesInBlock,
+        ),
+      );
+    }
+
+    for (final column in verticalColumns) {
+      final bounds = column
+          .map((line) => line.boundingBox)
+          .reduce((a, b) => a.expandToInclude(b));
+      filteredBlocks.add(
+        OcrBlockData(
+          text: column.map((line) => line.text).join('\n'),
+          boundingBox: bounds,
+          lines: column,
         ),
       );
     }
@@ -273,9 +297,8 @@ class OcrService {
             name: passName ?? 'pass',
             durationMs: localStopwatch.elapsedMilliseconds,
             qualityScore: TextOrientationAnalyzer.score(result.rawLines),
-            orientation: TextOrientationAnalyzer.analyze(
-              result.rawLines,
-            ).toJson(),
+            orientation: TextOrientationAnalyzer.analyze(result.rawLines)
+                .toJson(),
             rawLines: result.rawLinesCount,
             acceptedLines:
                 result.rawLines.length -
@@ -405,7 +428,8 @@ class OcrService {
 
       const double sufficientScoreThreshold =
           TextOrientationAnalyzer.minimumScore;
-      final pass1Sufficient = pass1Result.fullText.trim().isNotEmpty &&
+      final pass1Sufficient =
+          pass1Result.fullText.trim().isNotEmpty &&
           !pass1Result.hasLowQualityWarning &&
           pass1Score >= sufficientScoreThreshold;
       if (!orientationPlan.needsRecognition &&
@@ -456,7 +480,8 @@ class OcrService {
             final candidateScore = TextOrientationAnalyzer.score(
               candidate.rawLines,
             );
-            final candidateBetter = !candidate.allLinesFilteredOut &&
+            final candidateBetter =
+                !candidate.allLinesFilteredOut &&
                 candidate.fullText.trim().isNotEmpty &&
                 candidateAnalysis.uprightShare > bestUprightShare + 0.05 &&
                 candidateAnalysis.confidence >= 0.4 &&
@@ -586,7 +611,9 @@ class OcrService {
                 passName: 'fallback_smart_crop',
                 passRecords: passRecords,
               );
-              final roiScore = TextOrientationAnalyzer.score(roiResult.rawLines);
+              final roiScore = TextOrientationAnalyzer.score(
+                roiResult.rawLines,
+              );
               if (roiScore > bestScore) {
                 bestResult = roiResult;
                 bestScore = roiScore;

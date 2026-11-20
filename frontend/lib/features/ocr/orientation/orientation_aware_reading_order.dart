@@ -27,20 +27,23 @@ class OrientationAwareReadingOrder {
         _orderBlock(block, fallbackOrientation: documentOrientation),
     ];
 
-    final columnOrdered = _tryColumns(
-      ordered,
-      documentOrientation,
-      documentAxis,
-      documentCross,
+    final columnsAllowed = valid.every(
+      (block) =>
+          _blockOrientation(block, documentOrientation) == documentOrientation,
     );
+    final columnOrdered = columnsAllowed
+        ? _tryColumns(ordered, documentOrientation, documentAxis, documentCross)
+        : null;
     if (columnOrdered == null) {
-      ordered.sort((a, b) => _compareBlocks(
-        a,
-        b,
-        documentOrientation,
-        documentAxis,
-        documentCross,
-      ));
+      ordered.sort(
+        (a, b) => _compareBlocks(
+          a,
+          b,
+          documentOrientation,
+          documentAxis,
+          documentCross,
+        ),
+      );
     }
     return List.unmodifiable(columnOrdered ?? ordered);
   }
@@ -54,18 +57,20 @@ class OrientationAwareReadingOrder {
     Offset cross,
   ) {
     if (blocks.length < 2) return null;
-    final items = [for (final block in blocks) _BlockGeometry.from(block, axis, cross)];
+    final items = [
+      for (final block in blocks) _BlockGeometry.from(block, axis, cross),
+    ];
     if (items.any((item) => item.orientation != documentOrientation)) {
       return null;
     }
 
-    final byRead = [...items]
-      ..sort((a, b) => a.readMin.compareTo(b.readMin));
+    final byRead = [...items]..sort((a, b) => a.readMin.compareTo(b.readMin));
     final columns = <_ColumnGeometry>[];
     for (final item in byRead) {
       _ColumnGeometry? match;
       for (final column in columns) {
-        final overlap = math.min(column.readMax, item.readMax) -
+        final overlap =
+            math.min(column.readMax, item.readMax) -
             math.max(column.readMin, item.readMin);
         if (overlap > 0) {
           match = column;
@@ -93,7 +98,8 @@ class OrientationAwareReadingOrder {
       final previous = columns[i - 1];
       final gap = column.readMin - previous.readMax;
       final smallerWidth = math.min(column.readWidth, previous.readWidth);
-      final overlap = math.min(column.crossMax, previous.crossMax) -
+      final overlap =
+          math.min(column.crossMax, previous.crossMax) -
           math.max(column.crossMin, previous.crossMin);
       final smallerHeight = math.min(column.crossHeight, previous.crossHeight);
       if (smallerWidth <= 0 ||
@@ -115,11 +121,9 @@ class OrientationAwareReadingOrder {
 
   static OcrBlockData _orderBlock(
     OcrBlockData block, {
-  required TextOrientation fallbackOrientation,
+    required TextOrientation fallbackOrientation,
   }) {
-    final geoms = [
-      for (final line in block.lines) _LineGeometry.from(line),
-    ];
+    final geoms = [for (final line in block.lines) _LineGeometry.from(line)];
     if (geoms.length < 2) {
       return OcrBlockData(
         text: block.text,
@@ -162,23 +166,25 @@ class OrientationAwareReadingOrder {
   }
 
   static List<OcrLineData> _orderByBands(List<_LineGeometry> geoms) {
-    final sorted = [...geoms]..sort((a, b) {
-      final cross = a.crossPosition.compareTo(b.crossPosition);
-      return cross != 0 ? cross : a.readPosition.compareTo(b.readPosition);
-    });
+    final sorted = [...geoms]
+      ..sort((a, b) {
+        final cross = a.crossPosition.compareTo(b.crossPosition);
+        return cross != 0 ? cross : a.readPosition.compareTo(b.readPosition);
+      });
 
-    final crossSizes = sorted
-        .map((g) => g.crossExtent)
-        .where((v) => v.isFinite && v > 0)
-        .toList()
-      ..sort();
+    final crossSizes =
+        sorted
+            .map((g) => g.crossExtent)
+            .where((v) => v.isFinite && v > 0)
+            .toList()
+          ..sort();
     final medianCross = crossSizes.isEmpty
         ? 12.0
         : crossSizes.length.isOdd
         ? crossSizes[crossSizes.length ~/ 2]
         : (crossSizes[crossSizes.length ~/ 2 - 1] +
-                crossSizes[crossSizes.length ~/ 2]) /
-            2;
+                  crossSizes[crossSizes.length ~/ 2]) /
+              2;
     final threshold = math.max(8.0, medianCross * 0.8);
 
     final bands = <List<_LineGeometry>>[];
@@ -217,41 +223,30 @@ class OrientationAwareReadingOrder {
   ) {
     final aOrientation = _blockOrientation(a, documentOrientation);
     final bOrientation = _blockOrientation(b, documentOrientation);
+    final top = a.boundingBox.top.compareTo(b.boundingBox.top);
+    if (top != 0) return top;
+    final left = a.boundingBox.left.compareTo(b.boundingBox.left);
+    if (left != 0) return left;
+
+    // Equal visual origin: keep document-orientation preference only as a
+    // deterministic tie-breaker, never to hide a vertical block.
     final aPriority = aOrientation == documentOrientation ? 0 : 1;
     final bPriority = bOrientation == documentOrientation ? 0 : 1;
-    if (aPriority != bPriority) return aPriority.compareTo(bPriority);
-
-    final aCross = a.boundingBox.center.dx * documentCross.dx +
-        a.boundingBox.center.dy * documentCross.dy;
-    final bCross = b.boundingBox.center.dx * documentCross.dx +
-        b.boundingBox.center.dy * documentCross.dy;
-    final cross = aCross.compareTo(bCross);
-    if (cross != 0) return cross;
-
-    final aAlong = a.boundingBox.center.dx * documentAxis.dx +
-        a.boundingBox.center.dy * documentAxis.dy;
-    final bAlong = b.boundingBox.center.dx * documentAxis.dx +
-        b.boundingBox.center.dy * documentAxis.dy;
-    final along = aAlong.compareTo(bAlong);
-    if (along != 0) return along;
-
-    final top = a.boundingBox.top.compareTo(b.boundingBox.top);
-    return top != 0 ? top : a.boundingBox.left.compareTo(b.boundingBox.left);
+    return aPriority.compareTo(bPriority);
   }
 
   static TextOrientation _blockOrientation(
     OcrBlockData block,
     TextOrientation fallback,
   ) {
-    return _dominantOrientation(
-      [for (final line in block.lines) _LineGeometry.from(line)],
-      fallback: fallback,
-    );
+    return _dominantOrientation([
+      for (final line in block.lines) _LineGeometry.from(line),
+    ], fallback: fallback);
   }
 
   static TextOrientation _dominantOrientation(
     List<_LineGeometry> geoms, {
-  required TextOrientation fallback,
+    required TextOrientation fallback,
   }) {
     final votes = <TextOrientation, double>{
       for (final value in TextOrientation.values) value: 0,
@@ -347,7 +342,8 @@ class _LineGeometry {
       final distance = math.sqrt(dx * dx + dy * dy);
       if (distance > 1) {
         var candidate = Offset(dx / distance, dy / distance);
-        final alignment = candidate.dx * expected.dx + candidate.dy * expected.dy;
+        final alignment =
+            candidate.dx * expected.dx + candidate.dy * expected.dy;
         if (alignment < 0) candidate = -candidate;
         axis = candidate;
       }
@@ -363,7 +359,10 @@ class _LineGeometry {
       readPosition: center.dx * axis.dx + center.dy * axis.dy,
       crossPosition: center.dx * cross.dx + center.dy * cross.dy,
       readExtent: OrientationAwareReadingOrder._extent(line.boundingBox, axis),
-      crossExtent: OrientationAwareReadingOrder._extent(line.boundingBox, cross),
+      crossExtent: OrientationAwareReadingOrder._extent(
+        line.boundingBox,
+        cross,
+      ),
     );
   }
 }
@@ -388,11 +387,7 @@ class _BlockGeometry {
     required this.crossMax,
   });
 
-  factory _BlockGeometry.from(
-    OcrBlockData block,
-    Offset axis,
-    Offset cross,
-  ) {
+  factory _BlockGeometry.from(OcrBlockData block, Offset axis, Offset cross) {
     final center = block.boundingBox.center;
     final readExtent =
         OrientationAwareReadingOrder._extent(block.boundingBox, axis) / 2;

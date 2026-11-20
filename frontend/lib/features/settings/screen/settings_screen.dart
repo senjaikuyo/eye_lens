@@ -12,7 +12,7 @@ import 'package:eye_lens/features/settings/screen/faq_screen.dart';
 import 'package:eye_lens/features/settings/screen/widgets/language_selector_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/logout_dialog.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_email_tile.dart';
-import 'package:eye_lens/features/settings/screen/widgets/settings_list_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/settings_nav_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_logout_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/theme_selector_tile.dart';
 
@@ -33,11 +33,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadUserEmail() async {
-    final user = await AuthService().getUser();
-    if (mounted && user != null && user['email'] != null) {
-      setState(() {
-        _userEmail = user['email'].toString();
-      });
+    try {
+      final user = await AuthService().getUser();
+      if (mounted && user != null && user['email'] != null) {
+        setState(() {
+          _userEmail = user['email'].toString();
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load user email: $e');
     }
   }
 
@@ -122,17 +126,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 2. Change Password
-              SettingsListTile(
-                icon: Icon(
-                  Icons.lock_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 26,
-                ),
+              SettingsNavTile(
+                iconData: Icons.lock_outline_rounded,
+                label: strings.changePassword,
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -140,16 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   );
                 },
-                child: Text(
-                  strings.changePassword,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 17,
-                    fontWeight: isHighContrast
-                        ? FontWeight.w700
-                        : FontWeight.w600,
-                  ),
-                ),
               ),
 
               Divider(
@@ -159,58 +147,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 3. Auto-Play Audio
-              Semantics(
-                toggled: autoPlayAudio,
-                label: strings.autoPlayAudioSemantics(autoPlayAudio),
-                child: SettingsListTile(
-                  icon: Icon(
-                    Icons.graphic_eq_rounded,
-                    color: isDark ? Colors.white : Colors.black,
-                    size: 24,
-                  ),
-                  trailing: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Center(
-                      child: Switch(
-                        value: autoPlayAudio,
-                        activeThumbColor: isDark ? Colors.white : Colors.black,
-                        onChanged: (val) {
-                          context.read<SettingsProvider>().setAutoPlayAudio(
-                            val,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        strings.autoPlayAudio,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.black,
-                          fontSize: 17,
-                          fontWeight: isHighContrast
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        strings.autoPlayAudioSubtitle,
-                        style: TextStyle(
-                          color: isDark
-                              ? const Color(0xFF9E9E9E)
-                              : const Color(0xFF6E6E6E),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              SettingsAutoPlayTile(
+                value: autoPlayAudio,
+                isDark: isDark,
+                isHighContrast: isHighContrast,
+                title: strings.autoPlayAudio,
+                subtitle: strings.autoPlayAudioSubtitle,
+                semanticsLabel: strings.autoPlayAudioSemantics(autoPlayAudio),
+                onChanged: (val) {
+                  context.read<SettingsProvider>().setAutoPlayAudio(val);
+                },
               ),
 
               Divider(
@@ -254,32 +200,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 6. FAQ
-              SettingsListTile(
-                icon: Icon(
-                  Icons.help_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 26,
-                ),
+              SettingsNavTile(
+                iconData: Icons.help_outline_rounded,
+                label: strings.faq,
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const FaqScreen()),
                   );
                 },
-                child: Text(
-                  strings.faq,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 17,
-                    fontWeight: isHighContrast
-                        ? FontWeight.w700
-                        : FontWeight.w600,
-                  ),
-                ),
               ),
 
               Divider(
@@ -289,17 +219,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // 7. About
-              SettingsListTile(
-                icon: Icon(
-                  Icons.info_outline_rounded,
-                  color: isDark ? Colors.white : Colors.black,
-                  size: 24,
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: isDark ? const Color(0xFF777777) : Colors.black,
-                  size: 26,
-                ),
+              SettingsNavTile(
+                iconData: Icons.info_outline_rounded,
+                label: strings.about,
+                isDark: isDark,
+                isHighContrast: isHighContrast,
                 onTap: () {
                   showAboutDialog(
                     context: context,
@@ -308,16 +232,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     applicationLegalese: '© 2026 EyeLens Inc.',
                   );
                 },
-                child: Text(
-                  strings.about,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.black,
-                    fontSize: 17,
-                    fontWeight: isHighContrast
-                        ? FontWeight.w700
-                        : FontWeight.w600,
-                  ),
-                ),
               ),
 
               Divider(

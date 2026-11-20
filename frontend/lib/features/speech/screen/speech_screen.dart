@@ -22,9 +22,8 @@ import 'package:eye_lens/features/settings/screen/faq_screen.dart';
 import 'package:eye_lens/features/settings/screen/settings_screen.dart';
 import 'package:eye_lens/features/appearance/screen/appearance_sheet.dart';
 import 'package:eye_lens/features/speech/screen/widgets/audio_player_bar.dart';
-import 'package:eye_lens/features/speech/screen/widgets/highlighted_text_view.dart';
 import 'package:eye_lens/features/settings/screen/widgets/language_sheet.dart';
-import 'package:eye_lens/features/image_area/screen/ocr_image_overlay.dart';
+import 'package:eye_lens/features/speech/screen/widgets/speech_body_view.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_mode_toggle_button.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_top_action_bar.dart';
 
@@ -318,75 +317,35 @@ class _SpeechScreenState extends State<SpeechScreen> {
         fit: StackFit.expand,
         children: [
           // MAIN BODY
-          if (!_isTextView) ...[
-            if (widget.imageBytes != null)
-              Positioned.fill(
-                top: topPadding + 64,
-                bottom: bottomPadding + 140,
-                child: OcrImageOverlay(
-                  imageBytes: widget.imageBytes!,
-                  imageSize: widget.ocrResult?.imageSize ?? Size.zero,
-                  rawLines: widget.ocrResult?.rawLines ?? const [],
-                  elements: widget.ocrResult?.elements ?? const [],
-                  rejectedLines: widget.ocrResult?.rejectedLines ?? const [],
-                  isDark: isDark,
-                  isHighContrast: themeProvider.isHighContrast,
-                  controller: _lensSelectionController,
-                  onFrameChanging: _onFrameChanging,
-                  onSelectionComputed: _onSelectionComputed,
-                ),
-              )
-            else
-              Container(color: Colors.black),
-          ] else ...[
-            Positioned.fill(
-              child: Container(
-                color: isDark ? AppColors.black : Colors.white,
-                padding: EdgeInsets.only(
-                  top: topPadding + 80,
-                  left: 28,
-                  right: 28,
-                  bottom: 160,
-                ),
-                child: SingleChildScrollView(
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _fontSizeNotifier,
-                    builder: (context, currentFontSize, _) {
-                      return ValueListenableBuilder<double>(
-                        valueListenable: _progressNotifier,
-                        builder: (context, progress, _) {
-                          return ValueListenableBuilder<int>(
-                            valueListenable: _currentCharIndexNotifier,
-                            builder: (context, charIndex, _) {
-                              return HighlightedTextView(
-                                text: _activeText,
-                                formattedResult: _currentFramedFormattedResult,
-                                currentCharIndex: charIndex,
-                                fontSize: currentFontSize,
-                                cursorColorEnabled: themeProvider.cursorColor,
-                                highlightColor: themeProvider.highlightColor,
-                                isDark: isDark,
-                                isHighContrast: themeProvider.isHighContrast,
-                                progress: progress,
-                                onProgressChanged: (val) {
-                                  _progressNotifier.value = val;
-                                  _ttsService.seekTo(val);
-                                },
-                                onCharIndexChanged: (idx) {
-                                  _currentCharIndexNotifier.value = idx;
-                                  _ttsService.seekToCharIndex(idx);
-                                },
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
+          Positioned.fill(
+            child: SpeechBodyView(
+              isTextView: _isTextView,
+              isDark: isDark,
+              isHighContrast: themeProvider.isHighContrast,
+              cursorColorEnabled: themeProvider.cursorColor,
+              highlightColor: themeProvider.highlightColor,
+              topPadding: topPadding,
+              bottomPadding: bottomPadding,
+              imageBytes: widget.imageBytes,
+              ocrResult: widget.ocrResult,
+              lensSelectionController: _lensSelectionController,
+              onFrameChanging: _onFrameChanging,
+              onSelectionComputed: _onSelectionComputed,
+              activeText: _activeText,
+              formattedResult: _currentFramedFormattedResult,
+              fontSizeNotifier: _fontSizeNotifier,
+              progressNotifier: _progressNotifier,
+              currentCharIndexNotifier: _currentCharIndexNotifier,
+              onProgressChanged: (val) {
+                _progressNotifier.value = val;
+                _ttsService.seekTo(val);
+              },
+              onCharIndexChanged: (idx) {
+                _currentCharIndexNotifier.value = idx;
+                _ttsService.seekToCharIndex(idx);
+              },
             ),
-          ],
+          ),
 
           // TOP ACTION BAR
           Positioned(

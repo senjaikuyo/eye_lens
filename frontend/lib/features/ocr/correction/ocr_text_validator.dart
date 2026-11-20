@@ -5,7 +5,7 @@ import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 
 /// Alasan mengapa sebuah hasil ekstraksi OCR diklasifikasikan sebagai kondisi tanpa teks.
 enum NoTextReason {
-  /// Teks sah ditemukan (memenuhi syarat minimal 2 karakter alfanumerik).
+  /// Teks sah ditemukan (minimal 4 alfanumerik dan 2 huruf).
   none,
 
   /// Hasil OCR mentah kosong (tidak ada teks atau baris yang terdeteksi dari sensor/gambar).
@@ -14,7 +14,7 @@ enum NoTextReason {
   /// Seluruh baris teks terbuang oleh filter noise OCR.
   allLinesFiltered,
 
-  /// Teks yang tersisa kurang dari 2 huruf atau angka (kurang dari 2 alfanumerik).
+  /// Teks yang tersisa terlalu pendek untuk dibaca sebagai kalimat.
   insufficientAlphanumeric,
 }
 
@@ -70,11 +70,18 @@ class OcrTextValidationResult {
 /// Pemeriksa kondisi tanpa teks murni (pure function) untuk alur pemindaian kamera & galeri EyeLens.
 class OcrTextValidator {
   static final RegExp _alphaNumericRegex = RegExp(r'[a-zA-Z0-9]');
+  static final RegExp _letterRegex = RegExp(r'[a-zA-Z]');
 
   /// Menghitung jumlah karakter huruf dan angka (alfanumerik) di dalam teks.
   static int countAlphanumeric(String text) {
     if (text.isEmpty) return 0;
     return _alphaNumericRegex.allMatches(text).length;
+  }
+
+  /// Menghitung jumlah huruf pada teks.
+  static int countLetters(String text) {
+    if (text.isEmpty) return 0;
+    return _letterRegex.allMatches(text).length;
   }
 
   /// Mengevaluasi kondisi ada/tidaknya teks berdasarkan teks mentah, baris terfilter, dan jumlah alfanumerik.
@@ -83,7 +90,9 @@ class OcrTextValidator {
   /// 1. Hasil OCR mentah kosong (`rawLinesCount == 0` atau `rawOcrText.trim().isEmpty`).
   /// 2. Seluruh baris terbuang oleh penyaring (`acceptedLinesCount == 0` ketika `rawLinesCount > 0`,
   ///    atau `allLinesFiltered == true`).
-  /// 3. Teks yang tersisa kurang dari 2 huruf atau angka (`alphanumericCount < 2`).
+  /// 3. Teks yang tersisa kurang dari 4 alfanumerik atau kurang dari 2 huruf.
+  ///    Aturan ini menolak fragmen seperti `Rp 5` atau `12`, tetapi tetap
+  ///    menerima kata pendek bermakna seperti `Halo`.
   static OcrTextValidationResult evaluate({
     required String rawOcrText,
     required int rawLinesCount,
@@ -114,10 +123,11 @@ class OcrTextValidator {
       );
     }
 
-    // 3. Periksa apakah teks yang tersisa kurang dari 2 huruf atau angka
+    // 3. Periksa apakah teks cukup panjang dan mengandung huruf.
     final alphaCount = countAlphanumeric(filteredText);
-    if (alphaCount < 2) {
-      // Jika awalnya ada baris yang tersaring sehingga yang tersisa kurang dari 2 huruf/angka
+    final letterCount = countLetters(filteredText);
+    if (alphaCount < 4 || letterCount < 2) {
+      // Jika awalnya ada baris yang tersaring sehingga tersisa fragmen.
       final wasFilteredDown =
           acceptedLinesCount < rawLinesCount || allLinesFiltered;
       return OcrTextValidationResult(

@@ -819,29 +819,6 @@ class OcrService {
     return result.copyWith(diagnosticJson: report.toJsonString());
   }
 
-  /// Mengekstrak teks lengkap beserta koordinat bounding box dari file.
-  Future<OcrResult> processFileWithCoordinates(
-    String filePath, {
-    bool enableMultiPass = true,
-    OcrScanMode scanMode = OcrScanMode.document,
-    OcrNoiseFilterConfig? noiseFilterConfig,
-  }) async {
-    if (_isDisposed) return OcrResult.empty;
-
-    try {
-      final bytes = await File(filePath).readAsBytes();
-      return await processImageWithCoordinates(
-        bytes,
-        enableMultiPass: enableMultiPass,
-        scanMode: scanMode,
-        noiseFilterConfig: noiseFilterConfig,
-      );
-    } catch (e) {
-      debugPrint('[OcrService] Ekstraksi OCR file berkoordinat gagal: $e');
-      return OcrResult.empty;
-    }
-  }
-
   /// Membebaskan memori native C++ Google ML Kit.
   Future<void> dispose() async {
     _isDisposed = true;

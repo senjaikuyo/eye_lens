@@ -25,7 +25,7 @@ class PengaturanService {
     DatabaseHelper? dbHelper,
     SyncService? syncService,
   }) : _dbHelper = dbHelper ?? DatabaseHelper.instance,
-       _syncService = syncService ?? SyncService();
+       _syncService = syncService ?? SyncService.instance;
 
   Future<Map<String, dynamic>> load() => _dbHelper.getPengaturan();
 

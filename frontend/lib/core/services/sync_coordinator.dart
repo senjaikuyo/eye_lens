@@ -23,7 +23,7 @@ class SyncCoordinator with WidgetsBindingObserver {
     SyncService? syncService,
     Connectivity? connectivity,
     this.onConnectivityRestored,
-  }) : _syncService = syncService ?? SyncService(),
+  }) : _syncService = syncService ?? SyncService.instance,
        _connectivity = connectivity ?? Connectivity();
 
   void start() {

@@ -8,7 +8,7 @@ import 'package:eye_lens/core/services/sync_service.dart';
 
 class HistoryProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  final SyncService _syncService = SyncService();
+  final SyncService _syncService = SyncService.instance;
 
   List<HistoryModel> _items = [];
   bool _isLoading = false;

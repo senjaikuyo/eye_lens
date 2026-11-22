@@ -44,6 +44,9 @@ class SyncService {
 
   static const int maxRiwayatPerBatch = 100;
 
+  /// Instance bersama untuk seluruh pemanggil produksi.
+  static final SyncService instance = SyncService();
+
   /// Mutex bersama: HistoryProvider dan SyncCoordinator masing-masing membuat
   /// instance SyncService, sehingga flag harus bersifat statis agar dua instance
   /// tidak pernah menjalankan sinkronisasi bersamaan di dalam isolate yang sama.

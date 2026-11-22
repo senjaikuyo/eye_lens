@@ -55,7 +55,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> refresh() async {
     await load();
     if (isAuthenticated) {
-      unawaited(SyncService().syncPending());
+      unawaited(SyncService.instance.syncPending());
     }
   }
 

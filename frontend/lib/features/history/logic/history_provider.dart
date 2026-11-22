@@ -38,7 +38,6 @@ class HistoryProvider extends ChangeNotifier {
     try {
       _items = await _dbHelper.getRiwayatModelList();
     } catch (e) {
-      debugPrint('Error loading history: $e');
       _errorMessage = 'Gagal memuat riwayat';
       _items = [];
     } finally {
@@ -96,7 +95,6 @@ class HistoryProvider extends ChangeNotifier {
 
       return savedModel;
     } catch (e) {
-      debugPrint('Error saving history: $e');
       _errorMessage = 'Gagal menyimpan riwayat';
       notifyListeners();
       return null;
@@ -139,7 +137,6 @@ class HistoryProvider extends ChangeNotifier {
         return true;
       }
     } catch (e) {
-      debugPrint('Error deleting history item: $e');
       _errorMessage = 'Gagal menghapus riwayat';
       notifyListeners();
     }
@@ -154,7 +151,6 @@ class HistoryProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Error clearing history: $e');
       _errorMessage = 'Gagal membersihkan riwayat';
       notifyListeners();
       return false;

@@ -76,7 +76,8 @@ class DisplayPreferencesProvider extends ChangeNotifier {
           SettingsDefaults.maxFontSize.toDouble(),
         );
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[DisplayPreferencesProvider] _load failed: ${e.runtimeType}');
       // Tetap gunakan nilai bawaan bila database belum siap.
     } finally {
       if (!_disposed) notifyListeners();

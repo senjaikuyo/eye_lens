@@ -37,7 +37,9 @@ Future<void> main() async {
   // SQLite. Kegagalan migrasi tidak boleh mencegah aplikasi dibuka.
   try {
     await PengaturanService.instance.migrateLegacyPreferences();
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('Legacy preference migration failed: ${e.runtimeType}');
+  }
 
   // Validasi token tersimpan saat online; saat offline sesi lokal dipertahankan.
   unawaited(authProvider.validateSession());

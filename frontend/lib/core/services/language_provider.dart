@@ -29,7 +29,8 @@ class LanguageProvider extends ChangeNotifier {
     try {
       final row = await _pengaturanService.load();
       _language = row['bahasa_aplikasi'] == 'en' ? 'English' : 'Indonesian';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[LanguageProvider] _load failed: ${e.runtimeType}');
       // Tetap gunakan bahasa bawaan bila database belum siap.
     } finally {
       if (!_disposed) notifyListeners();

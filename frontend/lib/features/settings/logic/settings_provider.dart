@@ -38,7 +38,8 @@ class SettingsProvider extends ChangeNotifier {
     try {
       final row = await _pengaturanService.load();
       _autoPlayAudio = ((row['otomatis_putar'] as num?)?.toInt() ?? 1) != 0;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SettingsProvider] _load failed: ${e.runtimeType}');
       // Tetap gunakan nilai bawaan bila database belum siap.
     } finally {
       _isLoaded = true;

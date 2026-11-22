@@ -23,9 +23,6 @@ class HistoryModel {
     this.updatedAt = '',
   });
 
-  bool get isSynced => statusSinkron == 1;
-  bool get isSynch => statusSinkron == 1;
-
   DateTime get waktuDateTime {
     try {
       return DateTime.parse(waktu);

@@ -842,18 +842,6 @@ class OcrService {
     }
   }
 
-  /// Mengekstrak karakter teks dari citra foto yang berada di RAM (Uint8List).
-  Future<String> processImageFromRAM(Uint8List bytes) async {
-    final result = await processImageWithCoordinates(bytes);
-    return result.fullText;
-  }
-
-  /// Mengekstrak teks langsung dari berkas file yang ada (misal: pilihan dari galeri).
-  Future<String> processImageFromFile(String filePath) async {
-    final result = await processFileWithCoordinates(filePath);
-    return result.fullText;
-  }
-
   /// Membebaskan memori native C++ Google ML Kit.
   Future<void> dispose() async {
     _isDisposed = true;

@@ -523,62 +523,6 @@ class LensSelectionHelper {
     return renderedRect;
   }
 
-  /// Menyesuaikan ukuran bingkai saat pengguna menyeret salah satu pegangan (handle).
-  static Rect resizeFrame({
-    required Rect currentRect,
-    required LensHandlePosition handle,
-    required Offset delta,
-    required Size boundarySize,
-    double minWidth = minFrameSize,
-    double minHeight = minFrameSize,
-  }) {
-    double left = currentRect.left;
-    double top = currentRect.top;
-    double right = currentRect.right;
-    double bottom = currentRect.bottom;
-
-    switch (handle) {
-      case LensHandlePosition.topLeft:
-        left = min(left + delta.dx, right - minWidth);
-        top = min(top + delta.dy, bottom - minHeight);
-        break;
-      case LensHandlePosition.topRight:
-        right = max(right + delta.dx, left + minWidth);
-        top = min(top + delta.dy, bottom - minHeight);
-        break;
-      case LensHandlePosition.bottomLeft:
-        left = min(left + delta.dx, right - minWidth);
-        bottom = max(bottom + delta.dy, top + minHeight);
-        break;
-      case LensHandlePosition.bottomRight:
-        right = max(right + delta.dx, left + minWidth);
-        bottom = max(bottom + delta.dy, top + minHeight);
-        break;
-      case LensHandlePosition.top:
-        top = min(top + delta.dy, bottom - minHeight);
-        break;
-      case LensHandlePosition.bottom:
-        bottom = max(bottom + delta.dy, top + minHeight);
-        break;
-      case LensHandlePosition.left:
-        left = min(left + delta.dx, right - minWidth);
-        break;
-      case LensHandlePosition.right:
-        right = max(right + delta.dx, left + minWidth);
-        break;
-      case LensHandlePosition.none:
-        break;
-    }
-
-    // Batasi di dalam boundarySize layar
-    left = left.clamp(0.0, boundarySize.width - minWidth);
-    top = top.clamp(0.0, boundarySize.height - minHeight);
-    right = right.clamp(left + minWidth, boundarySize.width);
-    bottom = bottom.clamp(top + minHeight, boundarySize.height);
-
-    return Rect.fromLTRB(left, top, right, bottom);
-  }
-
   /// Memilih kata (TextElement / OcrWordData) yang titik tengahnya berada di dalam bingkai potongan.
   /// Baris dikelompokkan kembali lalu disaring oleh OcrNoiseFilter dan TextFormatter.
   /// Jika data kata tidak tersedia, digunakan titik tengah baris (OcrLineData).

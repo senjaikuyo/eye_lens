@@ -27,9 +27,6 @@ class SettingsModel {
     this.isSynch = 0,
   });
 
-  bool get isOtomatisPutar => otomatisPutar == 1;
-  bool get tersinkron => isSynch == 1;
-
   Map<String, dynamic> toMap() {
     return {
       'user_id': userId,
@@ -62,49 +59,6 @@ class SettingsModel {
           map['terakhir_diperbarui'] as String? ??
           DateTime.now().toIso8601String(),
       isSynch: (map['is_synch'] as int?) ?? 0,
-    );
-  }
-
-  factory SettingsModel.defaults() {
-    return SettingsModel(
-      id: 1,
-      tema: 'sistem',
-      ukuranTeks: 18,
-      warnaKursor: '#FACC15',
-      kontras: 'normal',
-      otomatisPutar: 1,
-      kecepatanSuara: 1.0,
-      bahasaSuara: 'id-ID',
-      bahasaAplikasi: 'id',
-      terakhirDiperbarui: DateTime.now().toIso8601String(),
-    );
-  }
-
-  SettingsModel copyWith({
-    String? tema,
-    int? ukuranTeks,
-    String? warnaKursor,
-    String? kontras,
-    int? otomatisPutar,
-    double? kecepatanSuara,
-    String? bahasaSuara,
-    String? bahasaAplikasi,
-    String? terakhirDiperbarui,
-    int? isSynch,
-  }) {
-    return SettingsModel(
-      id: 1,
-      userId: userId,
-      tema: tema ?? this.tema,
-      ukuranTeks: ukuranTeks ?? this.ukuranTeks,
-      warnaKursor: warnaKursor ?? this.warnaKursor,
-      kontras: kontras ?? this.kontras,
-      otomatisPutar: otomatisPutar ?? this.otomatisPutar,
-      kecepatanSuara: kecepatanSuara ?? this.kecepatanSuara,
-      bahasaSuara: bahasaSuara ?? this.bahasaSuara,
-      bahasaAplikasi: bahasaAplikasi ?? this.bahasaAplikasi,
-      terakhirDiperbarui: terakhirDiperbarui ?? this.terakhirDiperbarui,
-      isSynch: isSynch ?? this.isSynch,
     );
   }
 }

@@ -365,17 +365,6 @@ class TtsService {
     await seekToCharIndex(targetChar);
   }
 
-  /// Melompat relatif berdasarkan fraksi (0.0 s.d. 1.0).
-  Future<void> seekRelative(double deltaFraction) async {
-    if (_fullText.isEmpty) return;
-
-    final currentFraction = _fullText.isNotEmpty
-        ? (_currentCharIndex / _fullText.length)
-        : 0.0;
-    final targetFraction = (currentFraction + deltaFraction).clamp(0.0, 0.98);
-    await seekTo(targetFraction);
-  }
-
   /// Melompat ke fraksi progres tertentu.
   Future<void> seekTo(double fraction) async {
     if (_fullText.isEmpty) return;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:eye_lens/features/settings/screen/widgets/settings_list_tile.dart';
+
 class SettingsLogoutTile extends StatelessWidget {
   final bool isDark;
   final String label;
@@ -14,30 +16,20 @@ class SettingsLogoutTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return SettingsListTile(
       color: isDark ? const Color(0xFF2A1517) : const Color(0xFFFFF1F2),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFEF4444),
-                size: 24,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
+      onTap: onTap,
+      icon: const Icon(
+        Icons.logout_rounded,
+        color: Color(0xFFEF4444),
+        size: 24,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFEF4444),
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

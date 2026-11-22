@@ -11,6 +11,7 @@ import 'package:eye_lens/features/settings/screen/faq_screen.dart';
 import 'package:eye_lens/features/settings/screen/widgets/language_selector_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/logout_dialog.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_email_tile.dart';
+import 'package:eye_lens/features/settings/screen/widgets/settings_auto_play_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_nav_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/settings_logout_tile.dart';
 import 'package:eye_lens/features/settings/screen/widgets/theme_selector_tile.dart';

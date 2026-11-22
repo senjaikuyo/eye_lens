@@ -50,7 +50,6 @@ class SpeechScreen extends StatefulWidget {
 
 class _SpeechScreenState extends State<SpeechScreen> {
   late bool _isTextView;
-  double _fontSize = 32.0;
   final ValueNotifier<double> _fontSizeNotifier = ValueNotifier<double>(32.0);
   final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
@@ -205,11 +204,10 @@ class _SpeechScreenState extends State<SpeechScreen> {
   void initState() {
     super.initState();
     _lensSelectionController = LensSelectionController();
-    _fontSize = Provider.of<DisplayPreferencesProvider>(
+    _fontSizeNotifier.value = Provider.of<DisplayPreferencesProvider>(
       context,
       listen: false,
     ).fontSize;
-    _fontSizeNotifier.value = _fontSize;
     _isTextView = widget.imageBytes == null && !widget.hasImage;
 
     _currentFramedText = widget.text;
@@ -432,13 +430,11 @@ class _SpeechScreenState extends State<SpeechScreen> {
                   context,
                   themeProvider: themeProvider,
                   strings: strings,
-                  fontSize: _fontSize,
+                  fontSize: _fontSizeNotifier.value,
                   onFontSizeChanged: (newSize) {
-                    _fontSize = newSize;
                     _fontSizeNotifier.value = newSize;
                   },
                   onFontSizeChangeEnd: (finalSize) {
-                    _fontSize = finalSize;
                     _fontSizeNotifier.value = finalSize;
                     themeProvider.setFontSize(finalSize);
                   },

@@ -6,6 +6,7 @@ class SettingsListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final EdgeInsetsGeometry padding;
+  final Color color;
 
   const SettingsListTile({
     super.key,
@@ -14,12 +15,13 @@ class SettingsListTile extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    this.color = Colors.transparent,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: color,
       child: InkWell(
         onTap: onTap,
         child: Padding(

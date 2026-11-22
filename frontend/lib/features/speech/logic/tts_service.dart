@@ -228,6 +228,20 @@ class TtsService {
     await _flutterTts.setSpeechRate(nativeRate);
   }
 
+
+  ({int index, int offset}) _findParagraphAt(
+    int charIndex,
+    FormattedTextResult result,
+  ) {
+    for (int i = 0; i < result.paragraphs.length; i++) {
+      final p = result.paragraphs[i];
+      if (charIndex >= p.startIndex && charIndex <= p.endIndex) {
+        return (index: i, offset: charIndex - p.startIndex);
+      }
+    }
+    return (index: 0, offset: 0);
+  }
+
   /// Membacakan teks terformat berbasis paragraf dengan jeda 300 ms antar paragraf.
   Future<void> speakFormattedResult(
     FormattedTextResult result, {
@@ -245,19 +259,9 @@ class TtsService {
     }
 
     // Tentukan paragraf awal berdasarkan startCharIndex
-    int pIdx = 0;
-    int offsetInP = 0;
-    for (int i = 0; i < result.paragraphs.length; i++) {
-      final p = result.paragraphs[i];
-      if (startCharIndex >= p.startIndex && startCharIndex <= p.endIndex) {
-        pIdx = i;
-        offsetInP = startCharIndex - p.startIndex;
-        break;
-      }
-    }
-
-    _currentParagraphIndex = pIdx;
-    _charOffsetInParagraph = offsetInP;
+    final startPosition = _findParagraphAt(startCharIndex, result);
+    _currentParagraphIndex = startPosition.index;
+    _charOffsetInParagraph = startPosition.offset;
     _currentCharIndex = startCharIndex;
     _state = TtsState.playing;
 
@@ -383,19 +387,9 @@ class TtsService {
 
     if (_formattedResult != null) {
       final result = _formattedResult!;
-      int pIdx = 0;
-      int offsetInP = 0;
-      for (int i = 0; i < result.paragraphs.length; i++) {
-        final p = result.paragraphs[i];
-        if (targetChar >= p.startIndex && targetChar <= p.endIndex) {
-          pIdx = i;
-          offsetInP = targetChar - p.startIndex;
-          break;
-        }
-      }
-
-      _currentParagraphIndex = pIdx;
-      _charOffsetInParagraph = offsetInP;
+      final position = _findParagraphAt(targetChar, result);
+      _currentParagraphIndex = position.index;
+      _charOffsetInParagraph = position.offset;
 
       onProgress?.call(progress, '', targetChar);
 

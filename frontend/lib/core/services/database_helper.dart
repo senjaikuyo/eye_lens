@@ -792,7 +792,6 @@ class DatabaseHelper extends ChangeNotifier {
     );
   }
 
-  Future<int> deleteRiwayat(int id) => deleteRiwayatById(id);
 
   Future<int> clearAllRiwayat() async {
     final db = await database;

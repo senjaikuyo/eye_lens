@@ -129,7 +129,7 @@ class HistoryProvider extends ChangeNotifier {
 
   Future<bool> deleteRiwayat(int idRiwayat) async {
     try {
-      final rows = await _dbHelper.deleteRiwayat(idRiwayat);
+      final rows = await _dbHelper.deleteRiwayatById(idRiwayat);
       if (rows > 0) {
         _items.removeWhere((item) => item.idRiwayat == idRiwayat);
         _errorMessage = null;

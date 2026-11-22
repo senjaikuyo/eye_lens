@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'package:eye_lens/core/models/settings_model.dart';
 import 'package:eye_lens/core/models/history_model.dart';
 
 /// Penyimpanan lokal (Sqflite) EyeLens.
@@ -867,15 +866,6 @@ class DatabaseHelper extends ChangeNotifier {
   }
 
   // --- Typed Model Helpers ---
-
-  Future<SettingsModel> getPengaturanModel() async {
-    final map = await getPengaturan();
-    return SettingsModel.fromMap(map);
-  }
-
-  Future<int> updatePengaturanModel(SettingsModel model) async {
-    return await updatePengaturan(model.toMap());
-  }
 
   Future<int> insertRiwayatModel(HistoryModel model) async {
     return await insertRiwayat(

@@ -42,23 +42,4 @@ class SettingsModel {
       'is_synch': isSynch,
     };
   }
-
-  factory SettingsModel.fromMap(Map<String, dynamic> map) {
-    return SettingsModel(
-      id: map['id'] as int? ?? 1,
-      userId: (map['user_id'] as int?) ?? -1,
-      tema: map['tema'] as String? ?? 'sistem',
-      ukuranTeks: map['ukuran_teks'] as int? ?? 18,
-      warnaKursor: map['warna_kursor'] as String? ?? '#FACC15',
-      kontras: map['kontras'] as String? ?? 'normal',
-      otomatisPutar: map['otomatis_putar'] as int? ?? 1,
-      kecepatanSuara: (map['kecepatan_suara'] as num?)?.toDouble() ?? 1.0,
-      bahasaSuara: map['bahasa_suara'] as String? ?? 'id-ID',
-      bahasaAplikasi: map['bahasa_aplikasi'] as String? ?? 'id',
-      terakhirDiperbarui:
-          map['terakhir_diperbarui'] as String? ??
-          DateTime.now().toIso8601String(),
-      isSynch: (map['is_synch'] as int?) ?? 0,
-    );
-  }
 }

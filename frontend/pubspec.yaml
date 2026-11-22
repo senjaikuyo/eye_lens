@@ -1,5 +1,5 @@
 name: eye_lens
-description: "A new Flutter project."
+description: "EyeLens — pembaca teks dan TTS offline untuk low vision"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
   provider: ^6.1.2
   shared_preferences: ^2.5.4
   camera: ^0.12.0+1

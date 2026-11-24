@@ -27,14 +27,6 @@ class SettingsDefaults {
     Color(0xFF7B38D8), // Purple
   ];
 
-  static const List<String> highlightColorHexes = [
-    '#E58E1B',
-    '#1678BA',
-    '#D42749',
-    '#1FB16D',
-    '#7B38D8',
-  ];
-
   static Color highlightColorFromHex(String? hex) {
     if (hex == null || hex.isEmpty) return highlightColors.first;
     final normalized = hex.startsWith('#') ? hex.substring(1) : hex;

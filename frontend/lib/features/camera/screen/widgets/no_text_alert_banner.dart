@@ -80,7 +80,7 @@ class NoTextAlertBanner extends StatelessWidget {
                   alignment: Alignment.center,
                   child: const Icon(
                     Icons.close_rounded,
-                    color: AppColors.alertErrorIconX,
+                    color: AppColors.alertErrorBg,
                     size: 20,
                   ),
                 ),

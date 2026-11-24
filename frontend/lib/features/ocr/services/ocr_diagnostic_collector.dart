@@ -351,7 +351,8 @@ class OcrDiagnosticCollector {
   /// Laporan terakhir yang dibangun. Null bila diagnostik nonaktif.
   OcrDiagnosticReport? get report => _report;
 
-  OcrDiagnosticReport? _build({
+  /// Menyusun laporan akhir. Mengembalikan `null` bila diagnostik nonaktif.
+  OcrDiagnosticReport? finalize({
     required Size imageSentToMlKit,
     required List<OcrPassRecord> passes,
     required List<Map<String, Object?>> rejectedLines,
@@ -382,29 +383,6 @@ class OcrDiagnosticCollector {
       formattedText: formattedText,
       totalDurationMs: totalDurationMs,
       inputMetrics: r.inputMetrics,
-    );
-  }
-
-  /// Menyusun laporan akhir. Mengembalikan `null` bila diagnostik nonaktif.
-  OcrDiagnosticReport? finalize({
-    required Size imageSentToMlKit,
-    required List<OcrPassRecord> passes,
-    required List<Map<String, Object?>> rejectedLines,
-    required String rawText,
-    required String filteredText,
-    required String formattedText,
-    required int totalDurationMs,
-    List<Map<String, Object?>> doubtfulLines = const [],
-  }) {
-    return _build(
-      imageSentToMlKit: imageSentToMlKit,
-      passes: passes,
-      rejectedLines: rejectedLines,
-      doubtfulLines: doubtfulLines,
-      rawText: rawText,
-      filteredText: filteredText,
-      formattedText: formattedText,
-      totalDurationMs: totalDurationMs,
     );
   }
 }

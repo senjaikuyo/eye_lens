@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:eye_lens/app/theme/app_colors.dart';
 import 'package:eye_lens/core/constants/app_strings.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
-import 'package:eye_lens/features/appearance/screen/appearance_controls.dart';
+import 'package:eye_lens/features/appearance/screen/widgets/cursor_color_tile.dart';
+import 'package:eye_lens/features/appearance/screen/widgets/high_contrast_tile.dart';
+import 'package:eye_lens/features/appearance/screen/widgets/text_size_slider_tile.dart';
 
 class AppearanceBottomSheet {
   static Future<void> show(

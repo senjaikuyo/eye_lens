@@ -33,12 +33,15 @@ class SyncCoordinator with WidgetsBindingObserver {
 
     _subscription = _connectivity.onConnectivityChanged.listen((results) {
       if (results.any((result) => result != ConnectivityResult.none)) {
-        unawaited(onConnectivityRestored?.call());
-        unawaited(_syncService.syncPending());
+        _triggerSync();
       }
     });
 
     // Validasi sesi (bila online) lalu percobaan sinkronisasi awal.
+    _triggerSync();
+  }
+
+  void _triggerSync() {
     unawaited(onConnectivityRestored?.call());
     unawaited(_syncService.syncPending());
   }
@@ -54,8 +57,7 @@ class SyncCoordinator with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(onConnectivityRestored?.call());
-      unawaited(_syncService.syncPending());
+      _triggerSync();
     }
   }
 }

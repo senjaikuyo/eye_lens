@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:eye_lens/core/constants/app_constants.dart';
 import 'package:eye_lens/core/services/database_helper.dart';
 import 'package:eye_lens/core/services/display_preferences_provider.dart';
 import 'package:eye_lens/core/services/language_provider.dart';
@@ -144,7 +143,7 @@ void main() {
   group('Migrasi SharedPreferences', () {
     test('7. Pengaturan lama diimpor tanpa menghapus data prefs', () async {
       SharedPreferences.setMockInitialValues({
-        AppPreferenceKeys.autoPlayAudio: false,
+        'auto_play_audio': false,
         'theme_mode': 'dark',
         'high_contrast': true,
         'cursor_color': false,
@@ -164,7 +163,7 @@ void main() {
       expect(row['is_synch'], 0);
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool(AppPreferenceKeys.autoPlayAudio), isFalse);
+      expect(prefs.getBool('auto_play_audio'), isFalse);
       expect(prefs.getBool(PengaturanService.legacyMigrationFlag), isTrue);
     });
 

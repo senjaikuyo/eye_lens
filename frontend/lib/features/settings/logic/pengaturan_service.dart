@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:eye_lens/core/constants/app_constants.dart';
 import 'package:eye_lens/core/settings_defaults.dart';
 import 'package:eye_lens/core/services/database_helper.dart';
 import 'package:eye_lens/core/services/sync_service.dart';
@@ -47,7 +46,7 @@ class PengaturanService {
 
     final fields = <String, dynamic>{};
 
-    final savedAutoPlay = prefs.getBool(AppPreferenceKeys.autoPlayAudio);
+    final savedAutoPlay = prefs.getBool('auto_play_audio');
     if (savedAutoPlay != null) {
       fields['otomatis_putar'] = savedAutoPlay ? 1 : 0;
     }
@@ -72,9 +71,10 @@ class PengaturanService {
     final savedColorIndex = prefs.getInt('highlight_color_index');
     if (savedColorIndex != null &&
         savedColorIndex >= 0 &&
-        savedColorIndex < SettingsDefaults.highlightColorHexes.length) {
-      fields['warna_kursor'] =
-          SettingsDefaults.highlightColorHexes[savedColorIndex];
+        savedColorIndex < SettingsDefaults.highlightColors.length) {
+      fields['warna_kursor'] = SettingsDefaults.hexFromColor(
+        SettingsDefaults.highlightColors[savedColorIndex],
+      );
     }
 
     final savedFontSize = prefs.getDouble('speech_font_size');

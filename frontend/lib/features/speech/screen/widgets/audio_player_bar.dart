@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/app/theme/app_colors.dart';
+import 'package:eye_lens/features/speech/logic/tts_timeline_mapper.dart';
 
 class AudioPlayerBar extends StatelessWidget {
   final bool isTextView;
@@ -8,7 +9,11 @@ class AudioPlayerBar extends StatelessWidget {
   final bool cursorColorEnabled;
   final Color highlightColor;
   final double progress;
-  final ValueChanged<double> onProgressChanged;
+  final Duration currentPosition;
+  final Duration totalDuration;
+  final ValueChanged<double>? onSeekStart;
+  final ValueChanged<double> onSeekChanged;
+  final ValueChanged<double>? onSeekEnd;
   final String selectedLanguage;
   final VoidCallback onLanguageTap;
   final VoidCallback onRewind;
@@ -26,7 +31,11 @@ class AudioPlayerBar extends StatelessWidget {
     required this.cursorColorEnabled,
     required this.highlightColor,
     required this.progress,
-    required this.onProgressChanged,
+    required this.currentPosition,
+    required this.totalDuration,
+    this.onSeekStart,
+    required this.onSeekChanged,
+    this.onSeekEnd,
     required this.selectedLanguage,
     required this.onLanguageTap,
     required this.onRewind,
@@ -47,6 +56,10 @@ class AudioPlayerBar extends StatelessWidget {
     final sliderInactiveColor = isLightContainer
         ? const Color(0xFFD0D7DE)
         : Colors.white.withValues(alpha: 0.35);
+    final timeTextColor = isLightContainer ? AppColors.black : Colors.white;
+    final currentLabel = TtsTimelineMapper.formatDuration(currentPosition);
+    final totalLabel = TtsTimelineMapper.formatDuration(totalDuration);
+    final clampedProgress = progress.clamp(0.0, 1.0);
 
     return Container(
       padding: EdgeInsets.only(
@@ -64,17 +77,59 @@ class AudioPlayerBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Progress Slider
-          SliderTheme(
-            data: SliderThemeData(
-              thumbColor: sliderActiveColor,
-              activeTrackColor: sliderActiveColor,
-              inactiveTrackColor: sliderInactiveColor,
-              trackHeight: 4.0,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape: SliderComponentShape.noOverlay,
-            ),
-            child: Slider(value: progress, onChanged: onProgressChanged),
+          // Progress Slider dengan tampilan detik (MM:SS)
+          Row(
+            children: [
+              SizedBox(
+                width: 44,
+                child: Text(
+                  currentLabel,
+                  style: TextStyle(
+                    color: timeTextColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Semantics(
+                  label: 'Posisi audio',
+                  value: '$currentLabel dari $totalLabel',
+                  child: SliderTheme(
+                    data: SliderThemeData(
+                      thumbColor: sliderActiveColor,
+                      activeTrackColor: sliderActiveColor,
+                      inactiveTrackColor: sliderInactiveColor,
+                      trackHeight: 4.0,
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 7,
+                      ),
+                      overlayShape: SliderComponentShape.noOverlay,
+                    ),
+                    child: Slider(
+                      value: clampedProgress,
+                      onChangeStart: onSeekStart,
+                      onChanged: onSeekChanged,
+                      onChangeEnd: onSeekEnd,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  totalLabel,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: timeTextColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
 

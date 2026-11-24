@@ -270,25 +270,31 @@ class TtsService {
   }
 
   /// Membacakan teks mentah (fallback).
-  Future<void> speak(String text) async {
+  Future<void> speak(String text, {int startCharIndex = 0}) async {
     if (text.trim().isEmpty) return;
 
     _paragraphPauseTimer?.cancel();
     _playbackSessionId++;
     _formattedResult = null;
 
-    if (_state == TtsState.paused && _fullText == text) {
+    if (_state == TtsState.paused &&
+        _fullText == text &&
+        startCharIndex == _currentCharIndex) {
       await resume();
       return;
     }
 
     _fullText = text;
-    _charOffset = 0;
-    _currentCharIndex = 0;
+    final int safeStart = startCharIndex
+        .clamp(0, max(0, text.length - 1))
+        .toInt();
+    _charOffset = safeStart;
+    _currentCharIndex = safeStart;
     _state = TtsState.playing;
-    _rawChunks = TtsTextChunker.split(text);
+    final remaining = safeStart > 0 ? text.substring(safeStart) : text;
+    _rawChunks = TtsTextChunker.split(remaining);
     _rawChunkIndex = 0;
-    _rawChunkOffset = 0;
+    _rawChunkOffset = safeStart;
     await _flutterTts.stop();
     if (_rawChunks.isEmpty) {
       _state = TtsState.stopped;

@@ -18,6 +18,7 @@ import 'package:eye_lens/features/speech/logic/auto_play_helper.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_controller.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
 import 'package:eye_lens/features/speech/logic/tts_service.dart';
+import 'package:eye_lens/features/speech/logic/tts_timeline_mapper.dart';
 import 'package:eye_lens/core/widgets/feedback_dialog.dart';
 import 'package:eye_lens/features/camera/screen/widgets/no_text_alert_banner.dart';
 import 'package:eye_lens/features/settings/screen/faq_screen.dart';
@@ -28,7 +29,6 @@ import 'package:eye_lens/features/settings/screen/widgets/language_sheet.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_body_view.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_mode_toggle_button.dart';
 import 'package:eye_lens/features/speech/screen/widgets/speech_top_action_bar.dart';
-import 'package:eye_lens/features/speech/screen/widgets/speech_text_editor_dialog.dart';
 
 class SpeechScreen extends StatefulWidget {
   final String text;
@@ -54,6 +54,12 @@ class _SpeechScreenState extends State<SpeechScreen> {
   final ValueNotifier<bool> _isPlayingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<int> _currentCharIndexNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<Duration> _positionNotifier = ValueNotifier<Duration>(
+    Duration.zero,
+  );
+  late TtsTimelineMapper _timeline;
+  bool _isSeeking = false;
+  Timer? _positionTicker;
   String _selectedLanguage = 'Indonesia'; // 'Indonesia' or 'English'
   double _speed = 1.0;
   final TtsService _ttsService = TtsService();
@@ -72,11 +78,38 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   String get _activeText => _currentFramedText;
 
+  void _rebuildTimeline() {
+    _timeline = TtsTimelineMapper(
+      text: _activeText,
+      speedMultiplier: _speed,
+    );
+  }
+
+  void _startPositionTicker() {
+    _positionTicker?.cancel();
+    _positionTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted || !_isPlayingNotifier.value || _isSeeking) return;
+      final nextMs = _positionNotifier.value.inMilliseconds + 250;
+      final totalMs = _timeline.totalDuration.inMilliseconds;
+      if (totalMs <= 0) return;
+      final clamped = Duration(milliseconds: nextMs.clamp(0, totalMs));
+      _positionNotifier.value = clamped;
+      _progressNotifier.value = _timeline.progressForDuration(clamped);
+    });
+  }
+
+  void _stopPositionTicker() {
+    _positionTicker?.cancel();
+    _positionTicker = null;
+  }
+
   void _onFrameChanging() {
+    _stopPositionTicker();
     _ttsService.stop();
     _isPlayingNotifier.value = false;
     _progressNotifier.value = 0.0;
     _currentCharIndexNotifier.value = 0;
+    _positionNotifier.value = Duration.zero;
   }
 
   void _onSelectionComputed(
@@ -107,7 +140,11 @@ class _SpeechScreenState extends State<SpeechScreen> {
         _noTextAlertTitle = alertTitle;
         _noTextAlertMessage = alertMessage;
       }
+      _rebuildTimeline();
     });
+    _positionNotifier.value = Duration.zero;
+    _progressNotifier.value = 0.0;
+    _currentCharIndexNotifier.value = 0;
 
     if (decision == AutoPlayDecision.alertNoText) {
       _triggerNoTextAlert(title: alertTitle, message: alertMessage);
@@ -158,29 +195,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     }
   }
 
-  Future<void> _editCurrentText() async {
-    if (_activeText.trim().isEmpty) return;
-
-    final edited = await showSpeechTextEditor(
-      context: context,
-      initialText: _activeText,
-      isIndonesian: AppStrings.of(context).isIndonesian,
-    );
-    if (!mounted || edited == null) return;
-
-    _ttsService.stop();
-    setState(() {
-      _currentFramedText = edited;
-      _currentFramedFormattedResult = null;
-      _hasTextInFrame = true;
-      _showNoTextAlert = false;
-    });
-    _isPlayingNotifier.value = false;
-    _progressNotifier.value = 0.0;
-    _currentCharIndexNotifier.value = 0;
-  }
-
-  Future<void> _startSpeech() async {
+  Future<void> _startSpeech({int? startCharIndex}) async {
     if (!_hasTextInFrame || _activeText.trim().isEmpty) {
       final strings = AppStrings.of(context);
       final title = _noTextAlertTitle.isNotEmpty
@@ -193,11 +208,59 @@ class _SpeechScreenState extends State<SpeechScreen> {
       return;
     }
 
+    final targetIndex =
+        startCharIndex ??
+        (_currentCharIndexNotifier.value >= _activeText.length
+            ? 0
+            : _currentCharIndexNotifier.value);
+
     if (_currentFramedFormattedResult != null) {
-      await _ttsService.speakFormattedResult(_currentFramedFormattedResult!);
+      await _ttsService.speakFormattedResult(
+        _currentFramedFormattedResult!,
+        startCharIndex: targetIndex,
+      );
     } else {
-      await _ttsService.speak(_activeText);
+      await _ttsService.speak(_activeText, startCharIndex: targetIndex);
     }
+  }
+
+  void _handleSeekStart(double value) {
+    _isSeeking = true;
+  }
+
+  void _handleSeekChanged(double value) {
+    final clamped = value.clamp(0.0, 1.0);
+    final previewDuration = _timeline.durationForProgress(clamped);
+    _progressNotifier.value = clamped;
+    _positionNotifier.value = previewDuration;
+  }
+
+  Future<void> _handleSeekEnd(double value) async {
+    final clamped = value.clamp(0.0, 1.0);
+    final targetDuration = _timeline.durationForProgress(clamped);
+    final targetCharIndex = _timeline.charIndexForDuration(targetDuration);
+
+    _isSeeking = false;
+    _positionNotifier.value = targetDuration;
+    _progressNotifier.value = clamped;
+    _currentCharIndexNotifier.value = targetCharIndex;
+
+    if (_isPlayingNotifier.value) {
+      await _startSpeech(startCharIndex: targetCharIndex);
+    } else {
+      await _ttsService.seekToCharIndex(targetCharIndex);
+    }
+  }
+
+  Future<void> _seekRelativeSeconds(int deltaSeconds) async {
+    if (_timeline.isEmpty) return;
+    final totalMs = _timeline.totalDuration.inMilliseconds;
+    final targetMs = (_positionNotifier.value.inMilliseconds +
+            deltaSeconds * 1000)
+        .clamp(0, totalMs);
+    final targetDuration = Duration(milliseconds: targetMs);
+    final targetProgress = _timeline.progressForDuration(targetDuration);
+    await _handleSeekEnd(targetProgress);
   }
 
   @override
@@ -213,6 +276,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _currentFramedText = widget.text;
     _currentFramedFormattedResult = widget.ocrResult?.formattedResult;
     _hasTextInFrame = widget.text.trim().isNotEmpty;
+    _rebuildTimeline();
     _displayImageBytes = widget.imageBytes;
     _displayOcrResult = widget.ocrResult;
     _prepareOrientedPreview();
@@ -221,33 +285,43 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _selectedLanguage = langProv.isEnglish ? 'English' : 'Indonesia';
 
     _ttsService.onProgress = (double progress, String word, [int? charIndex]) {
-      if (!mounted) return;
-      _progressNotifier.value = progress;
+      if (!mounted || _isSeeking) return;
       if (charIndex != null) {
         _currentCharIndexNotifier.value = charIndex;
+        final syncedDuration = _timeline.durationForCharIndex(charIndex);
+        _positionNotifier.value = syncedDuration;
+        _progressNotifier.value = _timeline.progressForDuration(syncedDuration);
+      } else {
+        _progressNotifier.value = progress;
+        _positionNotifier.value = _timeline.durationForProgress(progress);
       }
     };
 
     _ttsService.onStart = () {
       if (!mounted) return;
       _isPlayingNotifier.value = true;
+      _startPositionTicker();
     };
 
     _ttsService.onPause = () {
       if (!mounted) return;
       _isPlayingNotifier.value = false;
+      _stopPositionTicker();
     };
 
     _ttsService.onCompletion = () {
       if (!mounted) return;
       _isPlayingNotifier.value = false;
+      _stopPositionTicker();
       _progressNotifier.value = 0.0;
+      _positionNotifier.value = Duration.zero;
       _currentCharIndexNotifier.value = 0;
     };
 
     _ttsService.onError = (_) {
       if (!mounted) return;
       _isPlayingNotifier.value = false;
+      _stopPositionTicker();
       final message = AppStrings.of(context).isIndonesian
           ? 'Suara tidak tersedia. Periksa pengaturan suara di HP.'
           : 'Audio is unavailable. Check your phone sound settings.';
@@ -294,6 +368,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
 
   @override
   void dispose() {
+    _stopPositionTicker();
     _noTextAlertDismissTimer?.cancel();
     _ttsService.stop();
     _ttsService.onProgress = null;
@@ -301,6 +376,7 @@ class _SpeechScreenState extends State<SpeechScreen> {
     _ttsService.onPause = null;
     _ttsService.onCompletion = null;
     _ttsService.onError = null;
+    _positionNotifier.dispose();
     _currentCharIndexNotifier.dispose();
     _progressNotifier.dispose();
     _isPlayingNotifier.dispose();
@@ -361,7 +437,13 @@ class _SpeechScreenState extends State<SpeechScreen> {
       } else {
         _speed = 1.0;
       }
+      _rebuildTimeline();
     });
+    final synced = _timeline.durationForCharIndex(
+      _currentCharIndexNotifier.value,
+    );
+    _positionNotifier.value = synced;
+    _progressNotifier.value = _timeline.progressForDuration(synced);
     _ttsService.setSpeed(_speed);
   }
 
@@ -421,8 +503,6 @@ class _SpeechScreenState extends State<SpeechScreen> {
               isDark: isDark,
               strings: strings,
               showAppearanceButton: _isTextView,
-              showEditButton: _hasTextInFrame,
-              onEditPressed: _editCurrentText,
               onBackPressed: () => Navigator.of(context).pop(),
               onAppearancePressed: () {
                 _isAppearanceSheetOpen = true;
@@ -488,51 +568,57 @@ class _SpeechScreenState extends State<SpeechScreen> {
             child: ValueListenableBuilder<double>(
               valueListenable: _progressNotifier,
               builder: (context, progress, _) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: _isPlayingNotifier,
-                  builder: (context, isPlaying, _) {
-                    return AudioPlayerBar(
-                      isTextView: _isTextView,
-                      isDark: isDark,
-                      cursorColorEnabled: themeProvider.cursorColor,
-                      highlightColor: themeProvider.highlightColor,
-                      progress: progress,
-                      onProgressChanged: (val) {
-                        _progressNotifier.value = val;
-                        _ttsService.seekTo(val);
-                      },
-                      selectedLanguage: _selectedLanguage,
-                      onLanguageTap: () {
-                        LanguageBottomSheet.show(
-                          context,
-                          strings: strings,
+                return ValueListenableBuilder<Duration>(
+                  valueListenable: _positionNotifier,
+                  builder: (context, currentPosition, _) {
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: _isPlayingNotifier,
+                      builder: (context, isPlaying, _) {
+                        return AudioPlayerBar(
+                          isTextView: _isTextView,
                           isDark: isDark,
+                          cursorColorEnabled: themeProvider.cursorColor,
+                          highlightColor: themeProvider.highlightColor,
+                          progress: progress,
+                          currentPosition: currentPosition,
+                          totalDuration: _timeline.totalDuration,
+                          onSeekStart: _handleSeekStart,
+                          onSeekChanged: _handleSeekChanged,
+                          onSeekEnd: _handleSeekEnd,
                           selectedLanguage: _selectedLanguage,
-                          onLanguageSelected: (lang) async {
-                            setState(() {
-                              _selectedLanguage = lang;
-                            });
-                            final langCode = lang == 'Indonesia'
-                                ? 'id-ID'
-                                : 'en-US';
-                            await _ttsService.setLanguage(langCode);
-                            if (_isPlayingNotifier.value) {
-                              await _startSpeech();
-                            }
+                          onLanguageTap: () {
+                            LanguageBottomSheet.show(
+                              context,
+                              strings: strings,
+                              isDark: isDark,
+                              selectedLanguage: _selectedLanguage,
+                              onLanguageSelected: (lang) async {
+                                setState(() {
+                                  _selectedLanguage = lang;
+                                });
+                                final langCode = lang == 'Indonesia'
+                                    ? 'id-ID'
+                                    : 'en-US';
+                                await _ttsService.setLanguage(langCode);
+                                if (_isPlayingNotifier.value) {
+                                  await _startSpeech();
+                                }
+                              },
+                            );
                           },
+                          onRewind: () {
+                            _seekRelativeSeconds(-10);
+                          },
+                          isPlaying: isPlaying,
+                          onPlayPause: _togglePlayPause,
+                          onForward: () {
+                            _seekRelativeSeconds(10);
+                          },
+                          speed: _speed,
+                          onSpeedTap: _onSpeedTap,
+                          bottomPadding: bottomPadding,
                         );
                       },
-                      onRewind: () {
-                        _ttsService.seekSeconds(-10.0);
-                      },
-                      isPlaying: isPlaying,
-                      onPlayPause: _togglePlayPause,
-                      onForward: () {
-                        _ttsService.seekSeconds(10.0);
-                      },
-                      speed: _speed,
-                      onSpeedTap: _onSpeedTap,
-                      bottomPadding: bottomPadding,
                     );
                   },
                 );

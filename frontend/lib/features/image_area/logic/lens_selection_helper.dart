@@ -547,11 +547,8 @@ class LensSelectionHelper {
         }).toList();
 
         if (selectedWords.isNotEmpty) {
-          // Urutkan kata dari kiri ke kanan
-          selectedWords.sort(
-            (a, b) => a.boundingBox.left.compareTo(b.boundingBox.left),
-          );
-
+          // Preserve ML Kit word order; screen-left is not reading-first
+          // when the recognized image has been rotated.
           // Hitung gabungan bounding box baris baru
           double minL = selectedWords.first.boundingBox.left;
           double minT = selectedWords.first.boundingBox.top;
@@ -574,6 +571,8 @@ class LensSelectionHelper {
               text: newLineText,
               boundingBox: newBoundingBox,
               confidence: line.confidence,
+              angle: line.angle,
+              orientation: line.orientation,
               blockIndex: line.blockIndex,
               elements: selectedWords,
             ),

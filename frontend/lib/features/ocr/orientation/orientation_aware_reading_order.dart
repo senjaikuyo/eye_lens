@@ -223,6 +223,17 @@ class OrientationAwareReadingOrder {
   ) {
     final aOrientation = _blockOrientation(a, documentOrientation);
     final bOrientation = _blockOrientation(b, documentOrientation);
+    if (aOrientation == documentOrientation &&
+        bOrientation == documentOrientation) {
+      final aGeometry = _BlockGeometry.from(a, documentAxis, documentCross);
+      final bGeometry = _BlockGeometry.from(b, documentAxis, documentCross);
+      // Compare in document coordinates, not screen coordinates. Screen-top
+      // becomes document-bottom after a 180-degree mapping.
+      final cross = aGeometry.crossMin.compareTo(bGeometry.crossMin);
+      if (cross != 0) return cross;
+      final read = aGeometry.readMin.compareTo(bGeometry.readMin);
+      if (read != 0) return read;
+    }
     final top = a.boundingBox.top.compareTo(b.boundingBox.top);
     if (top != 0) return top;
     final left = a.boundingBox.left.compareTo(b.boundingBox.left);

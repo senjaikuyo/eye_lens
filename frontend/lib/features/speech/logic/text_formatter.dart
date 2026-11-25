@@ -26,14 +26,6 @@ class TextFormatterConfig {
   static final RegExp listPrefixRegex = RegExp(
     r'^(\d+[\.\)]|[a-zA-Z][\.\)]|[\u2022\u2023\u25E6\u2043\u2219\*\-\–\—])\s+',
   );
-
-  /// Karakter sampah/noise OCR di awal atau akhir baris.
-  static final RegExp edgeNoiseRegex = RegExp(
-    r"""^[\~\|\_\`\'\^]+|[\~\|\_\`\'\^]+$""",
-  );
-
-  /// Deteksi kata yang terpotong tanda hubung di akhir baris (misal: "revolu-").
-  static final RegExp trailingHyphenRegex = RegExp(r'(\w+)-\s*$');
 }
 
 /// Layanan murni untuk merapikan hasil OCR berbasis struktur spasial (bounding box) dan teks.
@@ -121,11 +113,10 @@ class TextFormatter {
     OcrLineData? prevLine;
 
     for (final rawLine in block.lines) {
-      final sanitizedText = _sanitizeLine(rawLine.text);
-      if (sanitizedText.isEmpty) continue;
+      final lineText = rawLine.text;
 
       final isCurrentListItem = TextFormatterConfig.listPrefixRegex.hasMatch(
-        sanitizedText,
+        lineText,
       );
 
       bool startNewParagraph = false;
@@ -175,9 +166,9 @@ class TextFormatter {
           outputParagraphs.add(currentPara);
         }
         currentPara = _RawParagraphAccumulator(isListItem: isCurrentListItem);
-        currentPara.appendLine(sanitizedText, isFirstLine: true);
+        currentPara.appendLine(lineText, isFirstLine: true);
       } else {
-        currentPara!.appendLine(sanitizedText, isFirstLine: false);
+        currentPara!.appendLine(lineText, isFirstLine: false);
       }
 
       prevLine = rawLine;
@@ -188,67 +179,22 @@ class TextFormatter {
     }
   }
 
-  /// Membersihkan noise batas dan normalisasi spasi.
-  static String _sanitizeLine(String line) {
-    var text = line.trim();
-    // Bersihkan karakter sampah OCR di batas baris
-    text = text.replaceAll(TextFormatterConfig.edgeNoiseRegex, '').trim();
-    // Bersihkan spasi ganda / tab internal
-    text = text.replaceAll(RegExp(r'[ \t]+'), ' ');
-    return text;
-  }
-
   /// Fallback untuk memformat teks mentah jika tidak ada data posisi/koordinat.
   static FormattedTextResult formatRawText(String rawText) {
-    final clean = rawText.trim();
-    if (clean.isEmpty) return FormattedTextResult.empty;
-
-    final rawLines = clean.split('\n');
-    final List<_RawParagraphAccumulator> rawParagraphs = [];
-    _RawParagraphAccumulator? currentPara;
-
-    for (var rawLine in rawLines) {
-      final line = _sanitizeLine(rawLine);
-      if (line.isEmpty) {
-        if (currentPara != null && currentPara.hasContent) {
-          rawParagraphs.add(currentPara);
-          currentPara = null;
-        }
-        continue;
-      }
-
-      final isListItem = TextFormatterConfig.listPrefixRegex.hasMatch(line);
-      final isShort = line.length < 35;
-
-      if (currentPara == null ||
-          isListItem ||
-          currentPara.isListItem ||
-          isShort) {
-        if (currentPara != null && currentPara.hasContent) {
-          rawParagraphs.add(currentPara);
-        }
-        currentPara = _RawParagraphAccumulator(isListItem: isListItem);
-        currentPara.appendLine(line, isFirstLine: true);
-      } else {
-        currentPara.appendLine(line, isFirstLine: false);
-      }
-    }
-
-    if (currentPara != null && currentPara.hasContent) {
-      rawParagraphs.add(currentPara);
-    }
-
-    if (rawParagraphs.isEmpty) {
-      return FormattedTextResult.empty;
-    }
-
-    return _buildFormattedResult(rawParagraphs);
+    if (rawText.isEmpty) return FormattedTextResult.empty;
+    return _buildFormattedResult([
+      for (final line in rawText.split('\n'))
+        _RawParagraphAccumulator(
+          isListItem: TextFormatterConfig.listPrefixRegex.hasMatch(line),
+        )..appendLine(line, isFirstLine: true),
+    ], paragraphSeparator: '\n');
   }
 
   /// Membangun FormattedTextResult dengan pemetaan indeks karakter yang persis.
   static FormattedTextResult _buildFormattedResult(
-    List<_RawParagraphAccumulator> rawParagraphs,
-  ) {
+    List<_RawParagraphAccumulator> rawParagraphs, {
+    String paragraphSeparator = '\n\n',
+  }) {
     final StringBuffer fullTextBuffer = StringBuffer();
     final List<FormattedParagraph> paragraphs = [];
     final List<FormattedWord> allWords = [];
@@ -256,35 +202,22 @@ class TextFormatter {
     for (int pIdx = 0; pIdx < rawParagraphs.length; pIdx++) {
       final paraAcc = rawParagraphs[pIdx];
       final paraString = paraAcc.toString();
-      if (paraString.trim().isEmpty) continue;
-
-      if (fullTextBuffer.isNotEmpty) {
-        fullTextBuffer.write('\n\n'); // Pemisah antar paragraf
+      if (pIdx > 0) {
+        fullTextBuffer.write(paragraphSeparator);
       }
 
       final int paraStartIndex = fullTextBuffer.length;
       final List<FormattedWord> paraWords = [];
 
       // Pecah paragraf menjadi kata-kata
-      final wordTokens = paraString
-          .split(' ')
-          .where((w) => w.isNotEmpty)
-          .toList();
-
-      for (int wIdx = 0; wIdx < wordTokens.length; wIdx++) {
-        if (wIdx > 0) {
-          fullTextBuffer.write(' ');
-        }
-        final int wordStart = fullTextBuffer.length;
-        fullTextBuffer.write(wordTokens[wIdx]);
-        final int wordEnd = fullTextBuffer.length;
-
+      fullTextBuffer.write(paraString);
+      for (final match in RegExp(r'\S+').allMatches(paraString)) {
         final word = FormattedWord(
-          text: wordTokens[wIdx],
-          startIndex: wordStart,
-          endIndex: wordEnd,
+          text: match.group(0)!,
+          startIndex: paraStartIndex + match.start,
+          endIndex: paraStartIndex + match.end,
           paragraphIndex: paragraphs.length,
-          wordIndexInParagraph: wIdx,
+          wordIndexInParagraph: paraWords.length,
         );
         paraWords.add(word);
         allWords.add(word);
@@ -315,42 +248,20 @@ class TextFormatter {
 class _RawParagraphAccumulator {
   final bool isListItem;
   final StringBuffer _buffer = StringBuffer();
-  String _lastAppendedLine = '';
 
   _RawParagraphAccumulator({required this.isListItem});
 
   bool get hasContent => _buffer.isNotEmpty;
 
   void appendLine(String line, {required bool isFirstLine}) {
-    if (isFirstLine || _buffer.isEmpty) {
+    if (isFirstLine) {
       _buffer.write(line);
-      _lastAppendedLine = line;
       return;
     }
 
-    // Periksa apakah baris sebelumnya terpotong tanda hubung (hyphen) di akhir
-    final hyphenMatch = TextFormatterConfig.trailingHyphenRegex.firstMatch(
-      _lastAppendedLine,
-    );
-    if (hyphenMatch != null &&
-        line.isNotEmpty &&
-        RegExp(r'^\w').hasMatch(line)) {
-      // Hapus tanda hubung dari buffer dan sambung tanpa spasi
-      final currentStr = _buffer.toString();
-      final lastHyphenIndex = currentStr.lastIndexOf('-');
-      if (lastHyphenIndex != -1) {
-        _buffer.clear();
-        _buffer.write(currentStr.substring(0, lastHyphenIndex));
-        _buffer.write(line);
-        _lastAppendedLine = line;
-        return;
-      }
-    }
-
-    // Sambung dengan satu spasi tunggal
-    _buffer.write(' ');
+    // Preserve line boundaries and hyphens instead of guessing word joins.
+    _buffer.write('\n');
     _buffer.write(line);
-    _lastAppendedLine = line;
   }
 
   @override

@@ -196,7 +196,7 @@ void main() {
 
       final spoken = formatted.paragraphs.map((p) => p.text).toList();
       expect(spoken.first, 'Langkah 1');
-      expect(spoken.last, 's i g n');
+      expect(spoken.last, 's\ni\ng\nn');
       expect(spoken, contains('Langkah 2'));
       expect(
         formatted.allWords

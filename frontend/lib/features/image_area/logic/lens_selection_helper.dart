@@ -565,7 +565,9 @@ class LensSelectionHelper {
           }
 
           final newBoundingBox = Rect.fromLTRB(minL, minT, maxR, maxB);
-          final newLineText = selectedWords.map((w) => w.text).join(' ');
+          final newLineText = selectedWords.length == line.elements.length
+              ? line.text
+              : selectedWords.map((w) => w.text).join(' ');
 
           selectedLines.add(
             OcrLineData(

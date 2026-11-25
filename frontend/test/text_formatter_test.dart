@@ -6,7 +6,7 @@ import 'package:eye_lens/features/speech/logic/text_formatter.dart';
 
 void main() {
   group('TextFormatter Tests', () {
-    test('1. De-hyphenation menyambung kata terpotong di akhir baris', () {
+    test('1. Tanda hubung dan batas baris dipertahankan', () {
       final doc = OcrDocumentData(
         blocks: [
           OcrBlockData(
@@ -29,11 +29,11 @@ void main() {
 
       final result = TextFormatter.format(doc);
       expect(result.paragraphs.length, 1);
-      expect(result.fullText, 'revolusi industri 4.0');
-      expect(result.paragraphs.first.text, 'revolusi industri 4.0');
+      expect(result.fullText, 'revolu-\nsi industri 4.0');
+      expect(result.paragraphs.first.text, 'revolu-\nsi industri 4.0');
     });
 
-    test('2. Menggabungkan baris dalam satu paragraf yang mengalir', () {
+    test('2. Baris dalam satu paragraf tetap dipisahkan newline', () {
       final doc = OcrDocumentData(
         blocks: [
           OcrBlockData(
@@ -58,7 +58,7 @@ void main() {
       expect(result.paragraphs.length, 1);
       expect(
         result.fullText,
-        'Ini adalah kalimat pertama dari buku ini yang mengalir bersambung ke baris kedua.',
+        'Ini adalah kalimat pertama dari buku ini\nyang mengalir bersambung ke baris kedua.',
       );
     });
 
@@ -224,15 +224,15 @@ void main() {
       );
 
       final result = TextFormatter.format(doc);
-      expect(result.fullText, contains('Kiri satu Kiri dua'));
-      expect(result.fullText, contains('Kanan satu Kanan dua'));
+      expect(result.fullText, contains('Kiri satu\nKiri dua'));
+      expect(result.fullText, contains('Kanan satu\nKanan dua'));
       expect(
         result.fullText.indexOf('Kiri satu'),
         lessThan(result.fullText.indexOf('Kanan satu')),
       );
     });
 
-    test('6. Sanitasi noise simbol di tepi baris teks OCR', () {
+    test('6. Simbol di tepi baris teks OCR dipertahankan', () {
       final doc = OcrDocumentData(
         blocks: [
           OcrBlockData(
@@ -250,7 +250,7 @@ void main() {
       );
 
       final result = TextFormatter.format(doc);
-      expect(result.fullText, 'Teks bersih di tengah');
+      expect(result.fullText, '| Teks bersih di tengah ^');
     });
 
     test('7. Pemetaan indeks kata dan paragraf persis dan sinkron', () {
@@ -306,7 +306,7 @@ void main() {
       expect(result.paragraphs[0].text, 'yesterday');
       expect(result.paragraphs[1].text, 'today');
       expect(result.paragraphs[2].text, 'tomorrow');
-      expect(result.fullText, 'yesterday\n\ntoday\n\ntomorrow');
+      expect(result.fullText, raw);
     });
   });
 }

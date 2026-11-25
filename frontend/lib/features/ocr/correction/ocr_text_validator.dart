@@ -5,7 +5,7 @@ import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 
 /// Alasan mengapa sebuah hasil ekstraksi OCR diklasifikasikan sebagai kondisi tanpa teks.
 enum NoTextReason {
-  /// Teks sah ditemukan (minimal satu karakter alfanumerik).
+  /// Hasil teks nonkosong ditemukan, termasuk simbol dan non-Latin.
   none,
 
   /// Hasil OCR mentah kosong (tidak ada teks atau baris yang terdeteksi dari sensor/gambar).
@@ -96,14 +96,8 @@ class OcrTextValidator {
     return _letterRegex.allMatches(text).length;
   }
 
-  /// Mengevaluasi kondisi ada/tidaknya teks berdasarkan teks mentah, baris terfilter, dan jumlah alfanumerik.
-  ///
-  /// Kriteria kondisi tanpa teks:
-  /// 1. Hasil OCR mentah kosong (`rawLinesCount == 0` atau `rawOcrText.trim().isEmpty`).
-  /// 2. Seluruh baris terbuang oleh penyaring (`acceptedLinesCount == 0` ketika `rawLinesCount > 0`,
-  ///    atau `allLinesFiltered == true`).
-  /// 3. Teks yang tersisa tidak memiliki karakter alfanumerik. Karakter
-  ///    tunggal dapat berupa label, nomor, atau bagian teks vertikal.
+  /// Menerima seluruh hasil nonkosong tanpa ambang alfanumerik.
+  /// Metadata filter lama tidak menentukan apakah teks boleh ditampilkan.
   static OcrTextValidationResult evaluate({
     required String rawOcrText,
     required int rawLinesCount,
@@ -113,7 +107,7 @@ class OcrTextValidator {
   }) {
     // 1. Periksa apakah OCR mentah kosong
     final trimmedRaw = rawOcrText.trim();
-    if (rawLinesCount == 0 || trimmedRaw.isEmpty) {
+    if (trimmedRaw.isEmpty && filteredText.trim().isEmpty) {
       return const OcrTextValidationResult(
         hasText: false,
         reason: NoTextReason.rawOcrEmpty,
@@ -122,40 +116,12 @@ class OcrTextValidator {
       );
     }
 
-    // 2. Periksa apakah seluruh baris terbuang oleh OcrNoiseFilter
-    final isAllFiltered =
-        allLinesFiltered || (rawLinesCount > 0 && acceptedLinesCount == 0);
-    if (isAllFiltered) {
-      return const OcrTextValidationResult(
-        hasText: false,
-        reason: NoTextReason.allLinesFiltered,
-        text: '',
-        alphanumericCount: 0,
-      );
-    }
-
-    // 3. Periksa apakah teks cukup panjang dan mengandung huruf.
-    final alphaCount = countAlphanumeric(filteredText);
-    if (alphaCount == 0) {
-      // Jika awalnya ada baris yang tersaring sehingga tersisa fragmen.
-      final wasFilteredDown =
-          acceptedLinesCount < rawLinesCount || allLinesFiltered;
-      return OcrTextValidationResult(
-        hasText: false,
-        reason: wasFilteredDown
-            ? NoTextReason.allLinesFiltered
-            : NoTextReason.insufficientAlphanumeric,
-        text: filteredText,
-        alphanumericCount: alphaCount,
-      );
-    }
-
-    // 4. Teks sah ditemukan
+    final text = filteredText.trim().isNotEmpty ? filteredText : rawOcrText;
     return OcrTextValidationResult(
       hasText: true,
       reason: NoTextReason.none,
-      text: filteredText,
-      alphanumericCount: alphaCount,
+      text: text,
+      alphanumericCount: countAlphanumeric(text),
     );
   }
 

@@ -28,9 +28,15 @@ void main() {
       }
     });
 
-    test('teks tanpa alfanumerik ditolak', () {
-      for (final text in ['', '   ', '~~~', '---']) {
+    test('hanya teks kosong ditolak', () {
+      for (final text in ['', '   ']) {
         expect(evaluate(text).hasText, isFalse, reason: 'Input "$text"');
+      }
+    });
+
+    test('simbol dan non-Latin tetap diterima', () {
+      for (final text in ['~~~', '---', '日本語']) {
+        expect(evaluate(text).hasText, isTrue);
       }
     });
   });

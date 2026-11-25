@@ -231,7 +231,7 @@ void main() {
       expect(result.text.contains('Luar'), isFalse);
     });
 
-    test('7. Area kosong atau < 2 huruf/angka menghasilkan hasText false', () {
+    test('7. Simbol hasil OCR tetap diterima', () {
       final lineSymbol = const OcrLineData(
         text: '!',
         boundingBox: Rect.fromLTRB(100, 100, 150, 150),
@@ -251,8 +251,8 @@ void main() {
         originalImageSize: originalImageSize,
       );
 
-      // Kurang dari 2 huruf/angka -> hasText false
-      expect(result.hasText, isFalse);
+      expect(result.hasText, isTrue);
+      expect(result.text, '!');
       expect(result.validation.alphanumericCount, equals(0));
     });
 

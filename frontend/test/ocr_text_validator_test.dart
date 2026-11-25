@@ -1,222 +1,48 @@
 import 'dart:ui';
 
-import 'package:eye_lens/core/constants/app_strings.dart';
-import 'package:eye_lens/features/ocr/models/ocr_element.dart';
-import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
-import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:eye_lens/core/constants/app_strings.dart';
+import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
+import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 
 void main() {
-  const indoStrings = AppStrings(isIndonesian: true);
-  const engStrings = AppStrings(isIndonesian: false);
+  const strings = AppStrings(isIndonesian: true);
 
-  group('OcrTextValidator Tests', () {
-    test('1. Kondisi OCR kosong menghasilkan NoTextReason.rawOcrEmpty dan pesan standar', () {
-      final result = OcrTextValidator.evaluate(
-        rawOcrText: '',
-        rawLinesCount: 0,
-        filteredText: '',
-        acceptedLinesCount: 0,
-      );
+  test('empty output produces the no-text alert', () {
+    final result = OcrTextValidator.validateResult(OcrResult.empty);
+    expect(result.hasText, isFalse);
+    expect(result.reason, NoTextReason.rawOcrEmpty);
+    expect(result.getAlertTitle(strings), strings.noTextFoundTitle);
+    expect(result.getAlertMessage(strings), strings.noTextFoundAlert);
+    expect(result.getAlertInstruction(strings), strings.noTextFoundInstruction);
+  });
 
-      expect(result.hasText, isFalse);
-      expect(result.reason, equals(NoTextReason.rawOcrEmpty));
-      expect(result.alphanumericCount, equals(0));
+  test('processing failure remains distinct from empty output', () {
+    final result = OcrTextValidator.validateResult(OcrResult.failed());
+    expect(result.reason, NoTextReason.processingFailed);
+    expect(result.getAlertTitle(strings), strings.ocrFailedTitle);
+    expect(result.getAlertMessage(strings), strings.ocrFailedAlert);
+    expect(result.getAlertInstruction(strings), strings.ocrFailedInstruction);
+  });
 
-      // Verifikasi pesan bahasa Indonesia dan Inggris
-      expect(
-        result.getAlertMessage(indoStrings),
-        equals('Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.'),
+  for (final text in ['~~~', '___', '...', 'A', '日本語', '  A\t  B  ']) {
+    test('nonempty text survives unchanged: $text', () {
+      final result = OcrTextValidator.validateResult(
+        OcrResult(fullText: text, elements: const [], imageSize: Size.zero),
       );
-      expect(
-        result.getAlertMessage(engStrings),
-        equals('No text found. Point the camera at text and try again.'),
-      );
+      expect(result.hasText, isTrue);
+      expect(result.text, text);
+      expect(result.getAlertMessage(strings), isEmpty);
     });
+  }
 
-    test('2. Kondisi semua baris tersaring menghasilkan NoTextReason.allLinesFiltered dan pesan gambar kurang jelas', () {
-      final result = OcrTextValidator.evaluate(
-        rawOcrText: '5:51\n85%\n~~~',
-        rawLinesCount: 3,
-        filteredText: '',
-        acceptedLinesCount: 0,
-        allLinesFiltered: true,
-      );
-
-      expect(result.hasText, isFalse);
-      expect(result.reason, equals(NoTextReason.allLinesFiltered));
-      expect(result.alphanumericCount, equals(0));
-
-      // Verifikasi penambahan kalimat "Gambar kurang jelas"
-      expect(
-        result.getAlertMessage(indoStrings),
-        equals(
-          'Gambar kurang jelas. Teks tidak ditemukan. Arahkan kamera ke teks dan coba lagi.',
-        ),
-      );
-      expect(
-        result.getAlertMessage(engStrings),
-        equals(
-          'Image is unclear. No text found. Point the camera at text and try again.',
-        ),
-      );
-    });
-
-    test('3. Karakter tunggal diterima, simbol tanpa alfanumerik ditolak', () {
-      // Kasus A: Hanya 1 huruf tetap ditampilkan
-      final singleCharResult = OcrTextValidator.evaluate(
-        rawOcrText: 'A',
-        rawLinesCount: 1,
-        filteredText: 'A',
-        acceptedLinesCount: 1,
-      );
-      expect(singleCharResult.hasText, isTrue);
-      expect(singleCharResult.alphanumericCount, equals(1));
-      expect(singleCharResult.reason, equals(NoTextReason.none));
-      expect(singleCharResult.getAlertMessage(indoStrings), isEmpty);
-
-      // Kasus B: Hanya simbol / tanda baca tanpa huruf dan angka
-      final symbolResult = OcrTextValidator.evaluate(
-        rawOcrText: '...',
-        rawLinesCount: 1,
-        filteredText: '...',
-        acceptedLinesCount: 1,
-      );
-      expect(symbolResult.hasText, isFalse);
-      expect(symbolResult.alphanumericCount, equals(0));
-      expect(
-        symbolResult.reason,
-        equals(NoTextReason.insufficientAlphanumeric),
-      );
-
-      // Kasus C: Teks yang tersisa tetap ditampilkan walau satu karakter
-      final filteredDownResult = OcrTextValidator.evaluate(
-        rawOcrText: 'Kata pertama\nNoise baris\n1',
-        rawLinesCount: 3,
-        filteredText: '1',
-        acceptedLinesCount: 1,
-      );
-      expect(filteredDownResult.hasText, isTrue);
-      expect(filteredDownResult.alphanumericCount, equals(1));
-      expect(filteredDownResult.reason, equals(NoTextReason.none));
-      expect(filteredDownResult.getAlertMessage(indoStrings), isEmpty);
-    });
-
-    test(
-      '4. Kondisi teks normal (>= 2 alfanumerik) menghasilkan hasText true',
-      () {
-        final normalResult = OcrTextValidator.evaluate(
-          rawOcrText: 'Pengumuman Penting',
-          rawLinesCount: 1,
-          filteredText: 'Pengumuman Penting',
-          acceptedLinesCount: 1,
-        );
-
-        expect(normalResult.hasText, isTrue);
-        expect(normalResult.reason, equals(NoTextReason.none));
-        expect(normalResult.alphanumericCount, greaterThanOrEqualTo(2));
-        expect(normalResult.text, equals('Pengumuman Penting'));
-        expect(normalResult.getAlertMessage(indoStrings), isEmpty);
-        expect(normalResult.getAlertMessage(engStrings), isEmpty);
-      },
+  test('whitespace-only output is empty', () {
+    final result = OcrTextValidator.evaluate(
+      rawOcrText: ' \n\t ',
+      rawLinesCount: 1,
+      filteredText: ' \n\t ',
+      acceptedLinesCount: 1,
     );
-
-    test('5. Validasi langsung dari objek OcrResult', () {
-      // 5a. OcrResult kosong
-      final emptyCheck = OcrTextValidator.validateResult(OcrResult.empty);
-      expect(emptyCheck.hasText, isFalse);
-      expect(emptyCheck.reason, equals(NoTextReason.rawOcrEmpty));
-
-      // 5b. OcrResult dengan baris yang seluruhnya tersaring
-      const rejectedLine = RejectedLineInfo(
-        line: OcrLineData(
-          text: '5:51',
-          boundingBox: Rect.fromLTWH(0, 0, 50, 20),
-        ),
-        reason: NoiseRejectionReason.clockPattern,
-        explanation: 'Status bar clock',
-      );
-      const filteredOcr = OcrResult(
-        fullText: '',
-        elements: [],
-        imageSize: Size(1000, 2000),
-        rejectedLines: [rejectedLine],
-        allLinesFilteredOut: true,
-        rawLinesCount: 1,
-      );
-      final filteredCheck = OcrTextValidator.validateResult(filteredOcr);
-      expect(filteredCheck.hasText, isFalse);
-      expect(filteredCheck.reason, equals(NoTextReason.allLinesFiltered));
-      expect(
-        filteredCheck.getAlertMessage(indoStrings),
-        contains('Gambar kurang jelas'),
-      );
-
-      // 5c. OcrResult normal dengan teks valid
-      const validElement = OcrElement(
-        id: 'elem_0',
-        text: 'Selamat Datang',
-        boundingBox: Rect.fromLTWH(100, 100, 200, 30),
-      );
-      const validOcr = OcrResult(
-        fullText: 'Selamat Datang',
-        elements: [validElement],
-        imageSize: Size(1000, 2000),
-        rawLinesCount: 1,
-      );
-      final validCheck = OcrTextValidator.validateResult(validOcr);
-      expect(validCheck.hasText, isTrue);
-      expect(validCheck.reason, equals(NoTextReason.none));
-      expect(validCheck.text, equals('Selamat Datang'));
-    });
-
-    test('6. Verifikasi judul dan petunjuk terpisah untuk alert merah', () {
-      final emptyResult = OcrTextValidator.evaluate(
-        rawOcrText: '',
-        rawLinesCount: 0,
-        filteredText: '',
-        acceptedLinesCount: 0,
-      );
-
-      expect(
-        emptyResult.getAlertTitle(indoStrings),
-        equals('Teks tidak ditemukan'),
-      );
-      expect(emptyResult.getAlertTitle(engStrings), equals('No text found'));
-      expect(
-        emptyResult.getAlertInstruction(indoStrings),
-        equals('Arahkan kamera ke teks dan coba lagi.'),
-      );
-      expect(
-        emptyResult.getAlertInstruction(engStrings),
-        equals('Point the camera at text and try again.'),
-      );
-
-      final filteredResult = OcrTextValidator.evaluate(
-        rawOcrText: '123',
-        rawLinesCount: 1,
-        filteredText: '',
-        acceptedLinesCount: 0,
-        allLinesFiltered: true,
-      );
-
-      expect(
-        filteredResult.getAlertTitle(indoStrings),
-        equals('Gambar kurang jelas'),
-      );
-      expect(
-        filteredResult.getAlertTitle(engStrings),
-        equals('Image is unclear'),
-      );
-      expect(
-        filteredResult.getAlertInstruction(indoStrings),
-        equals('Arahkan kamera ke teks dan coba lagi.'),
-      );
-      expect(
-        filteredResult.getAlertInstruction(engStrings),
-        equals('Point the camera at text and try again.'),
-      );
-    });
+    expect(result.hasText, isFalse);
   });
 }

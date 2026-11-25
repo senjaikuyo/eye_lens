@@ -8,7 +8,7 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-RUN npm run build
+RUN NODE_OPTIONS="--dns-result-order=ipv4first --no-network-family-autoselection" npm run build
 
 FROM php:8.3-fpm-alpine
 

@@ -24,7 +24,7 @@ const bool kDebugOcrOverlay = false;
 /// dan bingkai pemilih area ala Google Lens.
 ///
 /// Fitur utama:
-/// - Satu bingkai membungkus kelompok teks utama (terbesar dan terdekat ke tengah).
+/// - Bingkai awal mencakup seluruh gambar; pengguna dapat memilih kelompok teks.
 /// - 4 sudut putih tipis berbentuk huruf L melengkung tanpa garis penuh, tanpa glow,
 ///   dan area di luar bingkai digelapkan tipis lewat scrim transparan.
 /// - Menempel pada citra saat di-zoom (pinch) atau digeser (pan satu jari di dalam/luar bingkai).
@@ -154,14 +154,10 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       // Pulihkan state yang tersimpan tanpa mengulang deteksi awal
       _imageCropRectNotifier.value = ctrl.imageCropRect;
     } else {
-      // Deteksi awal pertama kali
-      if (_clusters.isNotEmpty) {
-        final initialRect = _clusters.first.boundingBox;
-        _imageCropRectNotifier.value = initialRect;
-        ctrl?.markInitialized(initialRect);
-      } else {
-        _imageCropRectNotifier.value = Rect.zero;
-      }
+      // Mulai dari seluruh gambar, bukan kelompok teks pertama.
+      final initialRect = Offset.zero & widget.imageSize;
+      _imageCropRectNotifier.value = initialRect;
+      ctrl?.markInitialized(initialRect);
     }
   }
 
@@ -402,8 +398,9 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
                 ctrl.imageCropRect != Rect.zero) {
               _imageCropRectNotifier.value = ctrl.imageCropRect;
             } else if (_imageCropRectNotifier.value == Rect.zero &&
-                _clusters.isNotEmpty) {
-              final initialRect = _clusters.first.boundingBox;
+                widget.imageSize.width > 0 &&
+                widget.imageSize.height > 0) {
+              final initialRect = Offset.zero & widget.imageSize;
               _imageCropRectNotifier.value = initialRect;
               ctrl?.markInitialized(initialRect);
             }

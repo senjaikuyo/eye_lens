@@ -139,13 +139,8 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
       return;
     }
 
-    final filterResult = OcrNoiseFilter.filter(
-      lines: linesToUse,
-      imageSize: widget.imageSize,
-    );
-
     _clusters = TextClusterHelper.detectClusters(
-      filteredLines: filterResult.acceptedLines,
+      filteredLines: linesToUse,
       imageSize: widget.imageSize,
     );
 

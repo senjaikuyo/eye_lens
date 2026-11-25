@@ -40,12 +40,10 @@ class OcrService {
     : _textRecognizer = TextRecognizer(script: script);
 
   /// Helper untuk membangun OcrResult lengkap dari RecognizedText dan imageSize.
-  /// Menerapkan OcrNoiseFilter sebelum TextFormatter agar teks sampah tidak masuk
-  /// ke hasil, halaman speech, maupun TTS.
+  /// Semua baris nonkosong diteruskan tanpa filter noise atau karantina.
   Future<OcrResult> _buildOcrResult({
     required RecognizedText recognizedText,
     required Size imageSize,
-    OcrNoiseFilterConfig? noiseFilterConfig,
     OcrScanMode scanMode = OcrScanMode.document,
     Offset cropOffset = Offset.zero,
     double scale = 1.0,
@@ -106,20 +104,8 @@ class OcrService {
         line.withOrientation(TextOrientationAnalyzer.analyzeLine(line)),
     ];
 
-    // 1. Jalankan penyaring noise di background isolate sesuai konfigurasi mode
-    final effectiveConfig =
-        noiseFilterConfig ??
-        const OcrNoiseFilterConfig(enableAutoScreenshotDetection: true);
-    final filterResult = await OcrNoiseFilter.filterWithCompute(
-      OcrNoiseFilterInput(
-        lines: orientedLines,
-        imageSize: imageSize,
-        config: effectiveConfig,
-      ),
-    );
-
     // 2. Confidence hanya menandai kualitas; tidak menghapus teks OCR.
-    final confidenceGate = OcrConfidenceGate.apply(filterResult.acceptedLines);
+    final confidenceGate = OcrConfidenceGate.apply(orientedLines);
 
     // Karakter dalam satu kolom vertikal menjadi blok tersendiri. Teksnya
     // tidak pernah dirangkai, sehingga formatter dan TTS tetap menerimanya
@@ -131,7 +117,7 @@ class OcrService {
       for (final column in verticalColumns) ...column,
     };
 
-    // 2b. Kelompokkan baris horizontal yang lolos kembali ke blok ML Kit.
+    // 2b. Kelompokkan baris horizontal kembali ke blok ML Kit.
     final Map<int, List<OcrLineData>> blockMap = {};
     for (final line in confidenceGate.acceptedLines) {
       if (verticalLines.contains(line)) continue;
@@ -145,7 +131,7 @@ class OcrService {
       final originalBounds = (bIdx >= 0 && bIdx < originalBlockBounds.length)
           ? originalBlockBounds[bIdx]
           : linesInBlock.first.boundingBox;
-      // Do not let excluded/doubtful text leak via block-level metadata.
+      // Rebuild block text from the retained ML Kit lines.
       final originalText = linesInBlock.map((l) => l.text).join('\n');
 
       filteredBlocks.add(
@@ -194,7 +180,7 @@ class OcrService {
               .map((l) => l.text)
               .join('\n');
 
-    // 4. Siapkan OcrElement hanya untuk baris yang lolos filter dan telah dikoreksi
+    // 4. Siapkan OcrElement dari seluruh baris setelah koreksi.
     final List<OcrElement> elements = [];
     int elementIndex = 0;
     for (final block in correctedDocumentData.blocks) {
@@ -215,17 +201,7 @@ class OcrService {
       imageSize: imageSize,
       documentData: correctedDocumentData,
       formattedResult: formattedResult,
-      rejectedLines: filterResult.rejectedLines,
-      doubtfulLines: [
-        ...filterResult.doubtfulLines,
-        ...confidenceGate.quarantinedLines,
-      ],
-      fallbackUsed: filterResult.fallbackUsed,
-      hasLowQualityWarning:
-          filterResult.hasLowQualityWarning || confidenceGate.hasWarning,
-      allLinesFilteredOut:
-          filterResult.allLinesFilteredOut ||
-          confidenceGate.acceptedLines.isEmpty,
+      hasLowQualityWarning: confidenceGate.hasWarning,
       rawLinesCount: orientedLines.length,
       rawLines: orientedLines,
     );
@@ -260,7 +236,6 @@ class OcrService {
     required Size imageSize,
     required Directory tempDir,
     OcrScanMode scanMode = OcrScanMode.document,
-    OcrNoiseFilterConfig? noiseFilterConfig,
     Offset cropOffset = Offset.zero,
     double scale = 1.0,
     String? passName,
@@ -286,7 +261,6 @@ class OcrService {
         recognizedText: recognizedText,
         imageSize: imageSize,
         scanMode: scanMode,
-        noiseFilterConfig: noiseFilterConfig,
         cropOffset: cropOffset,
         scale: scale,
       );
@@ -337,7 +311,6 @@ class OcrService {
     Uint8List bytes, {
     bool enableMultiPass = true,
     OcrScanMode scanMode = OcrScanMode.document,
-    OcrNoiseFilterConfig? noiseFilterConfig,
     Map<String, Object?> captureMetadata = const {},
   }) async {
     try {
@@ -345,7 +318,6 @@ class OcrService {
         bytes,
         enableMultiPass: enableMultiPass,
         scanMode: scanMode,
-        noiseFilterConfig: noiseFilterConfig,
         captureMetadata: captureMetadata,
       ).timeout(_totalTimeout);
     } on TimeoutException {
@@ -357,7 +329,6 @@ class OcrService {
     Uint8List bytes, {
     required bool enableMultiPass,
     required OcrScanMode scanMode,
-    OcrNoiseFilterConfig? noiseFilterConfig,
     required Map<String, Object?> captureMetadata,
   }) async {
     if (_isDisposed) return OcrResult.empty;
@@ -402,7 +373,6 @@ class OcrService {
         imageSize: imageSize,
         tempDir: tempDir,
         scanMode: scanMode,
-        noiseFilterConfig: noiseFilterConfig,
         passName: 'pass1_original',
         passRecords: passRecords,
       );
@@ -466,7 +436,6 @@ class OcrService {
               imageSize: rotatedSize,
               tempDir: tempDir,
               scanMode: scanMode,
-              noiseFilterConfig: noiseFilterConfig,
               passName: 'orientation_$degrees',
               passRecords: passRecords,
               passStopwatch: timer,
@@ -544,7 +513,6 @@ class OcrService {
             imageBytes: contrastBytes,
             imageSize: imageSize,
             tempDir: tempDir,
-            noiseFilterConfig: noiseFilterConfig,
             passName: 'fallback_contrast',
             passRecords: passRecords,
           );
@@ -566,7 +534,6 @@ class OcrService {
             imageBytes: otsuBytes,
             imageSize: imageSize,
             tempDir: tempDir,
-            noiseFilterConfig: noiseFilterConfig,
             passName: 'fallback_otsu',
             passRecords: passRecords,
           );
@@ -603,7 +570,6 @@ class OcrService {
                 imageBytes: enhancedCrop,
                 imageSize: imageSize,
                 tempDir: tempDir,
-                noiseFilterConfig: noiseFilterConfig,
                 cropOffset: roi.topLeft,
                 scale: scale,
                 passName: 'fallback_smart_crop',
@@ -642,7 +608,6 @@ class OcrService {
               imageBytes: tileBytes,
               imageSize: imageSize,
               tempDir: tempDir,
-              noiseFilterConfig: noiseFilterConfig,
               cropOffset: tile.topLeft,
               scale: scale,
               passName: 'fallback_tile_${i + 1}',

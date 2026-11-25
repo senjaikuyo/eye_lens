@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_text_validator.dart';
 import 'package:eye_lens/features/speech/logic/text_formatter.dart';
 
@@ -524,16 +523,13 @@ class LensSelectionHelper {
   }
 
   /// Memilih kata (TextElement / OcrWordData) yang titik tengahnya berada di dalam bingkai potongan.
-  /// Baris dikelompokkan kembali lalu disaring oleh OcrNoiseFilter dan TextFormatter.
+  /// Baris dikelompokkan kembali untuk TextFormatter tanpa filter noise.
   /// Jika data kata tidak tersedia, digunakan titik tengah baris (OcrLineData).
   ///
-  /// CATATAN: OcrNoiseFilter tetap menggunakan [originalImageSize] penuh sebagai acuan
-  /// aturan ukuran relatif, zona tepi, dan keterpencilan, bukan ukuran bingkai crop.
   static LensSelectionResult selectTextInCrop({
     required List<OcrLineData> rawLines,
     required Rect imageCropRect,
     required Size originalImageSize,
-    OcrNoiseFilterConfig filterConfig = const OcrNoiseFilterConfig(),
   }) {
     if (rawLines.isEmpty ||
         imageCropRect.width <= 0 ||
@@ -607,16 +603,9 @@ class LensSelectionHelper {
       );
     }
 
-    // Saring noise dengan OcrNoiseFilter menggunakan ukuran gambar penuh sebagai acuan
-    final filterResult = OcrNoiseFilter.filter(
-      lines: selectedLines,
-      imageSize: originalImageSize,
-      config: filterConfig,
-    );
-
     // Kelompokkan baris yang lolos ke dalam blok
     final Map<int, List<OcrLineData>> blockMap = {};
-    for (final line in filterResult.acceptedLines) {
+    for (final line in selectedLines) {
       blockMap.putIfAbsent(line.blockIndex, () => []).add(line);
     }
 
@@ -646,7 +635,7 @@ class LensSelectionHelper {
 
     final docData = OcrDocumentData(
       blocks: blocks,
-      rawText: filterResult.acceptedLines.map((l) => l.text).join('\n'),
+      rawText: selectedLines.map((l) => l.text).join('\n'),
       allRawLines: selectedLines,
     );
 
@@ -654,21 +643,20 @@ class LensSelectionHelper {
     final formatted = TextFormatter.format(docData);
     final String finalText = formatted.fullText.isNotEmpty
         ? formatted.fullText
-        : filterResult.acceptedLines.map((l) => l.text).join('\n');
+        : selectedLines.map((l) => l.text).join('\n');
 
     // Validasi apakah hasil seleksi berisi teks yang sah
     final validation = OcrTextValidator.evaluate(
       rawOcrText: selectedLines.map((l) => l.text).join('\n'),
       rawLinesCount: selectedLines.length,
       filteredText: finalText,
-      acceptedLinesCount: filterResult.acceptedLines.length,
-      allLinesFiltered: filterResult.allLinesFilteredOut,
+      acceptedLinesCount: selectedLines.length,
     );
 
     return LensSelectionResult(
       text: finalText,
       formattedResult: formatted,
-      acceptedLines: filterResult.acceptedLines,
+      acceptedLines: selectedLines,
       imageCropRect: imageCropRect,
       validation: validation,
       hasText: validation.hasText,

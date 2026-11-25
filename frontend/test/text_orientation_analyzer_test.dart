@@ -103,21 +103,18 @@ void main() {
       expect(estimate.skewDegrees, lessThan(20));
     });
 
-    test('skor kualitas memakai validitas leksikal, bukan confidence', () {
-      final valid = [line('makanan dan buku'), line('minum air')];
-      final garbage = [line('zxqv wrtp khlm'), line('qwe zxcv')];
-      expect(
-        TextOrientationAnalyzer.score(valid),
-        greaterThan(TextOrientationAnalyzer.score(garbage)),
-      );
-      expect(
-        TextOrientationAnalyzer.score([
-          OcrLineData(text: 'buku', boundingBox: Rect.zero, confidence: 0.0),
-        ]),
-        TextOrientationAnalyzer.score([
-          OcrLineData(text: 'buku', boundingBox: Rect.zero, confidence: 0.99),
-        ]),
-      );
+    test('orientasi tidak berubah karena kata dikenal atau tidak dikenal', () {
+      final known = TextOrientationAnalyzer.analyze([
+        line('buku', angle: 0),
+        line('buku', angle: 90),
+      ]);
+      final unknown = TextOrientationAnalyzer.analyze([
+        line('zxqv', angle: 0),
+        line('buku', angle: 90),
+      ]);
+      expect(unknown.weightedShares, known.weightedShares);
+      expect(unknown.dominantOrientation, known.dominantOrientation);
+      expect(unknown.confidence, known.confidence);
     });
   });
 

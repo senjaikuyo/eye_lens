@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:eye_lens/features/ocr/correction/ocr_dictionary.dart';
 import 'package:eye_lens/features/ocr/orientation/text_orientation.dart';
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
@@ -11,7 +10,6 @@ import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 class TextOrientationAnalyzer {
   const TextOrientationAnalyzer._();
 
-  static const double minimumScore = 35.0;
   static const double _wordBoxWeight = 0.6;
   static const double _lineBoxWeight = 0.8;
   static const double _baselineWeight = 3.0;
@@ -109,8 +107,7 @@ class TextOrientationAnalyzer {
       }
       final total = narrowWords.length;
       if (horizontal / total >= 0.6) {
-        votes[TextOrientation.up] =
-            votes[TextOrientation.up]! + _wordBoxWeight;
+        votes[TextOrientation.up] = votes[TextOrientation.up]! + _wordBoxWeight;
         evidence.add('wordBoxHorizontal');
       } else if (vertical / total >= 0.6) {
         votes[TextOrientation.rotated90] =
@@ -141,8 +138,7 @@ class TextOrientationAnalyzer {
     );
   }
 
-  /// Agregasi bobot per baris. Bobot memakai panjang teks dan validitas
-  /// leksikal, bukan confidence OCR.
+  /// Agregasi orientasi memakai panjang teks, tanpa kamus atau penilaian ejaan.
   static ImageOrientationAnalysis analyze(Iterable<OcrLineData> lines) {
     var total = 0.0;
     var nullAngles = 0;
@@ -178,9 +174,7 @@ class TextOrientationAnalyzer {
       );
     }
 
-    final normalized = shares.map(
-      (key, value) => MapEntry(key, value / total),
-    );
+    final normalized = shares.map((key, value) => MapEntry(key, value / total));
     var dominant = TextOrientation.up;
     for (final entry in normalized.entries) {
       if (entry.value > normalized[dominant]! ||
@@ -211,30 +205,6 @@ class TextOrientationAnalyzer {
 
   static double _lineWeight(OcrLineData line) {
     final length = line.text.replaceAll(RegExp(r'\s'), '').length;
-    var weight = math.min(30.0, math.max(3.0, length.toDouble()));
-    final words = RegExp(r'[A-Za-z]+').allMatches(line.text).map((m) => m.group(0)!).toList();
-    if (words.isNotEmpty) {
-      final valid = words.where(OcrDictionary.isValidWord).length;
-      weight *= 0.5 + 0.5 * valid / words.length;
-    }
-    return weight;
-  }
-
-  /// Skor kualitas teks: validitas leksikal lebih berarti daripada jumlah
-  /// karakter mentah, sehingga rotasi tidak diterima hanya karena lebih banyak
-  /// karakter sampah yang terbaca.
-  static double score(Iterable<OcrLineData> lines) {
-    var characters = 0;
-    var words = 0;
-    var valid = 0;
-    for (final line in lines) {
-      characters += RegExp(r'[A-Za-z0-9]').allMatches(line.text).length;
-      for (final match in RegExp(r'[A-Za-z]+').allMatches(line.text)) {
-        words++;
-        if (OcrDictionary.isValidWord(match.group(0)!)) valid++;
-      }
-    }
-    if (words == 0) return characters.toDouble();
-    return characters * 0.25 + 60 * valid / words;
+    return math.min(30.0, math.max(3.0, length.toDouble()));
   }
 }

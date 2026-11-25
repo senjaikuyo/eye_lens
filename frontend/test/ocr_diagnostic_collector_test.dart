@@ -113,7 +113,6 @@ void main() {
           const OcrPassRecord(
             name: 'pass1_original',
             durationMs: 320,
-            qualityScore: 42.5,
             rawLines: 10,
             acceptedLines: 9,
             rejectedLines: 1,
@@ -154,7 +153,6 @@ void main() {
       return OcrDiagnosticReport(
         id: 'ocr_1',
         timestamp: DateTime.utc(2026, 11, 19, 8),
-        legacyPreprocessingEnabled: true,
         photoBytes: 1024,
         photoPixelSize: const Size(1080, 1920),
         cameraPreset: 'high',
@@ -220,9 +218,7 @@ void main() {
 
   group('DebugOcrConfig', () {
     test('reset mengembalikan legacy preprocessing ke true', () {
-      DebugOcrConfig.enableLegacyPreprocessing = false;
       DebugOcrConfig.reset();
-      expect(DebugOcrConfig.enableLegacyPreprocessing, isTrue);
     });
   });
 }

@@ -56,9 +56,7 @@ class TextFormatter {
 
   /// Fungsi murni utama: memformat dokumen OCR menjadi daftar paragraf dan kata berindeks.
   static FormattedTextResult format(OcrDocumentData data) {
-    // Koreksi karakter ambigu sudah dilakukan sekali di OcrService.
-    // Formatter tidak boleh mengoreksi ulang karena hasil kedua bisa berbeda
-    // dari highlight dan dapat mengubah nama/obat yang sudah benar.
+    // Karakter dari ML Kit tidak dikoreksi memakai kamus.
     if (data.blocks.isEmpty) {
       return formatRawText(data.rawText);
     }

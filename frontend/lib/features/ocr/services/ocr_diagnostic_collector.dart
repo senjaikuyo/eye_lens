@@ -11,16 +11,10 @@ import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 class DebugOcrConfig {
   DebugOcrConfig._();
 
-  /// Jalankan pass tambahan lama (kontras, Otsu, moiré, stroke thickening,
-  /// smart crop ROI). Default `true` agar perilaku sama dengan pipeline saat
-  /// ini (BASELINE). Set `false` untuk menguji citra mentah murni (Pass 1 saja).
-  static bool enableLegacyPreprocessing = true;
-
   /// Kumpulkan data diagnostik. Hanya relevan pada build debug/profile.
   static bool enableDiagnostics = kDebugMode;
 
   static void reset() {
-    enableLegacyPreprocessing = true;
     enableDiagnostics = kDebugMode;
   }
 }
@@ -139,7 +133,6 @@ class LineHeightStats {
 class OcrPassRecord {
   final String name;
   final int durationMs;
-  final double qualityScore;
   final int rawLines;
   final int acceptedLines;
   final int rejectedLines;
@@ -155,7 +148,6 @@ class OcrPassRecord {
   const OcrPassRecord({
     required this.name,
     required this.durationMs,
-    required this.qualityScore,
     required this.rawLines,
     required this.acceptedLines,
     required this.rejectedLines,
@@ -172,7 +164,6 @@ class OcrPassRecord {
   Map<String, Object?> toJson() => {
     'name': name,
     'durationMs': durationMs,
-    'qualityScore': qualityScore,
     'rawLines': rawLines,
     'acceptedLines': acceptedLines,
     'rejectedLines': rejectedLines,
@@ -202,7 +193,6 @@ class OcrPassRecord {
 class OcrDiagnosticReport {
   final String? id;
   final DateTime timestamp;
-  final bool legacyPreprocessingEnabled;
 
   final int photoBytes;
   final Size photoPixelSize;
@@ -230,7 +220,6 @@ class OcrDiagnosticReport {
   const OcrDiagnosticReport({
     this.id,
     required this.timestamp,
-    required this.legacyPreprocessingEnabled,
     required this.photoBytes,
     required this.photoPixelSize,
     required this.cameraPreset,
@@ -252,7 +241,6 @@ class OcrDiagnosticReport {
     return {
       'id': id,
       'timestamp': timestamp.toIso8601String(),
-      'legacyPreprocessingEnabled': legacyPreprocessingEnabled,
       'photo': {
         'bytes': photoBytes,
         'pixelWidth': photoPixelSize.width,
@@ -327,7 +315,6 @@ class OcrDiagnosticCollector {
       OcrDiagnosticReport(
         id: 'ocr_${DateTime.now().microsecondsSinceEpoch}',
         timestamp: DateTime.now(),
-        legacyPreprocessingEnabled: DebugOcrConfig.enableLegacyPreprocessing,
         photoBytes: photoBytes.length,
         photoPixelSize: photoPixelSize,
         cameraPreset: cameraPreset,
@@ -367,7 +354,6 @@ class OcrDiagnosticCollector {
     return OcrDiagnosticReport(
       id: r.id,
       timestamp: r.timestamp,
-      legacyPreprocessingEnabled: r.legacyPreprocessingEnabled,
       photoBytes: r.photoBytes,
       photoPixelSize: r.photoPixelSize,
       cameraPreset: r.cameraPreset,

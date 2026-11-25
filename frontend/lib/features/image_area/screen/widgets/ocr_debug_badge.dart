@@ -2,13 +2,8 @@ import 'package:flutter/material.dart';
 
 class OcrDebugBadge extends StatelessWidget {
   final int acceptedCount;
-  final int rejectedCount;
 
-  const OcrDebugBadge({
-    super.key,
-    required this.acceptedCount,
-    required this.rejectedCount,
-  });
+  const OcrDebugBadge({super.key, required this.acceptedCount});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +18,7 @@ class OcrDebugBadge extends StatelessWidget {
           border: Border.all(color: Colors.white24),
         ),
         child: Text(
-          'Debug OCR: $acceptedCount lolos | $rejectedCount dibuang',
+          'Debug OCR: $acceptedCount baris',
           style: Theme.of(context).textTheme.labelSmall
               ?.copyWith(color: Colors.white),
         ),

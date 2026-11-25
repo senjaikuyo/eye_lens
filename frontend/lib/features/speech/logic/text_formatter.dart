@@ -16,9 +16,6 @@ class TextFormatterConfig {
   /// Rasio lebar baris terhadap lebar kolom untuk mendeteksi penutup paragraf (< 70% lebar kolom).
   static const double paragraphEndWidthRatio = 0.7;
 
-  /// Toleransi tumpang-tindih sumbu-X untuk pengelompokan kolom (20%).
-  static const double columnOverlapTolerance = 0.2;
-
   /// Jeda antar paragraf saat pembacaan TTS dalam milidetik.
   static const int paragraphPauseMs = 300;
 

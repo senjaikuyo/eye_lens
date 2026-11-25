@@ -69,7 +69,6 @@ class SpeechBodyView extends StatelessWidget {
             imageSize: ocrResult?.imageSize ?? Size.zero,
             rawLines: ocrResult?.rawLines ?? const [],
             elements: ocrResult?.elements ?? const [],
-            rejectedLines: ocrResult?.rejectedLines ?? const [],
             isDark: isDark,
             isHighContrast: isHighContrast,
             controller: lensSelectionController,

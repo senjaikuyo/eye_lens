@@ -589,10 +589,7 @@ class LensSelectionHelper {
     if (selectedLines.isEmpty) {
       final validation = OcrTextValidator.evaluate(
         rawOcrText: '',
-        rawLinesCount: 0,
         filteredText: '',
-        acceptedLinesCount: 0,
-        allLinesFiltered: true,
       );
       return LensSelectionResult(
         text: '',
@@ -649,9 +646,7 @@ class LensSelectionHelper {
     // Validasi apakah hasil seleksi berisi teks yang sah
     final validation = OcrTextValidator.evaluate(
       rawOcrText: selectedLines.map((l) => l.text).join('\n'),
-      rawLinesCount: selectedLines.length,
       filteredText: finalText,
-      acceptedLinesCount: selectedLines.length,
     );
 
     return LensSelectionResult(

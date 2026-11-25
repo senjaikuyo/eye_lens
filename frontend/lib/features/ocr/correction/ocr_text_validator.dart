@@ -11,12 +11,6 @@ enum NoTextReason {
   /// Hasil OCR mentah kosong (tidak ada teks atau baris yang terdeteksi dari sensor/gambar).
   rawOcrEmpty,
 
-  /// Seluruh baris teks terbuang oleh filter noise OCR.
-  allLinesFiltered,
-
-  /// Teks yang tersisa terlalu pendek untuk dibaca sebagai kalimat.
-  insufficientAlphanumeric,
-
   /// Mesin OCR gagal memproses gambar; ini bukan kondisi gambar tanpa teks.
   processingFailed,
 }
@@ -51,9 +45,6 @@ class OcrTextValidationResult {
     if (reason == NoTextReason.processingFailed) {
       return strings.ocrFailedAlert;
     }
-    if (reason == NoTextReason.allLinesFiltered) {
-      return strings.unclearImageNoTextAlert;
-    }
     return strings.noTextFoundAlert;
   }
 
@@ -62,9 +53,6 @@ class OcrTextValidationResult {
     if (hasText) return '';
     if (reason == NoTextReason.processingFailed) {
       return strings.ocrFailedTitle;
-    }
-    if (reason == NoTextReason.allLinesFiltered) {
-      return strings.unclearImageNoTextTitle;
     }
     return strings.noTextFoundTitle;
   }
@@ -82,7 +70,6 @@ class OcrTextValidationResult {
 /// Pemeriksa kondisi tanpa teks murni (pure function) untuk alur pemindaian kamera & galeri EyeLens.
 class OcrTextValidator {
   static final RegExp _alphaNumericRegex = RegExp(r'[a-zA-Z0-9]');
-  static final RegExp _letterRegex = RegExp(r'[a-zA-Z]');
 
   /// Menghitung jumlah karakter huruf dan angka (alfanumerik) di dalam teks.
   static int countAlphanumeric(String text) {
@@ -90,20 +77,11 @@ class OcrTextValidator {
     return _alphaNumericRegex.allMatches(text).length;
   }
 
-  /// Menghitung jumlah huruf pada teks.
-  static int countLetters(String text) {
-    if (text.isEmpty) return 0;
-    return _letterRegex.allMatches(text).length;
-  }
-
   /// Menerima seluruh hasil nonkosong tanpa ambang alfanumerik.
   /// Metadata filter lama tidak menentukan apakah teks boleh ditampilkan.
   static OcrTextValidationResult evaluate({
     required String rawOcrText,
-    required int rawLinesCount,
     required String filteredText,
-    required int acceptedLinesCount,
-    bool allLinesFiltered = false,
   }) {
     // 1. Periksa apakah OCR mentah kosong
     final trimmedRaw = rawOcrText.trim();
@@ -136,24 +114,6 @@ class OcrTextValidator {
       );
     }
 
-    final rawCount = result.rawLinesCount > 0
-        ? result.rawLinesCount
-        : (result.elements.length + result.rejectedLines.length);
-
-    final rawText = (result.fullText.isNotEmpty || result.elements.isNotEmpty)
-        ? result.fullText
-        : (result.rejectedLines.isNotEmpty
-              ? result.rejectedLines.map((r) => r.line.text).join('\n')
-              : '');
-
-    return evaluate(
-      rawOcrText: rawText,
-      rawLinesCount: rawCount,
-      filteredText: result.fullText,
-      acceptedLinesCount: result.elements.length,
-      allLinesFiltered:
-          result.allLinesFilteredOut ||
-          (rawCount > 0 && result.elements.isEmpty),
-    );
+    return evaluate(rawOcrText: result.fullText, filteredText: result.fullText);
   }
 }

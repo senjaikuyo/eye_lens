@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/models/ocr_element.dart';
 import 'package:eye_lens/features/ocr/orientation/text_orientation.dart';
 import 'package:eye_lens/features/speech/logic/text_formatter.dart';
@@ -142,13 +141,6 @@ class OrientationTransform {
     final displaySize = degrees == 180
         ? original
         : Size(original.height, original.width);
-    RejectedLineInfo rejected(RejectedLineInfo value) => RejectedLineInfo(
-      line: line(value.line),
-      reason: value.reason,
-      explanation: value.explanation,
-      suspicionScore: value.suspicionScore,
-      signals: value.signals,
-    );
     return OcrResult(
       fullText: result.fullText,
       elements: result.elements
@@ -177,11 +169,7 @@ class OrientationTransform {
               allRawLines: result.documentData!.allRawLines.map(line).toList(),
             ),
       formattedResult: result.formattedResult,
-      rejectedLines: result.rejectedLines.map(rejected).toList(),
-      doubtfulLines: result.doubtfulLines.map(rejected).toList(),
-      fallbackUsed: result.fallbackUsed,
       hasLowQualityWarning: result.hasLowQualityWarning,
-      allLinesFilteredOut: result.allLinesFilteredOut,
       rawLinesCount: result.rawLinesCount,
       rawLines: result.rawLines.map(line).toList(),
       diagnosticJson: result.diagnosticJson,
@@ -194,13 +182,6 @@ class OrientationTransform {
   /// memakai orientasi yang ikut dipetakan. Teks tidak dibalik atau diubah.
   static OcrResult mapResultBack(OcrResult result, Size original, int degrees) {
     OcrLineData line(OcrLineData l) => mapLineBack(l, original, degrees);
-    RejectedLineInfo info(RejectedLineInfo r) => RejectedLineInfo(
-      line: line(r.line),
-      reason: r.reason,
-      explanation: r.explanation,
-      suspicionScore: r.suspicionScore,
-      signals: r.signals,
-    );
 
     final mappedElements = result.elements
         .map(
@@ -249,11 +230,7 @@ class OrientationTransform {
       imageSize: original,
       documentData: mappedDoc,
       formattedResult: formatted,
-      rejectedLines: result.rejectedLines.map(info).toList(),
-      doubtfulLines: result.doubtfulLines.map(info).toList(),
-      fallbackUsed: result.fallbackUsed,
       hasLowQualityWarning: result.hasLowQualityWarning,
-      allLinesFilteredOut: result.allLinesFilteredOut,
       rawLinesCount: result.rawLinesCount,
       rawLines: mappedLines,
       appliedOrientationRotation: degrees,

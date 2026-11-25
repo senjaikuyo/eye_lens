@@ -197,28 +197,11 @@ void main() {
     });
   });
 
-  group('rejectedLineToJson', () {
-    test('menyembunyikan teks bila includeText false', () {
-      final json = rejectedLineToJson(
-        line: const OcrLineData(
-          text: 'sampah',
-          boundingBox: Rect.fromLTWH(1, 2, 3, 4),
-          confidence: 0.4,
-        ),
-        reason: 'lowConfidence',
-        explanation: 'contoh',
-        includeText: false,
-      );
-
-      expect(json['text'], '<disembunyikan>');
-      expect(json['length'], 'sampah'.length);
-      expect(json['rule'], 'lowConfidence');
-    });
-  });
-
   group('DebugOcrConfig', () {
-    test('reset mengembalikan legacy preprocessing ke true', () {
+    test('reset mengembalikan konfigurasi diagnostik', () {
+      DebugOcrConfig.enableDiagnostics = false;
       DebugOcrConfig.reset();
+      expect(DebugOcrConfig.enableDiagnostics, isTrue);
     });
   });
 }

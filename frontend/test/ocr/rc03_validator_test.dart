@@ -3,9 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 OcrTextValidationResult evaluate(String text) => OcrTextValidator.evaluate(
   rawOcrText: text,
-  rawLinesCount: 1,
   filteredText: text,
-  acceptedLinesCount: 1,
 );
 
 void main() {

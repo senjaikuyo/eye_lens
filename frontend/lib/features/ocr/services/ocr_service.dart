@@ -11,7 +11,6 @@ import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/core/utils/image_dimension_helper.dart';
 import 'package:eye_lens/features/ocr/services/ocr_diagnostic_collector.dart';
 import 'package:eye_lens/features/camera/logic/image_blur_detector.dart';
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/correction/ocr_confidence_gate.dart';
 import 'package:eye_lens/features/ocr/preprocessing/ocr_preprocessor.dart';
 import 'package:eye_lens/features/ocr/reading_order/vertical_text_detector.dart';
@@ -27,7 +26,6 @@ import 'package:eye_lens/features/speech/logic/text_formatter.dart';
 /// - Menjaga privasi: memproses citra via ephemeral temp file yang langsung
 ///   dimusnahkan di blok `finally` (0 byte penulisan permanen di gawai).
 class OcrService {
-  static const int maxAdditionalPasses = 10;
   static const Duration _passTimeout = Duration(seconds: 20);
   static const Duration _totalTimeout = Duration(seconds: 60);
   final TextRecognizer _textRecognizer;
@@ -42,22 +40,13 @@ class OcrService {
   static Future<OcrResult> buildOcrResult({
     required RecognizedText recognizedText,
     required Size imageSize,
-    OcrScanMode scanMode = OcrScanMode.document,
-    Offset cropOffset = Offset.zero,
-    double scale = 1.0,
   }) async {
     final List<OcrLineData> allLines = [];
     final List<Rect> originalBlockBounds = [];
 
     for (int bIdx = 0; bIdx < recognizedText.blocks.length; bIdx++) {
       final block = recognizedText.blocks[bIdx];
-      originalBlockBounds.add(
-        OcrPreprocessor.remapBoundingBox(
-          block.boundingBox,
-          cropOffset: cropOffset,
-          scale: scale,
-        ),
-      );
+      originalBlockBounds.add(block.boundingBox);
       for (final line in block.lines) {
         if (line.text.trim().isNotEmpty) {
           final List<OcrWordData> words = [];
@@ -66,11 +55,7 @@ class OcrService {
               words.add(
                 OcrWordData(
                   text: elem.text,
-                  boundingBox: OcrPreprocessor.remapBoundingBox(
-                    elem.boundingBox,
-                    cropOffset: cropOffset,
-                    scale: scale,
-                  ),
+                  boundingBox: elem.boundingBox,
                   confidence: elem.confidence,
                 ),
               );
@@ -80,11 +65,7 @@ class OcrService {
           allLines.add(
             OcrLineData(
               text: line.text,
-              boundingBox: OcrPreprocessor.remapBoundingBox(
-                line.boundingBox,
-                cropOffset: cropOffset,
-                scale: scale,
-              ),
+              boundingBox: line.boundingBox,
               confidence: line.confidence,
               angle: line.angle,
               blockIndex: bIdx,
@@ -226,9 +207,6 @@ class OcrService {
     required Uint8List imageBytes,
     required Size imageSize,
     required Directory tempDir,
-    OcrScanMode scanMode = OcrScanMode.document,
-    Offset cropOffset = Offset.zero,
-    double scale = 1.0,
     String? passName,
     List<OcrPassRecord>? passRecords,
     Stopwatch? passStopwatch,
@@ -251,9 +229,6 @@ class OcrService {
       final result = await buildOcrResult(
         recognizedText: recognizedText,
         imageSize: imageSize,
-        scanMode: scanMode,
-        cropOffset: cropOffset,
-        scale: scale,
       );
 
       if (passRecords != null) {
@@ -265,14 +240,10 @@ class OcrService {
             orientation: TextOrientationAnalyzer.analyze(result.rawLines)
                 .toJson(),
             rawLines: result.rawLinesCount,
-            acceptedLines:
-                result.rawLines.length -
-                result.rejectedLines.length -
-                result.doubtfulLines.length,
-            rejectedLines: result.rejectedLines.length,
+            acceptedLines: result.rawLines.length,
+            rejectedLines: 0,
             confidence: ConfidenceStats.fromLines(result.rawLines),
             lineHeights: LineHeightStats.fromLines(result.rawLines),
-            doubtfulLines: result.doubtfulLines.length,
             angles: result.rawLines.map((l) => l.angle).toList(),
             rotationDegrees: rotationDegrees,
             submittedImageSize: await ImageDimensionHelper.getImageSize(
@@ -298,13 +269,11 @@ class OcrService {
   /// Membaca gambar asli dan mencoba rotasi berdasarkan bukti orientasi saja.
   Future<OcrResult> processImageWithCoordinates(
     Uint8List bytes, {
-    OcrScanMode scanMode = OcrScanMode.document,
     Map<String, Object?> captureMetadata = const {},
   }) async {
     try {
       return await _processImageWithCoordinates(
         bytes,
-        scanMode: scanMode,
         captureMetadata: captureMetadata,
       ).timeout(_totalTimeout);
     } on TimeoutException {
@@ -314,7 +283,6 @@ class OcrService {
 
   Future<OcrResult> _processImageWithCoordinates(
     Uint8List bytes, {
-    required OcrScanMode scanMode,
     required Map<String, Object?> captureMetadata,
   }) async {
     if (_isDisposed) return OcrResult.empty;
@@ -358,7 +326,6 @@ class OcrService {
         imageBytes: bytes,
         imageSize: imageSize,
         tempDir: tempDir,
-        scanMode: scanMode,
         passName: 'pass1_original',
         passRecords: passRecords,
       );
@@ -385,20 +352,17 @@ class OcrService {
           result: pass1Result,
           imageSize: imageSize,
           passRecords: passRecords,
-          bytes: bytes,
           totalStopwatch: totalStopwatch,
         );
       }
 
       OcrResult bestResult = pass1Result;
-      var additionalPasses = 0;
 
       // Kandidat rotasi berasal dari bukti orientasi teks, bukan rasio citra.
       // Hasil diterima hanya jika bukti orientasi tegak menguat.
       if (orientationPlan.needsRecognition) {
         for (final degrees in orientationPlan.candidateRotations) {
-          if (_isDisposed || additionalPasses >= maxAdditionalPasses) break;
-          additionalPasses++;
+          if (_isDisposed) break;
           final timer = Stopwatch()..start();
           try {
             final rotated = await OcrPreprocessor.rotate(bytes, degrees);
@@ -409,7 +373,6 @@ class OcrService {
               imageBytes: rotated,
               imageSize: rotatedSize,
               tempDir: tempDir,
-              scanMode: scanMode,
               passName: 'orientation_$degrees',
               passRecords: passRecords,
               passStopwatch: timer,
@@ -445,7 +408,6 @@ class OcrService {
         result: bestResult,
         imageSize: imageSize,
         passRecords: passRecords,
-        bytes: bytes,
         totalStopwatch: totalStopwatch,
       );
     } on TimeoutException catch (e) {
@@ -464,7 +426,6 @@ class OcrService {
     required OcrResult result,
     required Size imageSize,
     required List<OcrPassRecord> passRecords,
-    required Uint8List bytes,
     required Stopwatch totalStopwatch,
   }) {
     if (!diagnostics.isActive) return result;
@@ -472,28 +433,7 @@ class OcrService {
     final report = diagnostics.finalize(
       imageSentToMlKit: imageSize,
       passes: passRecords,
-      rejectedLines: result.rejectedLines
-          .map(
-            (r) => rejectedLineToJson(
-              line: r.line,
-              reason: r.reason.name,
-              explanation: r.explanation,
-            ),
-          )
-          .toList(),
-      doubtfulLines: result.doubtfulLines
-          .map(
-            (r) => {
-              ...rejectedLineToJson(
-                line: r.line,
-                reason: r.reason.name,
-                explanation: r.explanation,
-              ),
-              'suspicionScore': r.suspicionScore,
-              'signals': r.signals.map((s) => s.name).toList(),
-            },
-          )
-          .toList(),
+      rejectedLines: const [],
       rawText: result.rawLines.map((l) => l.text).join('\n'),
       filteredText: result.documentData?.rawText ?? '',
       formattedText: result.fullText,

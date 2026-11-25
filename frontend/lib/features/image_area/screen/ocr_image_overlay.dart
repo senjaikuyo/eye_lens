@@ -10,7 +10,6 @@ import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 import 'package:eye_lens/features/speech/logic/auto_play_helper.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_controller.dart';
 import 'package:eye_lens/features/image_area/logic/lens_selection_helper.dart';
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/ocr/reading_order/text_cluster_helper.dart';
 import 'package:eye_lens/features/image_area/screen/widgets/full_image_reset_button.dart';
 import 'package:eye_lens/features/image_area/screen/widgets/google_lens_frame_painter.dart';
@@ -44,7 +43,6 @@ class OcrImageOverlay extends StatefulWidget {
   final Size imageSize;
   final List<OcrLineData> rawLines;
   final List<OcrElement> elements;
-  final List<RejectedLineInfo> rejectedLines;
   final VoidCallback? onFrameChanging;
   final OnSelectionComputedCallback? onSelectionComputed;
   final bool isDark;
@@ -57,7 +55,6 @@ class OcrImageOverlay extends StatefulWidget {
     required this.imageSize,
     this.rawLines = const [],
     this.elements = const [],
-    this.rejectedLines = const [],
     this.onFrameChanging,
     this.onSelectionComputed,
     this.isDark = true,
@@ -617,7 +614,6 @@ class _OcrImageOverlayState extends State<OcrImageOverlay>
             if (kDebugOcrOverlay)
               OcrDebugBadge(
                 acceptedCount: widget.elements.length,
-                rejectedCount: widget.rejectedLines.length,
               ),
           ],
         );

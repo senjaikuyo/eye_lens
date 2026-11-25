@@ -1,18 +1,15 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:eye_lens/features/ocr/correction/ocr_noise_filter.dart';
 import 'package:eye_lens/features/speech/models/text_formatter_models.dart';
 
 /// Mencatat confidence OCR tanpa menyembunyikan teks yang dikenali.
 @immutable
 class ConfidenceGateResult {
   final List<OcrLineData> acceptedLines;
-  final List<RejectedLineInfo> quarantinedLines;
   final bool hasWarning;
 
   const ConfidenceGateResult({
     required this.acceptedLines,
-    required this.quarantinedLines,
     required this.hasWarning,
   });
 }
@@ -24,11 +21,7 @@ class OcrConfidenceGate {
 
   static ConfidenceGateResult apply(List<OcrLineData> lines) {
     if (lines.isEmpty) {
-      return const ConfidenceGateResult(
-        acceptedLines: [],
-        quarantinedLines: [],
-        hasWarning: false,
-      );
+      return const ConfidenceGateResult(acceptedLines: [], hasWarning: false);
     }
 
     final accepted = <OcrLineData>[];
@@ -48,7 +41,6 @@ class OcrConfidenceGate {
 
     return ConfidenceGateResult(
       acceptedLines: List.unmodifiable(accepted),
-      quarantinedLines: const [],
       hasWarning: warning,
     );
   }

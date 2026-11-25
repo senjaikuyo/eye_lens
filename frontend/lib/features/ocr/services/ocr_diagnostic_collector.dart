@@ -372,25 +372,3 @@ class OcrDiagnosticCollector {
     );
   }
 }
-
-/// Serialisasi baris yang ditolak filter agar mudah dibaca di log.
-Map<String, Object?> rejectedLineToJson({
-  required OcrLineData line,
-  required String reason,
-  required String explanation,
-  bool includeText = true,
-}) {
-  return {
-    'rule': reason,
-    'text': includeText ? line.text : '<disembunyikan>',
-    'length': line.text.length,
-    'confidence': line.confidence,
-    'box': {
-      'left': line.boundingBox.left,
-      'top': line.boundingBox.top,
-      'width': line.boundingBox.width,
-      'height': line.boundingBox.height,
-    },
-    'explanation': includeText ? explanation : '<disembunyikan>',
-  };
-}

@@ -18,7 +18,6 @@ void main() {
       ]);
 
       expect(result.acceptedLines, hasLength(1));
-      expect(result.quarantinedLines, isEmpty);
       expect(result.hasWarning, isTrue);
     });
 
@@ -26,7 +25,6 @@ void main() {
       final result = OcrConfidenceGate.apply([line('Teks meragukan', 0.45)]);
 
       expect(result.acceptedLines, hasLength(1));
-      expect(result.quarantinedLines, isEmpty);
       expect(result.hasWarning, isTrue);
     });
 
@@ -54,7 +52,6 @@ void main() {
         'baris buruk',
         'baris baik',
       ]);
-      expect(result.quarantinedLines, isEmpty);
       expect(result.hasWarning, isTrue);
     });
 

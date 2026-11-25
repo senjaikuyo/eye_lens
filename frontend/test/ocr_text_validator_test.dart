@@ -39,9 +39,7 @@ void main() {
   test('whitespace-only output is empty', () {
     final result = OcrTextValidator.evaluate(
       rawOcrText: ' \n\t ',
-      rawLinesCount: 1,
       filteredText: ' \n\t ',
-      acceptedLinesCount: 1,
     );
     expect(result.hasText, isFalse);
   });
